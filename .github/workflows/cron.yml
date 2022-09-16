@@ -1,0 +1,32 @@
+name: Run Connector
+on:
+  repository_dispatch:
+  schedule:
+    - cron: "00 10 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Run Connector
+        run: python main.py
+        env:
+          SP_DC: ${{ secrets.SP_DC }}
+          SP_KEY: ${{ secrets.SP_KEY }}
+
+      - name: Commit data
+        uses: stefanzweifel/git-auto-commit-action@v4.1.2
+        with:
+          branch: ${{ github.head_ref }}
+          commit_message: Fetch Spotify data
+          commit_user_name: Open Podcast Bot
+          commit_user_email: bot@openpodcast.dev
+          commit_author: Open Podcast Bot <bot@openpodcast.dev>
