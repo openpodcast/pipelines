@@ -1,6 +1,7 @@
 name: Run Connector
 on:
   repository_dispatch:
+  workflow_dispatch:
   schedule:
     - cron: "00 10 * * *"
 
