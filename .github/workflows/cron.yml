@@ -19,6 +19,7 @@ jobs:
 
       - name: Run Connector
         run: python main.py
+        working-directory: ./spotify
         env:
           SP_DC: ${{ secrets.SP_DC }}
           SP_KEY: ${{ secrets.SP_KEY }}
