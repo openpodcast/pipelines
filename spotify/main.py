@@ -24,29 +24,32 @@ def main():
     metadata = connector.metadata()
     logger.info(f"Metadata: {metadata}")
     with open(f"metadata/{dt.datetime.now()}.json", "w") as f:
-        json.dump(metadata, f)
+        json.dump(metadata, f, indent=4)
 
     episodes = connector.episodes(start, end)
-    logger.info(f"Found {len(episodes)} episodes")
     with open(f"episodes/{dt.datetime.now()}.json", "w") as f:
-        json.dump(episodes, f)
+        json.dump(episodes, f, indent=4)
 
-    streams = connector.streams("48DAya24YOjS7Ez49JSH3y", start, end)
-    logger.info(json.dumps(streams, indent=4))
-    with open(f"streams/{dt.datetime.now()}.json", "w") as f:
-        json.dump(streams, f)
+    for episode in episodes["episodes"]:
+        id = episode['id']
+        logger.info(f"Fetching data for {id}")
 
-    # Fetch listener data for podcast
-    listeners = connector.listeners("48DAya24YOjS7Ez49JSH3y", start, end)
-    logger.info("Podcast Listeners = {}", json.dumps(listeners, indent=4))
-    with open(f"listeners/{dt.datetime.now()}.json", "w") as f:
-        json.dump(listeners, f)
+        streams = connector.streams(id, start, end)
+        logger.info("Streams = {}", json.dumps(streams, indent=4))
+        with open(f"streams/{id}-{dt.datetime.now()}.json", "w") as f:
+            json.dump(streams, f, indent=4)
 
-    # Fetch aggregate data for podcast
-    aggregate  = connector.aggregate("48DAya24YOjS7Ez49JSH3y", start, end)
-    logger.info("Podcast Aggregate = {}", json.dumps(aggregate, indent=4))
-    with open(f"aggregate/{dt.datetime.now()}.json", "w") as f:
-        json.dump(aggregate, f)
+        # Fetch listener data for podcast
+        listeners = connector.listeners(id, start, end)
+        logger.info("Podcast Listeners = {}", json.dumps(listeners, indent=4))
+        with open(f"listeners/{id}-{dt.datetime.now()}.json", "w") as f:
+            json.dump(listeners, f, indent=4)
+
+        # Fetch aggregate data for podcast
+        aggregate  = connector.aggregate(id, start, end)
+        logger.info("Podcast Aggregate = {}", json.dumps(aggregate, indent=4))
+        with open(f"aggregate/{id}-{dt.datetime.now()}.json", "w") as f:
+            json.dump(aggregate, f, indent=4)
 
 if __name__ == "__main__":
     main()
