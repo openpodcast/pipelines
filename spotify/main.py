@@ -4,9 +4,9 @@ import json
 from loguru import logger
 from spotifyconnector import SpotifyConnector
 
-BASE_URL = os.environ.get("SPOTIFY_BASE_URL")
-CLIENT_ID = os.environ.get("SPOTIFY_CLIENT_ID")
-PODCAST_ID = os.environ.get("SPOTIFY_PODCAST_ID")
+BASE_URL = "https://generic.wg.spotify.com/podcasters/v0"
+CLIENT_ID = "05a1371ee5194c27860b3ff3ff3979d2"
+PODCAST_ID = "0WgG3O6LTgbGN5SQmVrNRG" 
 SP_DC = os.environ.get("SPOTIFY_SP_DC")
 SP_KEY = os.environ.get("SPOTIFY_SP_KEY")
 
