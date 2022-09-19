@@ -1,0 +1,68 @@
+{
+    "episodes": [
+        {
+            "name": "#03 Vendor Lock-in of Big Podcast Hosters",
+            "id": "2ebg5MhyOK9rotpCBfe830",
+            "url": "https://open.spotify.com/episode/2ebg5MhyOK9rotpCBfe830",
+            "releaseDate": "2022-09-13",
+            "artworkUrl": "https://i.scdn.co/image/ab6765630000ba8a638ad87e64236619590c6bd7",
+            "description": "In this episode we learn about the licensing strategies of Anchor (which belongs to Spotify) and how it affects podcasters.While Anchor is a great platform for beginners, there are some caveats to be aware of before signing up. The reason is that Anchor has a non-exclusive license, which means that they can use your content in any way they want, including selling it to third parties. They can also use your content to promote the service, which is a bit of a double edged sword. On the one hand, it's great that they're promoting the service, but on the other hand, they're using your content to do it -- at no additional cost to them.Furthermore, if you want to move your podcast to another platform, you need to update all links in Spotify, Apple Podcasts, Google Podcasts, etc.As an alternative our Proxy allows you to change the URL transparently and clients won&rsquo;t see a change.In general it's a good idea to do some research before signing up for a hosting and to think about open source platforms which can be hosted on your own and provide statistics which can be exported.LinksAnchor Terms of ServiceOpen Podcast on GithubHostsMatthias Endler (https://twitter.com/matthiasendler)&nbsp;Wolfgang Gassler (https://twitter.com/schafele)FeedbackEmail: echo@openpodcast.dev&nbsp;Twitter: https://twitter.com/OpenPodcastDev&nbsp;CreditsThe theme music is &ldquo;Orbiting A Distant Planet'' by Quantum Jazz and is licensed under a Attribution-ShareAlike 3.0 International License.",
+            "explict": false,
+            "language": "en-US",
+            "duration": 519297,
+            "starts": 0,
+            "streams": 0,
+            "listeners": 0,
+            "sparkLine": [],
+            "hasVideo": false
+        },
+        {
+            "name": "#02 Our Plan - Does Spotify cache podcasts?",
+            "id": "7Im0OmzL44oedpHpBNvA19",
+            "url": "https://open.spotify.com/episode/7Im0OmzL44oedpHpBNvA19",
+            "releaseDate": "2022-09-06",
+            "artworkUrl": "https://i.scdn.co/image/ab6765630000ba8a949a7b5c3456a4599488eb46",
+            "description": "How do podcasts work on a technical level and how do we want to avoid common pitfalls with podcast hosting?Fundamentally podcasts are very simple. Everyone can host one and publish content with open formats like RSS. The devil is in the details as they say. Many platforms like Spotify and Apple Music have their own logic for handling podcasts. We dive into the pitfalls of hosting podcasts and the advantages of open statistics data for hosts.We will also talk about our plans on how to set up Open Podcast. We plan to use an open proxy (a little program that transparently tracks listens and subscribers).Spotify caches requests to episodes, which means our proxy can not track these requests.Therefore we also plan to fetch existing data from Spotify, Apple, and Amazon directly with so-called importers.LinksRSS 2.0 specification: https://validator.w3.org/feed/docs/rss2.htmlHow Spotify caches requests (German): https://sendegate.de/t/spotify-und-die-hostingpartner/10387Transistor Spotify Passthrough: https://transistor.fm/changelog/spotify-passthrough/&nbsp;HostsMatthias Endler (https://twitter.com/matthiasendler)&nbsp;Wolfgang Gassler (https://twitter.com/schafele)FeedbackEmail: echo@openpodcast.dev&nbsp;Twitter: https://twitter.com/OpenPodcastDev&nbsp;CreditsThe theme music is &ldquo;Orbiting A Distant Planet'' by Quantum Jazz and is licensed under a Attribution-ShareAlike 3.0 International License.",
+            "explict": false,
+            "language": "en-US",
+            "duration": 815400,
+            "starts": 1,
+            "streams": 1,
+            "listeners": 1,
+            "sparkLine": [],
+            "hasVideo": false
+        },
+        {
+            "name": "#01 The Open Podcast Project",
+            "id": "48DAya24YOjS7Ez49JSH3y",
+            "url": "https://open.spotify.com/episode/48DAya24YOjS7Ez49JSH3y",
+            "releaseDate": "2022-08-30",
+            "artworkUrl": "https://i.scdn.co/image/ab6765630000ba8a0e7ce18958e22a9ce0dc0127",
+            "description": "Welcome to &ldquo;The Open Podcast Podcast&rdquo;, a weekly show about the Podcast Ecosystem and our attempt to build an open source analytics platform for podcast hosts.In this episode we introduce the Open Podcast project and explain why we think it&rsquo;s important to have open alternatives to existing podcast hosting platforms.We believe that the Podcast ecosystem needs to remain open. Contrary to what some proprietary platforms believe, we think people value choice and freedom.We want to counter fragmentation, paywalls, and limits.We believe that Podcast hosts can grow an audience without locking people in or being dependent on the big players.If anything we should work on expanding the RSS standard to support more functionality.Linkshttps://twitter.com/chrismessina/status/1384572264566255619Michael Migano from Anchor (which belongs to Spotify): &ldquo;Podcasting, RSS, Openness, and Choice&ldquo;. https://mignano.medium.com/podcasting-rss-openness-and-choice-50223b1f16d0Media Tech Lab Grant: https://www.media-lab.de/en/programs/media-tech-lab CopyrightThe theme music is &ldquo;Orbiting A Distant Planet'' by Quantum Jazz and is licensed under a Attribution-ShareAlike 3.0 International License.HostsMatthias Endler (https://twitter.com/matthiasendler)&nbsp;Wolfgang Gassler (https://twitter.com/schafele)FeedbackEmail: echo@openpodcast.dev&nbsp;Twitter: https://twitter.com/OpenPodcastDev&nbsp;",
+            "explict": false,
+            "language": "en-US",
+            "duration": 566055,
+            "starts": 0,
+            "streams": 0,
+            "listeners": 0,
+            "sparkLine": [],
+            "hasVideo": false
+        }
+    ],
+    "totalPages": 1,
+    "currentPage": 1,
+    "totalEpisodes": 3,
+    "metadata": {
+        "network": {
+            "id": "6BJtNPLQSTx541yBr7HDFq",
+            "name": "Spotify Direct Submission",
+            "doingBusinessAs": "Spotify Direct Submission"
+        },
+        "show": {
+            "id": "0WgG3O6LTgbGN5SQmVrNRG",
+            "name": "TOPP - The Open Podcast Podcast"
+        },
+        "startDate": "2022-09-17",
+        "endDate": "2022-09-18"
+    }
+}
