@@ -30,6 +30,7 @@ jobs:
         env:
           SPOTIFY_SP_DC: ${{ secrets.SPOTIFY_SP_DC }}
           SPOTIFY_SP_KEY: ${{ secrets.SPOTIFY_SP_KEY }}
+          PH_PROJECT_API_KEY: ${{ secrets.PH_PROJECT_API_KEY }}
 
       - name: Commit data
         uses: stefanzweifel/git-auto-commit-action@v4.1.2
