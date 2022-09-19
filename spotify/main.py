@@ -14,6 +14,22 @@ FEED_URL = 'https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2'
 posthog.project_api_key = os.environ.get("PH_PROJECT_API_KEY")
 
 
+class PostHog:
+    def __init__(self, api_key, feed):
+        self.api_key = api_key
+        self.feed = feed
+        self.date = dt.datetime.now().strftime("%Y-%m-%d")
+
+    def capture(self, event, properties):
+        posthog.capture(self.feed, event, {
+            'feed': self.feed,
+            'source': 'Spotify Connector',
+            'day': self.date,
+            # Merge in properties
+            **properties
+        })
+
+
 def main():
     connector = SpotifyConnector(
         base_url=BASE_URL,
@@ -22,7 +38,10 @@ def main():
         sp_dc=SP_DC,
         sp_key=SP_KEY,
     )
-    today = dt.datetime.now().strftime("%Y-%m-%d")
+    posthog_client = PostHog(
+        api_key=posthog.project_api_key,
+        feed=FEED_URL,
+    )
     end = dt.datetime.now()
     start = dt.datetime.now() - dt.timedelta(days=1)
 
@@ -31,15 +50,11 @@ def main():
     with open(f"metadata/{dt.datetime.now()}.json", "w") as f:
         json.dump(metadata, f)
 
-    posthog.capture(FEED_URL, 'connector', {
-        'feed': FEED_URL,
-        'source': 'Spotify',
-        'totalEpisodes': metadata["totalEpisodes"],
-        'starts': metadata["starts"],
-        'streams': metadata["streams"],
-        'listeners': metadata["listeners"],
-        'followers': metadata["followers"],
-    })
+    for metric in ['totalEpisodes', 'starts',
+                   'streams', 'listeners', 'followers']:
+        posthog_client.capture(metric, {
+            'count': metadata[metric],
+        })
 
     episodes = connector.episodes(start, end)
     with open(f"episodes/{dt.datetime.now()}.json", "w") as f:
@@ -60,15 +75,15 @@ def main():
         with open(f"listeners/{id}-{dt.datetime.now()}.json", "w") as f:
             json.dump(listeners, f, indent=4)
 
+        for metric in ['starts', 'streams']:
+            posthog_client.capture(metric, {
+                'count': episode[metric],
+                'episode': episode['name'],
+            })
         count = listeners["counts"][-1]["count"]
-        posthog.capture(FEED_URL, f"connector", {
-            'feed': FEED_URL,
-            'source': 'Spotify',
-            "episode": episode['name'],
-            'day': today,
-            'starts': episode["starts"],
-            'streams': episode["streams"],
-            'listeners': count,
+        posthog_client.capture("listeners", {
+            count: count,
+            'episode': episode['name'],
         })
 
         # Fetch aggregate data for podcast
