@@ -31,7 +31,9 @@ def main():
     with open(f"metadata/{dt.datetime.now()}.json", "w") as f:
         json.dump(metadata, f)
 
-    posthog.capture(FEED_URL, 'audience', {
+    posthog.capture(FEED_URL, 'connector', {
+        'feed': FEED_URL,
+        'source': 'Spotify',
         'totalEpisodes': metadata["totalEpisodes"],
         'starts': metadata["starts"],
         'streams': metadata["streams"],
@@ -59,7 +61,10 @@ def main():
             json.dump(listeners, f, indent=4)
 
         count = listeners["counts"][-1]["count"]
-        posthog.capture(FEED_URL, f"Spotify {episode['name']}", {
+        posthog.capture(FEED_URL, f"connector", {
+            'feed': FEED_URL,
+            'source': 'Spotify',
+            "episode": episode['name'],
             'day': today,
             'starts': episode["starts"],
             'streams': episode["streams"],
