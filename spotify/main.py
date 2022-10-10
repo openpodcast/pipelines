@@ -13,7 +13,7 @@ SP_DC = os.environ.get("SPOTIFY_SP_DC")
 SP_KEY = os.environ.get("SPOTIFY_SP_KEY")
 FEED_URL = 'https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2'
 posthog.project_api_key = os.environ.get("PH_PROJECT_API_KEY")
-OPENPODCAST_API_ENDPOINT = "https://api-6a7hrmyrca-od.a.run.app/connector"
+OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
 OPENPODCAST_API_TOKEN = "cn389ncoiwuencr"
 
 class PostHog:
