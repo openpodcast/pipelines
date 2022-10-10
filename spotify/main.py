@@ -14,6 +14,7 @@ SP_KEY = os.environ.get("SPOTIFY_SP_KEY")
 FEED_URL = 'https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2'
 posthog.project_api_key = os.environ.get("PH_PROJECT_API_KEY")
 OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
+# OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
 OPENPODCAST_API_TOKEN = "cn389ncoiwuencr"
 
 class PostHog:
@@ -37,7 +38,7 @@ class OpenPodcastApi:
         self.token = token
         pass
 
-    def capture(self, data, meta = {}):
+    def capture(self, data, range, meta = {}):
         """ 
         Send POST request to Open Podcast API.
         """
@@ -45,12 +46,14 @@ class OpenPodcastApi:
             'Authorization': f'Bearer {self.token}'
         }
         json = {
-            "provider": "Spotify",
+            "provider": "spotify",
             "version": 1,
-            "retrieved": int(dt.datetime.now().timestamp()),
+            "retrieved": dt.datetime.now().isoformat(),
             "meta": meta,
+            "range": range,
             "data": data,
         }
+        print(json)
         return requests.post(self.endpoint, headers=headers, json=json)
         
 
@@ -71,23 +74,23 @@ def main():
         token=OPENPODCAST_API_TOKEN,
     )
 
-    start = dt.datetime.now() - dt.timedelta(days=1)
-    end = dt.datetime.now()
 
     metadata = connector.metadata()
     logger.info(f"Metadata: {metadata}")
     with open(f"metadata/{dt.datetime.now()}.json", "w") as f:
         json.dump(metadata, f)
 
+    start = dt.datetime.now() - dt.timedelta(days=1)
+    end = dt.datetime.now()
     open_podcast_api.capture(metadata, 
         meta = {
             "show": PODCAST_ID,
-            "range": {
-                "start": start.isoformat(),
-                "end": end.isoformat()
-            },
             "endpoint": "metadata", 
-        }
+        },
+        range = {
+            "start": start.strftime("%Y-%m-%d"),
+            "end": end.strftime("%Y-%m-%d"),
+        },
     )
 
     # for metric in ['totalEpisodes', 'starts',
@@ -101,12 +104,12 @@ def main():
         json.dump(episodes, f, indent=4)
 
     open_podcast_api.capture(episodes, 
+        range = {
+            "start": start.strftime("%Y-%m-%d"),
+            "end": end.strftime("%Y-%m-%d"),
+        },
         meta = {
             "show": PODCAST_ID,
-            "range": {
-                "start": start.isoformat(),
-                "end": end.isoformat()
-            },
             "endpoint": "episodes", 
         }
     )
@@ -121,14 +124,14 @@ def main():
             json.dump(streams, f, indent=4)
 
         open_podcast_api.capture(streams, 
+            range = {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d"),
+            },
             meta = {
                 "show": PODCAST_ID,
                 "episode": id,
-                "range": {
-                    "start": start.isoformat(),
-                    "end": end.isoformat()
-                },
-                "endpoint": "streams", 
+                "endpoint": "detailedStreams", 
             }
         )
 
@@ -139,13 +142,13 @@ def main():
             json.dump(listeners, f, indent=4)
 
         open_podcast_api.capture(listeners, 
+            range = {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d"),
+            },
             meta = {
                 "show": PODCAST_ID,
                 "episode": id,
-                "range": {
-                    "start": start.isoformat(),
-                    "end": end.isoformat()
-                },
                 "endpoint": "listeners", 
             }
         )
@@ -168,13 +171,13 @@ def main():
             json.dump(aggregate, f, indent=4)
 
         open_podcast_api.capture(aggregate,
+            range = {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d"),
+            },
             meta = {
                 "show": PODCAST_ID,
                 "episode": id,
-                "range": {
-                    "start": start.isoformat(),
-                    "end": end.isoformat()
-                },
                 "endpoint": "aggregate", 
             }
         )
