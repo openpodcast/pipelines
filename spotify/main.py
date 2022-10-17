@@ -153,6 +153,24 @@ def main():
             }
         )
 
+        # Fetch performance data for podcast
+        performance = connector.performance(id)
+        logger.info("Podcast Performance = {}", json.dumps(performance, indent=4))
+        with open(f"performance/{id}-{dt.datetime.now()}.json", "w") as f:
+            json.dump(performance, f, indent=4)
+
+        open_podcast_api.capture(performance, 
+            range = {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d"),
+            },
+            meta = {
+                "show": PODCAST_ID,
+                "episode": id,
+                "endpoint": "performance", 
+            }
+        )
+
         # for metric in ['starts', 'streams']:
         #     posthog_client.capture(metric, {
         #         'count': episode[metric],
