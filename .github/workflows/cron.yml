@@ -1,4 +1,4 @@
-name: Run Connector
+name: Spotify Import
 on:
   repository_dispatch:
   workflow_dispatch:
