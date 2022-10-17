@@ -1,5 +1,5 @@
 autopep8==1.7.0
-backoff==2.2.1
+backoff==1.11.1
 certifi==2022.9.24
 charset-normalizer==2.1.1
 idna==3.4
