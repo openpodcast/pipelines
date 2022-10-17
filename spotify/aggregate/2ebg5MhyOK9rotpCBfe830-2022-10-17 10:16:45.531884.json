@@ -1,0 +1,77 @@
+{
+    "count": 0,
+    "ageFacetedCounts": {
+        "28-34": {
+            "counts": {
+                "NOT_SPECIFIED": 0,
+                "MALE": 0,
+                "NON_BINARY": 0,
+                "FEMALE": 0
+            }
+        },
+        "0-17": {
+            "counts": {
+                "NOT_SPECIFIED": 0,
+                "MALE": 0,
+                "NON_BINARY": 0,
+                "FEMALE": 0
+            }
+        },
+        "45-59": {
+            "counts": {
+                "NOT_SPECIFIED": 0,
+                "MALE": 0,
+                "NON_BINARY": 0,
+                "FEMALE": 0
+            }
+        },
+        "60-150": {
+            "counts": {
+                "NOT_SPECIFIED": 0,
+                "MALE": 0,
+                "NON_BINARY": 0,
+                "FEMALE": 0
+            }
+        },
+        "23-27": {
+            "counts": {
+                "NOT_SPECIFIED": 0,
+                "MALE": 0,
+                "NON_BINARY": 0,
+                "FEMALE": 0
+            }
+        },
+        "18-22": {
+            "counts": {
+                "NOT_SPECIFIED": 0,
+                "MALE": 0,
+                "NON_BINARY": 0,
+                "FEMALE": 0
+            }
+        },
+        "35-44": {
+            "counts": {
+                "NOT_SPECIFIED": 0,
+                "MALE": 0,
+                "NON_BINARY": 0,
+                "FEMALE": 0
+            }
+        },
+        "unknown": {
+            "counts": {
+                "NOT_SPECIFIED": 0,
+                "MALE": 0,
+                "NON_BINARY": 0,
+                "FEMALE": 0
+            }
+        }
+    },
+    "genderedCounts": {
+        "counts": {
+            "NOT_SPECIFIED": 0,
+            "MALE": 0,
+            "NON_BINARY": 0,
+            "FEMALE": 0
+        }
+    }
+}
