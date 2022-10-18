@@ -118,10 +118,11 @@ def main():
         id = episode['id']
         logger.info(f"Fetching data for {id}")
 
-        # check if starts, streams, and listeners is 0           
-        if episode['starts'] == 0 and episode['streams'] == 0 and episode['listeners'] == 0:
-            logger.info(f"Skipping {id} because it has 0 starts, streams, and listeners")
-            continue
+        # TODO: Get episode metadata
+        # episode_metadata = connector.episode_metadata(id)
+        # if episode['starts'] == 0 and episode['streams'] == 0 and episode['listeners'] == 0:
+        #     logger.info(f"Skipping {id} because it has 0 starts, streams, and listeners")
+        #     continue
 
         streams = connector.streams(id, start, end)
         logger.info("Streams = {}", json.dumps(streams, indent=4))
@@ -158,23 +159,26 @@ def main():
             }
         )
 
-        # Fetch performance data for podcast
-        performance = connector.performance(id)
-        logger.info("Podcast Performance = {}", json.dumps(performance, indent=4))
-        with open(f"performance/{id}-{dt.datetime.now()}.json", "w") as f:
-            json.dump(performance, f, indent=4)
+        try:
+            # Fetch performance data for podcast
+            performance = connector.performance(id)
+            logger.info("Podcast Performance = {}", json.dumps(performance, indent=4))
+            with open(f"performance/{id}-{dt.datetime.now()}.json", "w") as f:
+                json.dump(performance, f, indent=4)
 
-        open_podcast_api.capture(performance, 
-            range = {
-                "start": start.strftime("%Y-%m-%d"),
-                "end": end.strftime("%Y-%m-%d"),
-            },
-            meta = {
-                "show": PODCAST_ID,
-                "episode": id,
-                "endpoint": "performance", 
-            }
-        )
+            open_podcast_api.capture(performance, 
+                range = {
+                    "start": start.strftime("%Y-%m-%d"),
+                    "end": end.strftime("%Y-%m-%d"),
+                },
+                meta = {
+                    "show": PODCAST_ID,
+                    "episode": id,
+                    "endpoint": "performance", 
+                }
+            )
+        except Exception as e:
+            logger.error("Failed to fetch performance data for episode {}: {}", id, e)
 
         # for metric in ['starts', 'streams']:
         #     posthog_client.capture(metric, {
