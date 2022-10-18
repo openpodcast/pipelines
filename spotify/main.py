@@ -118,6 +118,11 @@ def main():
         id = episode['id']
         logger.info(f"Fetching data for {id}")
 
+        # check if starts, streams, and listeners is 0           
+        if episode['starts'] == 0 and episode['streams'] == 0 and episode['listeners'] == 0:
+            logger.info(f"Skipping {id} because it has 0 starts, streams, and listeners")
+            continue
+
         streams = connector.streams(id, start, end)
         logger.info("Streams = {}", json.dumps(streams, indent=4))
         with open(f"streams/{id}-{dt.datetime.now()}.json", "w") as f:
