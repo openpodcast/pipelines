@@ -15,7 +15,7 @@ FEED_URL = 'https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2'
 posthog.project_api_key = os.environ.get("PH_PROJECT_API_KEY")
 OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
 # OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
-OPENPODCAST_API_TOKEN = "cn389ncoiwuencr"
+OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
 
 class PostHog:
     def __init__(self, api_key, feed):
