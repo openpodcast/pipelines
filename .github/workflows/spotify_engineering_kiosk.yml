@@ -28,6 +28,7 @@ jobs:
       - name: Run Connector
         run: python main.py
         env:
+          PODCAST_ID: ${{ secrets.PODCAST_ID_ENGINEERING_KIOSK }}
           SPOTIFY_SP_DC: ${{ secrets.SPOTIFY_SP_DC_ENGINEERING_KIOSK }}
           SPOTIFY_SP_KEY: ${{ secrets.SPOTIFY_SP_KEY_ENGINEERING_KIOSK }}
           PH_PROJECT_API_KEY: ${{ secrets.PH_PROJECT_API_KEY }}
