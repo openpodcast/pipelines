@@ -8,7 +8,7 @@ import requests
 
 BASE_URL = "https://generic.wg.spotify.com/podcasters/v0"
 CLIENT_ID = "05a1371ee5194c27860b3ff3ff3979d2"
-PODCAST_ID = "0WgG3O6LTgbGN5SQmVrNRG"
+PODCAST_ID = os.environ.get("PODCAST_ID")
 SP_DC = os.environ.get("SPOTIFY_SP_DC")
 SP_KEY = os.environ.get("SPOTIFY_SP_KEY")
 FEED_URL = 'https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2'
