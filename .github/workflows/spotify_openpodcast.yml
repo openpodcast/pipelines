@@ -1,4 +1,4 @@
-name: Spotify Import
+name: Open Podcast Spotify Import
 on:
   repository_dispatch:
   workflow_dispatch:
