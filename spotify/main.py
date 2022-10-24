@@ -76,13 +76,13 @@ def main():
         json.dump(episodes, f, indent=4)
 
     result = open_podcast_api.capture(episodes, 
-        range = {
-            "start": start.strftime("%Y-%m-%d"),
-            "end": end.strftime("%Y-%m-%d"),
-        },
         meta = {
             "show": SPOTIFY_PODCAST_ID,
             "endpoint": "episodes", 
+        },
+        range = {
+            "start": start.strftime("%Y-%m-%d"),
+            "end": end.strftime("%Y-%m-%d"),
         }
     )
     print(result)
@@ -103,14 +103,14 @@ def main():
             json.dump(streams, f, indent=4)
 
         result = open_podcast_api.capture(streams, 
-            range = {
-                "start": start.strftime("%Y-%m-%d"),
-                "end": end.strftime("%Y-%m-%d"),
-            },
             meta = {
                 "show": SPOTIFY_PODCAST_ID,
                 "episode": id,
                 "endpoint": "detailedStreams", 
+            },
+            range = {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d"),
             }
         )
         print(result)
@@ -122,14 +122,14 @@ def main():
             json.dump(listeners, f, indent=4)
 
         open_podcast_api.capture(listeners, 
-            range = {
-                "start": start.strftime("%Y-%m-%d"),
-                "end": end.strftime("%Y-%m-%d"),
-            },
             meta = {
                 "show": SPOTIFY_PODCAST_ID,
                 "episode": id,
                 "endpoint": "listeners", 
+            },
+            range = {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d"),
             }
         )
 
@@ -141,14 +141,14 @@ def main():
                 json.dump(performance, f, indent=4)
 
             open_podcast_api.capture(performance, 
-                range = {
-                    "start": start.strftime("%Y-%m-%d"),
-                    "end": end.strftime("%Y-%m-%d"),
-                },
                 meta = {
                     "show": SPOTIFY_PODCAST_ID,
                     "episode": id,
                     "endpoint": "performance", 
+                },
+                range = {
+                    "start": start.strftime("%Y-%m-%d"),
+                    "end": end.strftime("%Y-%m-%d"),
                 }
             )
         except Exception as e:
@@ -161,14 +161,14 @@ def main():
             json.dump(aggregate, f, indent=4)
 
         open_podcast_api.capture(aggregate,
-            range = {
-                "start": start.strftime("%Y-%m-%d"),
-                "end": end.strftime("%Y-%m-%d"),
-            },
             meta = {
                 "show": SPOTIFY_PODCAST_ID,
                 "episode": id,
                 "endpoint": "aggregate", 
+            },
+            range = {
+                "start": start.strftime("%Y-%m-%d"),
+                "end": end.strftime("%Y-%m-%d"),
             }
         )
 
