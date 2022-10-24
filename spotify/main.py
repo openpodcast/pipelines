@@ -8,7 +8,7 @@ import requests
 
 BASE_URL = "https://generic.wg.spotify.com/podcasters/v0"
 CLIENT_ID = "05a1371ee5194c27860b3ff3ff3979d2"
-PODCAST_ID = os.environ.get("PODCAST_ID")
+SPOTIFY_PODCAST_ID = os.environ.get("SPOTIFY_SPOTIFY_PODCAST_ID")
 SP_DC = os.environ.get("SPOTIFY_SP_DC")
 SP_KEY = os.environ.get("SPOTIFY_SP_KEY")
 FEED_URL = 'https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2'
@@ -58,10 +58,18 @@ class OpenPodcastApi:
         
 
 def main():
+    print("Starting Spotify Connector")
+    print(BASE_URL)
+    print(CLIENT_ID)
+    print(SPOTIFY_PODCAST_ID)
+    print(SP_DC)
+    print(SP_KEY)
+    print(FEED_URL)
+    print(OPENPODCAST_API_ENDPOINT)
     connector = SpotifyConnector(
         base_url=BASE_URL,
         client_id=CLIENT_ID,
-        podcast_id=PODCAST_ID,
+        SPOTIFY_PODCAST_ID=SPOTIFY_PODCAST_ID,
         sp_dc=SP_DC,
         sp_key=SP_KEY,
     )
@@ -84,7 +92,7 @@ def main():
     end = dt.datetime.now()
     open_podcast_api.capture(metadata, 
         meta = {
-            "show": PODCAST_ID,
+            "show": SPOTIFY_PODCAST_ID,
             "endpoint": "metadata", 
         },
         range = {
@@ -109,7 +117,7 @@ def main():
             "end": end.strftime("%Y-%m-%d"),
         },
         meta = {
-            "show": PODCAST_ID,
+            "show": SPOTIFY_PODCAST_ID,
             "endpoint": "episodes", 
         }
     )
@@ -135,7 +143,7 @@ def main():
                 "end": end.strftime("%Y-%m-%d"),
             },
             meta = {
-                "show": PODCAST_ID,
+                "show": SPOTIFY_PODCAST_ID,
                 "episode": id,
                 "endpoint": "detailedStreams", 
             }
@@ -153,7 +161,7 @@ def main():
                 "end": end.strftime("%Y-%m-%d"),
             },
             meta = {
-                "show": PODCAST_ID,
+                "show": SPOTIFY_PODCAST_ID,
                 "episode": id,
                 "endpoint": "listeners", 
             }
@@ -172,7 +180,7 @@ def main():
                     "end": end.strftime("%Y-%m-%d"),
                 },
                 meta = {
-                    "show": PODCAST_ID,
+                    "show": SPOTIFY_PODCAST_ID,
                     "episode": id,
                     "endpoint": "performance", 
                 }
@@ -203,7 +211,7 @@ def main():
                 "end": end.strftime("%Y-%m-%d"),
             },
             meta = {
-                "show": PODCAST_ID,
+                "show": SPOTIFY_PODCAST_ID,
                 "episode": id,
                 "endpoint": "aggregate", 
             }
