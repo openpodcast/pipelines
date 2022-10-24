@@ -3,7 +3,6 @@ import datetime as dt
 import json
 from loguru import logger
 from spotifyconnector import SpotifyConnector
-import posthog
 import requests
 
 BASE_URL = "https://generic.wg.spotify.com/podcasters/v0"
@@ -12,25 +11,9 @@ SPOTIFY_PODCAST_ID = os.environ.get("SPOTIFY_PODCAST_ID")
 SP_DC = os.environ.get("SPOTIFY_SP_DC")
 SP_KEY = os.environ.get("SPOTIFY_SP_KEY")
 FEED_URL = 'https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2'
-posthog.project_api_key = os.environ.get("PH_PROJECT_API_KEY")
 OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
 # OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
 OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
-
-class PostHog:
-    def __init__(self, api_key, feed):
-        self.api_key = api_key
-        self.feed = feed
-        self.date = dt.datetime.now().strftime("%Y-%m-%d")
-
-    def capture(self, event, properties):
-        posthog.capture(self.feed, event, {
-            'feed': self.feed,
-            'source': 'Spotify Connector',
-            'day': self.date,
-            # Merge in properties
-            **properties
-        })
 
 class OpenPodcastApi:
     def __init__(self, endpoint, token):
@@ -53,19 +36,10 @@ class OpenPodcastApi:
             "range": range,
             "data": data,
         }
-        print(json)
         return requests.post(self.endpoint, headers=headers, json=json)
         
 
 def main():
-    print("Starting Spotify Connector")
-    print(BASE_URL)
-    print(CLIENT_ID)
-    print(SPOTIFY_PODCAST_ID)
-    print(SP_DC)
-    print(SP_KEY)
-    print(FEED_URL)
-    print(OPENPODCAST_API_ENDPOINT)
     connector = SpotifyConnector(
         base_url=BASE_URL,
         client_id=CLIENT_ID,
@@ -73,15 +47,10 @@ def main():
         sp_dc=SP_DC,
         sp_key=SP_KEY,
     )
-    # posthog_client = PostHog(
-    #     api_key=posthog.project_api_key,
-    #     feed=FEED_URL,
-    # )
     open_podcast_api = OpenPodcastApi(
         endpoint=OPENPODCAST_API_ENDPOINT,
         token=OPENPODCAST_API_TOKEN,
     )
-
 
     metadata = connector.metadata()
     logger.info(f"Metadata: {metadata}")
@@ -90,7 +59,7 @@ def main():
 
     start = dt.datetime.now() - dt.timedelta(days=1)
     end = dt.datetime.now()
-    open_podcast_api.capture(metadata, 
+    result = open_podcast_api.capture(metadata, 
         meta = {
             "show": SPOTIFY_PODCAST_ID,
             "endpoint": "metadata", 
@@ -100,18 +69,13 @@ def main():
             "end": end.strftime("%Y-%m-%d"),
         },
     )
-
-    # for metric in ['totalEpisodes', 'starts',
-    #                'streams', 'listeners', 'followers']:
-    #     posthog_client.capture(metric, {
-    #         'count': metadata[metric],
-    #     })
+    print(result)
 
     episodes = connector.episodes(start, end)
     with open(f"episodes/{dt.datetime.now()}.json", "w") as f:
         json.dump(episodes, f, indent=4)
 
-    open_podcast_api.capture(episodes, 
+    result = open_podcast_api.capture(episodes, 
         range = {
             "start": start.strftime("%Y-%m-%d"),
             "end": end.strftime("%Y-%m-%d"),
@@ -121,6 +85,7 @@ def main():
             "endpoint": "episodes", 
         }
     )
+    print(result)
 
     for episode in episodes["episodes"]:
         id = episode['id']
@@ -137,7 +102,7 @@ def main():
         with open(f"streams/{id}-{dt.datetime.now()}.json", "w") as f:
             json.dump(streams, f, indent=4)
 
-        open_podcast_api.capture(streams, 
+        result = open_podcast_api.capture(streams, 
             range = {
                 "start": start.strftime("%Y-%m-%d"),
                 "end": end.strftime("%Y-%m-%d"),
@@ -148,6 +113,7 @@ def main():
                 "endpoint": "detailedStreams", 
             }
         )
+        print(result)
 
         # Fetch listener data for podcast
         listeners = connector.listeners(id, start, end)
@@ -188,17 +154,6 @@ def main():
         except Exception as e:
             logger.error("Failed to fetch performance data for episode {}: {}", id, e)
 
-        # for metric in ['starts', 'streams']:
-        #     posthog_client.capture(metric, {
-        #         'count': episode[metric],
-        #         'episode': episode['name'],
-        #     })
-        # count = listeners["counts"][-1]["count"]
-        # posthog_client.capture("listeners", {
-        #     count: count,
-        #     'episode': episode['name'],
-        # })
-
         # Fetch aggregate data for podcast
         aggregate = connector.aggregate(id, start, end)
         logger.info("Podcast Aggregate = {}", json.dumps(aggregate, indent=4))
@@ -216,14 +171,6 @@ def main():
                 "endpoint": "aggregate", 
             }
         )
-
-        # for metric in ['listeners', 'followers']:
-        #     posthog_client.capture(metric, {
-        #         'count': aggregate[metric],
-        #         'episode': episode['name'],
-        #     })
-        # TODO: Send aggregate data to PostHog
-
 
 if __name__ == "__main__":
     main()
