@@ -8,7 +8,7 @@ import requests
 
 BASE_URL = "https://generic.wg.spotify.com/podcasters/v0"
 CLIENT_ID = "05a1371ee5194c27860b3ff3ff3979d2"
-SPOTIFY_PODCAST_ID = os.environ.get("SPOTIFY_SPOTIFY_PODCAST_ID")
+SPOTIFY_PODCAST_ID = os.environ.get("SPOTIFY_PODCAST_ID")
 SP_DC = os.environ.get("SPOTIFY_SP_DC")
 SP_KEY = os.environ.get("SPOTIFY_SP_KEY")
 FEED_URL = 'https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2'
@@ -69,7 +69,7 @@ def main():
     connector = SpotifyConnector(
         base_url=BASE_URL,
         client_id=CLIENT_ID,
-        SPOTIFY_PODCAST_ID=SPOTIFY_PODCAST_ID,
+        podcast_id=SPOTIFY_PODCAST_ID,
         sp_dc=SP_DC,
         sp_key=SP_KEY,
     )
