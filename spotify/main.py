@@ -58,7 +58,7 @@ def fetch_and_capture(
         # Silently ignore errors because for some endpoints we don't have data (e.g. `performance`)
         return
 
-    with open(f"{file_path_prefix}-{dt.datetime.now()}.json", "w+") as f:
+    with open(f"{file_path_prefix}{dt.datetime.now()}.json", "w+") as f:
         json.dump(data, f)
 
     result = open_podcast_client.capture(
@@ -123,7 +123,7 @@ def main():
 
         fetch_and_capture(
             "streams",
-            f"streams/{id}",
+            f"streams/{id}-",
             lambda: spotify_connector.streams(id, start, end),
             open_podcast_client,
             start,
@@ -134,7 +134,7 @@ def main():
         )
         fetch_and_capture(
             "listeners",
-            f"listeners/{id}",
+            f"listeners/{id}-",
             lambda: spotify_connector.listeners(id, start, end),
             open_podcast_client,
             start,
@@ -145,7 +145,7 @@ def main():
         )
         fetch_and_capture(
             "performance",
-            f"performance/{id}",
+            f"performance/{id}-",
             lambda: spotify_connector.performance(id),
             open_podcast_client,
             start,
@@ -156,7 +156,7 @@ def main():
         )
         fetch_and_capture(
             "aggregate",
-            f"aggregate/{id}",
+            f"aggregate/{id}-",
             lambda: spotify_connector.aggregate(id, start, end),
             open_podcast_client,
             start,
