@@ -38,139 +38,75 @@ class OpenPodcastApi:
         }
         return requests.post(self.endpoint, headers=headers, json=json)
         
+def fetch_and_capture(endpoint_name, file_path_prefix, connector_call, open_podcast_client, start, end, extra_meta = {}):
+    """
+    Wrapper function to fetch data from Spotify and directly send to Open Podcast API.
+    """
+    logger.info(f"Fetching {endpoint_name}")
+    try:
+        data = connector_call()
+    except Exception as e:
+        logger.error(f"Failed to fetch data from {endpoint_name} endpoint: {e}")
+        # Silently ignore errors because for some endpoints we don't have data (e.g. `performance`)
+        return
+
+    with open(f"{file_path_prefix}-{dt.datetime.now()}.json", "w+") as f:
+        json.dump(data, f)
+
+    result = open_podcast_client.capture(data, 
+        # Merge in extra metadata (if any)
+        meta = {**extra_meta, **{
+            "show": SPOTIFY_PODCAST_ID,
+            "endpoint": endpoint_name, 
+        }},
+        range = {
+            "start": start.strftime("%Y-%m-%d"),
+            "end": end.strftime("%Y-%m-%d"),
+        }
+    )
+    logger.info(f"{endpoint_name}: {result.text}")
+
+    return data
 
 def main():
-    connector = SpotifyConnector(
+    spotify_connector = SpotifyConnector(
         base_url=BASE_URL,
         client_id=CLIENT_ID,
         podcast_id=SPOTIFY_PODCAST_ID,
         sp_dc=SP_DC,
         sp_key=SP_KEY,
     )
-    open_podcast_api = OpenPodcastApi(
+    open_podcast_client = OpenPodcastApi(
         endpoint=OPENPODCAST_API_ENDPOINT,
         token=OPENPODCAST_API_TOKEN,
     )
 
-    metadata = connector.metadata()
-    logger.info(f"Metadata: {metadata}")
-    with open(f"metadata/{dt.datetime.now()}.json", "w") as f:
-        json.dump(metadata, f)
-
     start = dt.datetime.now() - dt.timedelta(days=1)
     end = dt.datetime.now()
-    result = open_podcast_api.capture(metadata, 
-        meta = {
-            "show": SPOTIFY_PODCAST_ID,
-            "endpoint": "metadata", 
-        },
-        range = {
-            "start": start.strftime("%Y-%m-%d"),
-            "end": end.strftime("%Y-%m-%d"),
-        },
-    )
-    print(result)
 
-    episodes = connector.episodes(start, end)
-    with open(f"episodes/{dt.datetime.now()}.json", "w") as f:
-        json.dump(episodes, f, indent=4)
+    fetch_and_capture("metadata", "metadata", lambda: spotify_connector.metadata(), open_podcast_client, start, end)
 
-    result = open_podcast_api.capture(episodes, 
-        meta = {
-            "show": SPOTIFY_PODCAST_ID,
-            "endpoint": "episodes", 
-        },
-        range = {
-            "start": start.strftime("%Y-%m-%d"),
-            "end": end.strftime("%Y-%m-%d"),
-        }
-    )
-    print(result)
+    episodes = fetch_and_capture("episodes", "metadata", lambda: spotify_connector.episodes(start, end), open_podcast_client, start, end)
 
     for episode in episodes["episodes"]:
         id = episode['id']
-        logger.info(f"Fetching data for {id}")
 
-        # TODO: Get episode metadata
-        # episode_metadata = connector.episode_metadata(id)
-        # if episode['starts'] == 0 and episode['streams'] == 0 and episode['listeners'] == 0:
-        #     logger.info(f"Skipping {id} because it has 0 starts, streams, and listeners")
-        #     continue
+        # TODO: Get episode metadata. Not implemented by Spotify connector yet.
+        # fetch_and_capture("episode_metadata", f"episode_metadata/{id}", lambda: spotify_connector.episode_metadata(id, start, end), open_podcast_client, start, end)
 
-        streams = connector.streams(id, start, end)
-        logger.info("Streams = {}", json.dumps(streams, indent=4))
-        with open(f"streams/{id}-{dt.datetime.now()}.json", "w") as f:
-            json.dump(streams, f, indent=4)
+        fetch_and_capture("streams", f"streams/{id}", lambda: spotify_connector.streams(id, start, end), open_podcast_client, start, end, extra_meta={
+            "episode": id,
+        })
+        fetch_and_capture("listeners", f"listeners/{id}", lambda: spotify_connector.listeners(id, start, end), open_podcast_client, start, end, extra_meta={
+            "episode": id,
+        })
+        fetch_and_capture("performance", f"performance/{id}", lambda: spotify_connector.performance(id), open_podcast_client, start, end, extra_meta={
+            "episode": id,
+        })
+        fetch_and_capture("aggregate", f"aggregate/{id}", lambda: spotify_connector.aggregate(id, start, end), open_podcast_client, start, end, extra_meta={
+            "episode": id,
+        })
 
-        result = open_podcast_api.capture(streams, 
-            meta = {
-                "show": SPOTIFY_PODCAST_ID,
-                "episode": id,
-                "endpoint": "detailedStreams", 
-            },
-            range = {
-                "start": start.strftime("%Y-%m-%d"),
-                "end": end.strftime("%Y-%m-%d"),
-            }
-        )
-        print(result)
-
-        # Fetch listener data for podcast
-        listeners = connector.listeners(id, start, end)
-        logger.info("Podcast Listeners = {}", json.dumps(listeners, indent=4))
-        with open(f"listeners/{id}-{dt.datetime.now()}.json", "w") as f:
-            json.dump(listeners, f, indent=4)
-
-        open_podcast_api.capture(listeners, 
-            meta = {
-                "show": SPOTIFY_PODCAST_ID,
-                "episode": id,
-                "endpoint": "listeners", 
-            },
-            range = {
-                "start": start.strftime("%Y-%m-%d"),
-                "end": end.strftime("%Y-%m-%d"),
-            }
-        )
-
-        try:
-            # Fetch performance data for podcast
-            performance = connector.performance(id)
-            logger.info("Podcast Performance = {}", json.dumps(performance, indent=4))
-            with open(f"performance/{id}-{dt.datetime.now()}.json", "w") as f:
-                json.dump(performance, f, indent=4)
-
-            open_podcast_api.capture(performance, 
-                meta = {
-                    "show": SPOTIFY_PODCAST_ID,
-                    "episode": id,
-                    "endpoint": "performance", 
-                },
-                range = {
-                    "start": start.strftime("%Y-%m-%d"),
-                    "end": end.strftime("%Y-%m-%d"),
-                }
-            )
-        except Exception as e:
-            logger.error("Failed to fetch performance data for episode {}: {}", id, e)
-
-        # Fetch aggregate data for podcast
-        aggregate = connector.aggregate(id, start, end)
-        logger.info("Podcast Aggregate = {}", json.dumps(aggregate, indent=4))
-        with open(f"aggregate/{id}-{dt.datetime.now()}.json", "w") as f:
-            json.dump(aggregate, f, indent=4)
-
-        open_podcast_api.capture(aggregate,
-            meta = {
-                "show": SPOTIFY_PODCAST_ID,
-                "episode": id,
-                "endpoint": "aggregate", 
-            },
-            range = {
-                "start": start.strftime("%Y-%m-%d"),
-                "end": end.strftime("%Y-%m-%d"),
-            }
-        )
 
 if __name__ == "__main__":
     main()
