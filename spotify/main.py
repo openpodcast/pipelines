@@ -139,7 +139,7 @@ def main():
             },
         )
 
-        start = dt.datetime.now() - dt.timedelta(days=3)
+        start = dt.datetime.now() - dt.timedelta(days=30)
         end = dt.datetime.now()
         fetch_and_capture(
             "listeners",
