@@ -106,6 +106,10 @@ def main():
         end,
     )
 
+    # Fetch all episodes. We need to specify a range here because the API
+    # requires it, so let's use a long range.
+    start = dt.datetime.now() - dt.timedelta(days=30)
+    end = dt.datetime.now()
     episodes = fetch_and_capture(
         "episodes",
         "episodes/",
@@ -121,6 +125,8 @@ def main():
         # TODO: Get episode metadata. Not implemented by Spotify connector yet.
         # fetch_and_capture("episode_metadata", f"episode_metadata/{id}", lambda: spotify_connector.episode_metadata(id, start, end), open_podcast_client, start, end)
 
+        start = dt.datetime.now() - dt.timedelta(days=3)
+        end = dt.datetime.now()
         fetch_and_capture(
             "streams",
             f"streams/{id}-",
@@ -132,6 +138,9 @@ def main():
                 "episode": id,
             },
         )
+
+        start = dt.datetime.now() - dt.timedelta(days=3)
+        end = dt.datetime.now()
         fetch_and_capture(
             "listeners",
             f"listeners/{id}-",
@@ -143,6 +152,9 @@ def main():
                 "episode": id,
             },
         )
+
+        start = dt.datetime.now() - dt.timedelta(days=30)
+        end = dt.datetime.now()
         fetch_and_capture(
             "performance",
             f"performance/{id}-",
@@ -154,17 +166,24 @@ def main():
                 "episode": id,
             },
         )
-        fetch_and_capture(
-            "aggregate",
-            f"aggregate/{id}-",
-            lambda: spotify_connector.aggregate(id, start, end),
-            open_podcast_client,
-            start,
-            end,
-            extra_meta={
-                "episode": id,
-            },
-        )
+
+        # Fetch aggregate data for the episode in 3x1 day changes
+        # (today, yesterday, the day before yesterday) 
+        # Otherwise you get aggregated data of 3 days.
+        for i in range(3):
+            end = dt.datetime.now() - dt.timedelta(days=i)
+            start = end - dt.timedelta(days=1)
+            fetch_and_capture(
+                "aggregate",
+                f"aggregate/{id}-",
+                lambda: spotify_connector.aggregate(id, start, end),
+                open_podcast_client,
+                start,
+                end,
+                extra_meta={
+                    "episode": id,
+                },
+            )
 
 
 if __name__ == "__main__":
