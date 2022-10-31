@@ -128,7 +128,7 @@ def main():
         start = dt.datetime.now() - dt.timedelta(days=3)
         end = dt.datetime.now()
         fetch_and_capture(
-            "streams",
+            "detailedStreams",
             f"streams/{id}-",
             lambda: spotify_connector.streams(id, start, end),
             open_podcast_client,
