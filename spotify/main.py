@@ -4,6 +4,7 @@ import json
 from loguru import logger
 from spotifyconnector import SpotifyConnector
 import requests
+import types
 
 BASE_URL = "https://generic.wg.spotify.com/podcasters/v0"
 CLIENT_ID = "05a1371ee5194c27860b3ff3ff3979d2"
@@ -58,6 +59,11 @@ def fetch_and_capture(
         # Silently ignore errors because for some endpoints we don't have data (e.g. `performance`)
         return
 
+    # If the data is a generator, we need convert it to a list with
+    # `endpoint_name` as the key (e.g. for `episodes` and `detailedStreams`)
+    if isinstance(data, types.GeneratorType):
+        data = {endpoint_name: list(data)}
+
     with open(f"{file_path_prefix}{dt.datetime.now()}.json", "w+") as f:
         json.dump(data, f)
 
@@ -96,15 +102,59 @@ def main():
 
     start = dt.datetime.now() - dt.timedelta(days=1)
     end = dt.datetime.now()
-
     fetch_and_capture(
         "metadata",
-        "metadata/",
+        "data/podcast/metadata/",
         lambda: spotify_connector.metadata(),
         open_podcast_client,
         start,
         end,
     )
+
+    start = dt.datetime.now() - dt.timedelta(days=3)
+    end = dt.datetime.now()
+    fetch_and_capture(
+        "detailedStreams",
+        "data/podcast/streams/",
+        lambda: spotify_connector.streams(start, end),
+        open_podcast_client,
+        start,
+        end,
+    )
+
+    start = dt.datetime.now() - dt.timedelta(days=3)
+    end = dt.datetime.now()
+    fetch_and_capture(
+        "listeners",
+        "data/podcast/listeners/",
+        lambda: spotify_connector.listeners(start, end),
+        open_podcast_client,
+        start,
+        end,
+    )
+
+    for i in range(3):
+        end = dt.datetime.now() - dt.timedelta(days=i)
+        start = end - dt.timedelta(days=1)
+        fetch_and_capture(
+            "aggregate",
+            "data/podcast/aggregate/",
+            lambda: spotify_connector.aggregate(start, end),
+            open_podcast_client,
+            start,
+            end,
+        )
+
+    # start = dt.datetime.now() - dt.timedelta(days=3)
+    # end = dt.datetime.now()
+    # fetch_and_capture(
+    #     "followers",
+    #     "data/podcast/followers/",
+    #     lambda: spotify_connector.followers(),
+    #     open_podcast_client,
+    #     start,
+    #     end,
+    # )
 
     # Fetch all episodes. We need to specify a range here because the API
     # requires it, so let's use a long range.
@@ -112,7 +162,7 @@ def main():
     end = dt.datetime.now()
     episodes = fetch_and_capture(
         "episodes",
-        "episodes/",
+        "data/podcast/episodes/",
         lambda: spotify_connector.episodes(start, end),
         open_podcast_client,
         start,
@@ -122,15 +172,16 @@ def main():
     for episode in episodes["episodes"]:
         id = episode["id"]
 
-        # TODO: Get episode metadata. Not implemented by Spotify connector yet.
-        # fetch_and_capture("episode_metadata", f"episode_metadata/{id}", lambda: spotify_connector.episode_metadata(id, start, end), open_podcast_client, start, end)
+        # Do we want to fetch episode metadata? It is supported by the client
+        # but we don't use it at the moment.
+        # fetch_and_capture("episode_metadata", f"data/episodes/metadata/{id}", lambda: spotify_connector.episode_metadata(id, start, end), open_podcast_client, start, end)
 
         start = dt.datetime.now() - dt.timedelta(days=3)
         end = dt.datetime.now()
         fetch_and_capture(
             "detailedStreams",
-            f"streams/{id}-",
-            lambda: spotify_connector.streams(id, start, end),
+            f"data/episodes/streams/{id}-",
+            lambda: spotify_connector.streams(start, end, episode=id),
             open_podcast_client,
             start,
             end,
@@ -143,8 +194,8 @@ def main():
         end = dt.datetime.now()
         fetch_and_capture(
             "listeners",
-            f"listeners/{id}-",
-            lambda: spotify_connector.listeners(id, start, end),
+            f"data/episodes/listeners/{id}-",
+            lambda: spotify_connector.listeners(start, end, episode=id),
             open_podcast_client,
             start,
             end,
@@ -157,7 +208,7 @@ def main():
         end = dt.datetime.now()
         fetch_and_capture(
             "performance",
-            f"performance/{id}-",
+            f"data/episodes/performance/{id}-",
             lambda: spotify_connector.performance(id),
             open_podcast_client,
             start,
@@ -175,8 +226,8 @@ def main():
             start = end - dt.timedelta(days=1)
             fetch_and_capture(
                 "aggregate",
-                f"aggregate/{id}-",
-                lambda: spotify_connector.aggregate(id, start, end),
+                f"data/episodes/aggregate/{id}-",
+                lambda: spotify_connector.aggregate(start, end, episode=id),
                 open_podcast_client,
                 start,
                 end,
