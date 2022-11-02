@@ -2,6 +2,12 @@ name: Engineering Kiosk Spotify Import
 on:
   repository_dispatch:
   workflow_dispatch:
+    inputs:
+      debug:
+        description: "Store debug output in repo"
+        default: false
+        required: false
+        type: boolean
   schedule:
     - cron: "00 11 * * *"
 
@@ -33,6 +39,7 @@ jobs:
           SPOTIFY_SP_KEY: ${{ secrets.SPOTIFY_SP_KEY_ENGINEERING_KIOSK }}
           PH_PROJECT_API_KEY: ${{ secrets.PH_PROJECT_API_KEY }}
           OPENPODCAST_API_TOKEN: ${{ secrets.OPENPODCAST_API_TOKEN_ENGINEERING_KIOSK }}
+          STORE_DATA: ${{ inputs.debug }}
 
       - name: Commit data
         uses: stefanzweifel/git-auto-commit-action@v4.1.2
