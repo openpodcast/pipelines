@@ -13,7 +13,8 @@ a database and make them available via a REST API.
 
 So far, it can collect data from the following sources:
 
-* Spotify
+- Spotify
+- Apple
 
 Please see the subdirectories for more information.
 You can help contribute new connectors.
