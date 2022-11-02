@@ -1,4 +1,4 @@
-name: Engineering Kiosk Spotify Import
+name: Spotify Engineering Kiosk Import
 on:
   repository_dispatch:
   workflow_dispatch:

@@ -1,4 +1,4 @@
-name: Open Podcast Apple Import
+name: Apple Open Podcast Import
 on:
   repository_dispatch:
   workflow_dispatch:

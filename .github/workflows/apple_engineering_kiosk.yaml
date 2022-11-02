@@ -1,4 +1,4 @@
-name: Engineering Kiosk Apple Import
+name: Apple Engineering Kiosk Import
 on:
   repository_dispatch:
   workflow_dispatch:
