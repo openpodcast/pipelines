@@ -1,7 +1,7 @@
-# Spotify Connector
+# Spotify Data
 
-This is the Spotify connector, which fetches data from the Spotify API. It is
-based on the inofficial Spotify Podcast API. We use our client library to fetch
-the data from the API.
+This uses our Spotify connector to fetch data for our podcasts from the Spotify
+API. To add a new podcast, create a new workflow file in the `.github/workflows`
+directory and set the required environment variables.
 
-The library is available on [GitHub](https://github.com/openpodcast/spotify-importer).
+The connector is available on [GitHub](https://github.com/openpodcast/spotify-connector).
