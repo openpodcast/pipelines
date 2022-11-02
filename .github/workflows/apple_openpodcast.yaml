@@ -1,0 +1,42 @@
+name: Open Podcast Apple Import
+on:
+  repository_dispatch:
+  workflow_dispatch:
+  schedule:
+    - cron: "00 12 * * *"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./apple
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Run Connector
+        run: python main.py
+        env:
+          PODCAST_ID: ${{ secrets.APPLE_PODCAST_ID }}
+          MYACINFO: ${{ secrets.APPLE_MYACINFO }}
+          OPENPODCAST_API_TOKEN: ${{ secrets.OPENPODCAST_API_TOKEN }}
+
+      - name: Commit data
+        uses: stefanzweifel/git-auto-commit-action@v4.1.2
+        with:
+          branch: ${{ github.head_ref }}
+          commit_message: Fetch Spotify data
+          commit_user_name: Open Podcast Bot
+          commit_user_email: bot@openpodcast.dev
+          commit_author: Open Podcast Bot <bot@openpodcast.dev>

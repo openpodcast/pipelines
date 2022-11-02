@@ -8,8 +8,8 @@ import types
 
 PODCAST_ID = os.environ.get("PODCAST_ID")
 MYACINFO = os.environ.get("MYACINFO")
-# OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
-OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
+OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
+# OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
 OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
 
 # Store data locally for debugging. If this is set to `False`, 
