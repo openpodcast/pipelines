@@ -19,7 +19,7 @@ OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
 # Store data locally for debugging. If this is set to `False`, 
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
-STORE_DATA = os.environ.get("STORE_DATA", 0) == 1
+STORE_DATA = os.environ.get("STORE_DATA", 'False').lower() in ('true', '1', 't')
 
 class OpenPodcastApi:
     def __init__(self, endpoint, token):
