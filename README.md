@@ -1,20 +1,27 @@
-# Open Podcast Metrics
-
-This is a set of connectors and scripts to collect and analyze podcast metrics.
-It is a work in progress, and is not yet ready for general use.
+# 📈 Open Podcast Metrics
 
 We want to make podcast metrics more accessible to the public. We believe that
 podcast metrics should be open and available to everyone.
 
-We use the Podcast Hosting API's to get the latest podcast metrics. We then store them in
-a database and make them available via a REST API.
+This is a set of connectors and scripts to collect podcast metrics.
+We use the Podcast Hosting API's to get the latest metrics 
+and send them to our [Open Podcast API] instance.
+
 
 ## Connectors
 
-So far, it can collect data from the following sources:
+So far, we collect data from the following sources:
 
 - Spotify
 - Apple
 
 Please see the subdirectories for more information.
-You can help contribute new connectors.
+
+## Contributing
+
+If you also want to collect metrics for your podcast, please reach out
+or directly create an issue. We'll get you onboarded.
+
+You can also help contribute or request new connectors.
+
+[Open Podcast API]: https://github.com/openpodcast/api
