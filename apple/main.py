@@ -151,6 +151,9 @@ def main():
             open_podcast_client,
             start,
             end,
+            extra_meta={
+                "episodeid": episode_id,
+            },
         )
 
 if __name__ == "__main__":
