@@ -118,6 +118,19 @@ def main():
     )
 
     # Fetch podcast episodes
+    #
+    # Response:
+    # {
+    #   "content": {
+    #     "results": {
+    #       "1000584606852": {
+    #         "id": "10005846068
+    #         ...
+    #       },
+    #       ...
+    #     }
+    #   }
+    # }
     end = dt.datetime.now()
     start = dt.datetime.now() - dt.timedelta(days=7)
     episodes = fetch_and_capture(
@@ -129,24 +142,13 @@ def main():
         end,
     )
 
-    # Response:
-    # "content": {
-    #   "results": {
-    #       "1000584606852": {
-    #           "id": "10005846068
-    #            ...
-    #       },
-    #       ...
-    #   }
-    # }
-
-    # Iterate over episodes and fetch performance data
+    # Iterate over episodes and fetch details
     for episode_id, episode in episodes["content"]["results"].items():
         end = dt.datetime.now()
         start = dt.datetime.now() - dt.timedelta(days=7)
         fetch_and_capture(
             "episodeDetails",
-            "data/podcast/episodes/",
+            "data/episodes/details/",
             lambda: apple_connector.episode(episode_id),
             open_podcast_client,
             start,
