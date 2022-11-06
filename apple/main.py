@@ -8,6 +8,7 @@ import types
 
 PODCAST_ID = os.environ.get("PODCAST_ID")
 MYACINFO = os.environ.get("MYACINFO")
+ITCTX = os.environ.get("ITCTX")
 OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
 # OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
 OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
@@ -87,6 +88,7 @@ def main():
     apple_connector = AppleConnector(
         podcast_id=PODCAST_ID,
         myacinfo=MYACINFO,
+        itctx=ITCTX,
     )
     open_podcast_client = OpenPodcastApi(
         endpoint=OPENPODCAST_API_ENDPOINT,
