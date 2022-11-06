@@ -150,16 +150,16 @@ def main():
             end,
         )
 
-    # start = dt.datetime.now() - dt.timedelta(days=3)
-    # end = dt.datetime.now()
-    # fetch_and_capture(
-    #     "followers",
-    #     "data/podcast/followers/",
-    #     lambda: spotify_connector.followers(),
-    #     open_podcast_client,
-    #     start,
-    #     end,
-    # )
+    start = dt.datetime.now() - dt.timedelta(days=3)
+    end = dt.datetime.now()
+    fetch_and_capture(
+        "followers",
+        "data/podcast/followers/",
+        lambda: spotify_connector.followers(start, end),
+        open_podcast_client,
+        start,
+        end,
+    )
 
     # Fetch all episodes. We need to specify a range here because the API
     # requires it, so let's use a long range.
