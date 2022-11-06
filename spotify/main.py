@@ -155,7 +155,7 @@ def main():
     fetch_and_capture(
         "followers",
         "data/podcast/followers/",
-        lambda: spotify_connector.followers(),
+        lambda: spotify_connector.followers(start, end),
         open_podcast_client,
         start,
         end,
