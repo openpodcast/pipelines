@@ -145,12 +145,15 @@ def main():
         end = dt.datetime.now()
         start = dt.datetime.now() - dt.timedelta(days=7)
         fetch_and_capture(
-            "episodes",
+            "episodeDetails",
             "data/podcast/episodes/",
             lambda: apple_connector.episode(episode_id),
             open_podcast_client,
             start,
             end,
+            extra_meta={
+                "episode": episode_id,
+            },
         )
 
 if __name__ == "__main__":
