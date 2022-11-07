@@ -9,7 +9,7 @@ on:
         required: false
         type: boolean
   schedule:
-    - cron: "00 12 * * *"
+    - cron: "45 * * * *"
 
 jobs:
   build:
