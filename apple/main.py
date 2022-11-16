@@ -41,9 +41,15 @@ def get_cookies():
     """
     Get cookies from API
     """
-    cookies = requests.get(
-        "https://apple-automation-6a7hrmyrca-ew.a.run.app/cookies"
-    ).json()
+    response = requests.get(
+        "https://apple-automation-6a7hrmyrca-ew.a.run.app/cookies",
+        timeout=600
+    )
+
+    if response.status_code != 200:
+        raise Exception(f"Failed to get cookies: {response.text}")
+    
+    cookies = response.json()
     return cookies
 
 
@@ -92,10 +98,6 @@ def fetch_and_capture(
 
 
 def main():
-
-    # MYACINFO = os.environ.get("MYACINFO")
-    # ITCTX = os.environ.get("ITCTX")
-
     # Call API which returns an array of cookies.
     cookies = get_cookies()
 
