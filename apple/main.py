@@ -99,16 +99,25 @@ def fetch_and_capture(
 
 def main():
     # Call API which returns an array of cookies.
+    # Structure of cookies is:
+    # [
+    #   {
+    #     "name": "my-cookie-name",
+    #     "value": "my-cookie-value",
+    #     ...
+    #   },
+    #   ...
+    # ]
+
     cookies = get_cookies()
 
-    # Check if we have the required cookies
-    required_cookies = ["myacinfo", "itctx"]
-    for cookie in required_cookies:
-        if cookie not in cookies:
-            raise Exception(f"Cookie '{cookie}' not found in response")
+    # Get myacinfo cookie
+    myacinfo_cookie = next(c for c in cookies if c["name"] == "myacinfo")
+    myacinfo = myacinfo_cookie["value"]
 
-    myacinfo = cookies["myacinfo"]
-    itctx = cookies["itctx"]
+    # Get itctx cookie
+    itctx_cookie = next(c for c in cookies if c["name"] == "itctx")
+    itctx = itctx_cookie["value"]
 
     apple_connector = AppleConnector(
         podcast_id=PODCAST_ID,
