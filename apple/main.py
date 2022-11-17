@@ -42,7 +42,7 @@ def get_cookies():
     Get cookies from API
     """
     response = requests.get(
-        "https://apple-automation-6a7hrmyrca-ew.a.run.app/cookies",
+        "https://apple-automation.openpodcast.dev/cookies",
         timeout=600
     )
 
