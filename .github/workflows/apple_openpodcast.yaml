@@ -35,8 +35,6 @@ jobs:
         run: python main.py
         env:
           PODCAST_ID: ${{ secrets.APPLE_PODCAST_ID }}
-          MYACINFO: ${{ secrets.APPLE_MYACINFO }}
-          ITCTX: ${{ secrets.APPLE_ITCTX }}
           OPENPODCAST_API_TOKEN: ${{ secrets.OPENPODCAST_API_TOKEN }}
 
       - name: Commit data

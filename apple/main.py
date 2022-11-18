@@ -7,8 +7,6 @@ import requests
 import types
 
 PODCAST_ID = os.environ.get("PODCAST_ID")
-MYACINFO = os.environ.get("MYACINFO")
-ITCTX = os.environ.get("ITCTX")
 OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
 # OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
 OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
@@ -38,6 +36,21 @@ class OpenPodcastApi:
             "data": data,
         }
         return requests.post(self.endpoint, headers=headers, json=json)
+
+def get_cookies():
+    """
+    Get cookies from API
+    """
+    response = requests.get(
+        "https://apple-automation.openpodcast.dev/cookies",
+        timeout=600
+    )
+
+    if response.status_code != 200:
+        raise Exception(f"Failed to get cookies: {response.text}")
+    
+    cookies = response.json()
+    return cookies
 
 
 def fetch_and_capture(
@@ -85,10 +98,31 @@ def fetch_and_capture(
 
 
 def main():
+    # Call API which returns an array of cookies.
+    # Structure of cookies is:
+    # [
+    #   {
+    #     "name": "my-cookie-name",
+    #     "value": "my-cookie-value",
+    #     ...
+    #   },
+    #   ...
+    # ]
+
+    cookies = get_cookies()
+
+    # Get myacinfo cookie
+    myacinfo_cookie = next(c for c in cookies if c["name"] == "myacinfo")
+    myacinfo = myacinfo_cookie["value"]
+
+    # Get itctx cookie
+    itctx_cookie = next(c for c in cookies if c["name"] == "itctx")
+    itctx = itctx_cookie["value"]
+
     apple_connector = AppleConnector(
         podcast_id=PODCAST_ID,
-        myacinfo=MYACINFO,
-        itctx=ITCTX,
+        myacinfo=myacinfo,
+        itctx=itctx,
     )
     open_podcast_client = OpenPodcastApi(
         endpoint=OPENPODCAST_API_ENDPOINT,
