@@ -46,7 +46,7 @@ def get_cookies():
         timeout=600
     )
 
-    logging.info(f"Got cookies response: {response.status_code}")
+    logger.info(f"Got cookies response: {response.status_code}")
     if response.status_code != 200:
         raise Exception(f"Failed to get cookies: {response.text}")
     
@@ -120,7 +120,7 @@ def main():
     itctx_cookie = next(c for c in cookies if c["name"] == "itctx")
     itctx = itctx_cookie["value"]
 
-    logging.info(f"Got cookies: {myacinfo}, {itctx}")
+    logger.info(f"Got cookies: {myacinfo}, {itctx}")
 
     apple_connector = AppleConnector(
         podcast_id=PODCAST_ID,
