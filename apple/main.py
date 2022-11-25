@@ -11,10 +11,11 @@ OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
 # OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
 OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
 
-# Store data locally for debugging. If this is set to `False`, 
+# Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
 STORE_DATA = os.environ.get("STORE_DATA", 0) == 1
+
 
 class OpenPodcastApi:
     def __init__(self, endpoint, token):
@@ -37,19 +38,19 @@ class OpenPodcastApi:
         }
         return requests.post(self.endpoint, headers=headers, json=json)
 
+
 def get_cookies():
     """
     Get cookies from API
     """
     response = requests.get(
-        "https://apple-automation.openpodcast.dev/cookies",
-        timeout=600
+        "https://apple-automation.openpodcast.dev/cookies", timeout=600
     )
 
     logger.info(f"Got cookies response: {response.status_code}")
     if response.status_code != 200:
         raise Exception(f"Failed to get cookies: {response.text}")
-    
+
     cookies = response.json()
     return cookies
 
@@ -179,8 +180,12 @@ def main():
         end,
     )
 
-    # Iterate over episodes and fetch details
-    for episode_id, episode in episodes["content"]["results"].items():
+    # Show error if no episodes are found
+    if not episodes or not episodes["content"] or not episodes["content"]["results"]:
+        logger.error("No episodes found")
+        return
+
+    for episode_id, _episode in episodes["content"]["results"].items():
         end = dt.datetime.now()
         start = dt.datetime.now() - dt.timedelta(days=7)
         fetch_and_capture(
@@ -194,6 +199,7 @@ def main():
                 "episode": episode_id,
             },
         )
+
 
 if __name__ == "__main__":
     main()
