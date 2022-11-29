@@ -163,7 +163,7 @@ def main():
 
     # Fetch all episodes. We need to specify a range here because the API
     # requires it, so let's use a long range.
-    start = dt.datetime.now() - dt.timedelta(days=30)
+    start = dt.datetime(2015, 5, 1)
     end = dt.datetime.now()
     episodes = fetch_and_capture(
         "episodes",
