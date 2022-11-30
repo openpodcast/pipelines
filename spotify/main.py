@@ -12,8 +12,7 @@ SPOTIFY_PODCAST_ID = os.environ.get("SPOTIFY_PODCAST_ID")
 SP_DC = os.environ.get("SPOTIFY_SP_DC")
 SP_KEY = os.environ.get("SPOTIFY_SP_KEY")
 FEED_URL = "https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2"
-OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
-# OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
+OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT")
 OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
 
 # Store data locally for debugging. If this is set to `False`, 
