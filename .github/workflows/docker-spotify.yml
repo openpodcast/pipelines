@@ -18,14 +18,11 @@ on:
 env:
   IMAGE_NAME: openpodcast/spotify-cron
   DOCKER_PLATFORMS: linux/amd64,linux/arm64/v8
-  DOCKERFILE: spotify/Dockerfile
+  DOCKERFILE: Dockerfile
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./spotify
     # Don't run on forks
     if: github.repository_owner == 'openpodcast' &&
       github.actor != 'dependabot[bot]' &&
@@ -37,6 +34,7 @@ jobs:
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v3
+        working-directory: ./spotify
         with:
           # list of Docker images to use as base name for tags
           images: |
@@ -65,6 +63,7 @@ jobs:
 
       - name: Push Image
         uses: docker/build-push-action@v3
+        working-directory: ./spotify
         with:
           context: .
           file: ${{ env.DOCKERFILE }}
@@ -75,6 +74,7 @@ jobs:
 
       - name: Update DockerHub description
         uses: peter-evans/dockerhub-description@v3
+        working-directory: ./spotify
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
