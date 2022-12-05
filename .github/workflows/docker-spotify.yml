@@ -16,7 +16,7 @@ on:
       - "master"
 
 env:
-  IMAGE_NAME: openpodcast/spotify-cron
+  IMAGE_NAME: openpodcast/spotify-connector
   DOCKER_PLATFORMS: linux/amd64,linux/arm64/v8
 
 jobs:
