@@ -1,8 +1,8 @@
 FROM python:3.11-slim-bullseye
 
-# Install envsubst and cron
+# Install cron
 RUN apt-get update \
-    && apt-get install -y gettext-base cron \
+    && apt-get install -y cron \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
