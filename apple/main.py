@@ -106,6 +106,7 @@ def fetch_and_capture(
 
     return data
 
+
 def api_healthcheck(open_podcast_client):
     """
     Try three times to get 200 from healthcheck endpoint
@@ -118,6 +119,7 @@ def api_healthcheck(open_podcast_client):
             logger.info(f"Healthcheck failed, retrying in 5 seconds...")
             time.sleep(5)
     return False
+
 
 def main():
     # Call API which returns an array of cookies.
