@@ -1,6 +1,7 @@
 import os
 import datetime as dt
 import json
+import time
 from loguru import logger
 from spotifyconnector import SpotifyConnector
 import requests
@@ -15,10 +16,11 @@ FEED_URL = "https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2"
 OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT")
 OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
 
-# Store data locally for debugging. If this is set to `False`, 
+# Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
-STORE_DATA = os.environ.get("STORE_DATA", 'False').lower() in ('true', '1', 't')
+STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
+
 
 class OpenPodcastApi:
     def __init__(self, endpoint, token):
@@ -91,6 +93,20 @@ def fetch_and_capture(
     return data
 
 
+def api_healthcheck(open_podcast_client):
+    """
+    Try three times to get 200 from healthcheck endpoint
+    """
+    for i in range(3):
+        status = open_podcast_client.health()
+        if status.status_code == 200:
+            return True
+        else:
+            logger.info(f"Healthcheck failed, retrying in 5 seconds...")
+            time.sleep(5)
+    return False
+
+
 def main():
     spotify_connector = SpotifyConnector(
         base_url=BASE_URL,
@@ -103,6 +119,11 @@ def main():
         endpoint=OPENPODCAST_API_ENDPOINT,
         token=OPENPODCAST_API_TOKEN,
     )
+
+    # Check if API is up before sending data
+    if not api_healthcheck(open_podcast_client):
+        logger.error("Open Podcast API is not up. Quitting")
+        return
 
     start = dt.datetime.now() - dt.timedelta(days=1)
     end = dt.datetime.now()
@@ -223,7 +244,7 @@ def main():
         )
 
         # Fetch aggregate data for the episode in 3x1 day changes
-        # (today, yesterday, the day before yesterday) 
+        # (today, yesterday, the day before yesterday)
         # Otherwise you get aggregated data of 3 days.
         for i in range(3):
             end = dt.datetime.now() - dt.timedelta(days=i)
