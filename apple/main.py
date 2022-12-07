@@ -1,6 +1,7 @@
 import os
 import datetime as dt
 import json
+import time
 from loguru import logger
 from appleconnector import AppleConnector
 import requests
@@ -37,6 +38,13 @@ class OpenPodcastApi:
             "data": data,
         }
         return requests.post(self.endpoint, headers=headers, json=json)
+
+    def health(self):
+        """
+        Send GET request to the Open Podcast healthcheck endpoint `/health`.
+        """
+        headers = {"Authorization": f"Bearer {self.token}"}
+        return requests.get(f"{self.endpoint}/health", headers=headers)
 
 
 def get_cookies():
@@ -98,6 +106,18 @@ def fetch_and_capture(
 
     return data
 
+def api_healthcheck(open_podcast_client):
+    """
+    Try three times to get 200 from healthcheck endpoint
+    """
+    for i in range(3):
+        status = open_podcast_client.health()
+        if status.status_code == 200:
+            return True
+        else:
+            logger.info(f"Healthcheck failed, retrying in 5 seconds...")
+            time.sleep(5)
+    return False
 
 def main():
     # Call API which returns an array of cookies.
@@ -110,7 +130,6 @@ def main():
     #   },
     #   ...
     # ]
-
     cookies = get_cookies()
 
     # Get myacinfo cookie
@@ -132,6 +151,11 @@ def main():
         endpoint=OPENPODCAST_API_ENDPOINT,
         token=OPENPODCAST_API_TOKEN,
     )
+
+    # Check if API is up before sending data
+    if not api_healthcheck(open_podcast_client):
+        logger.error("Open Podcast API is not up. Quitting")
+        return
 
     start = dt.datetime.now() - dt.timedelta(days=1)
     end = dt.datetime.now()
