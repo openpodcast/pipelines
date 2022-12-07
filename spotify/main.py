@@ -43,6 +43,13 @@ class OpenPodcastApi:
         }
         return requests.post(self.endpoint, headers=headers, json=json)
 
+    def health(self):
+        """
+        Send GET request to the Open Podcast healthcheck endpoint `/health`.
+        """
+        headers = {"Authorization": f"Bearer {self.token}"}
+        return requests.get(f"{self.endpoint}/health", headers=headers)
+
 
 def fetch_and_capture(
     endpoint_name,
