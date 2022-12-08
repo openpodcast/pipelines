@@ -71,6 +71,7 @@ def fetch_and_capture(
     start,
     end,
     extra_meta={},
+    fallible=False,
 ):
     """
     Wrapper function to fetch data from Apple and directly send to Open Podcast API.
@@ -80,8 +81,14 @@ def fetch_and_capture(
         data = connector_call()
     except Exception as e:
         logger.error(f"Failed to fetch data from {endpoint_name} endpoint: {e}")
-        # Silently ignore errors because for some endpoints we don't have data (e.g. `performance`)
-        return
+
+        if fallible:
+            # Silently ignore errors because for some endpoints we don't have
+            # data
+            return
+        else:
+            # Raise error if endpoint is not fallible (default)
+            raise e
 
     if STORE_DATA:
         with open(f"{file_path_prefix}{dt.datetime.now()}.json", "w+") as f:

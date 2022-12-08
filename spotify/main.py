@@ -60,6 +60,7 @@ def fetch_and_capture(
     start,
     end,
     extra_meta={},
+    fallible=False,
 ):
     """
     Wrapper function to fetch data from Spotify and directly send to Open Podcast API.
@@ -69,8 +70,14 @@ def fetch_and_capture(
         data = connector_call()
     except Exception as e:
         logger.error(f"Failed to fetch data from {endpoint_name} endpoint: {e}")
-        # Silently ignore errors because for some endpoints we don't have data (e.g. `performance`)
-        return
+
+        if fallible:
+            # Silently ignore errors because for some endpoints we don't have
+            # data
+            return
+        else:
+            # Raise error if endpoint is not fallible (default)
+            raise e
 
     # If the data is a generator, we need convert it to a list with
     # `endpoint_name` as the key (e.g. for `episodes` and `detailedStreams`)
@@ -249,6 +256,7 @@ def main():
             extra_meta={
                 "episode": id,
             },
+            fallible=True,
         )
 
         # Fetch aggregate data for the episode in 3x1 day changes
