@@ -1,6 +1,7 @@
 import os
 import datetime as dt
 import json
+import sys
 import time
 from loguru import logger
 from appleconnector import AppleConnector
@@ -156,7 +157,7 @@ def main():
     # Check if API is up before sending data
     if not api_healthcheck(open_podcast_client):
         logger.error("Open Podcast API is not up. Quitting")
-        return
+        sys.exit(1)
 
     start = dt.datetime.now() - dt.timedelta(days=1)
     end = dt.datetime.now()
