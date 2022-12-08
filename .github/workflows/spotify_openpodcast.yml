@@ -34,7 +34,7 @@ jobs:
       - name: Run Connector
         run: python main.py
         env:
-          OPENPODCAST_API_ENDPOINT: https://api.openpodcast.dev/connector
+          OPENPODCAST_API_ENDPOINT: https://api.openpodcast.dev
           SPOTIFY_PODCAST_ID: ${{ secrets.SPOTIFY_PODCAST_ID }}
           SPOTIFY_SP_DC: ${{ secrets.SPOTIFY_SP_DC }}
           SPOTIFY_SP_KEY: ${{ secrets.SPOTIFY_SP_KEY }}
