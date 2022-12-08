@@ -34,10 +34,9 @@ jobs:
       - name: Run Connector
         run: python main.py
         env:
-          PODCAST_ID: ${{ secrets.APPLE_PODCAST_ID_ENGINEERING_KIOSK }}
-          MYACINFO: ${{ secrets.APPLE_MYACINFO_ENGINEERING_KIOSK }}
-          ITCTX: ${{ secrets.APPLE_ITCTX_ENGINEERING_KIOSK }}
+          OPENPODCAST_API_ENDPOINT: https://api.openpodcast.dev
           OPENPODCAST_API_TOKEN: ${{ secrets.OPENPODCAST_API_TOKEN_ENGINEERING_KIOSK }}
+          PODCAST_ID: ${{ secrets.APPLE_PODCAST_ID_ENGINEERING_KIOSK }}
 
       - name: Commit data
         uses: stefanzweifel/git-auto-commit-action@v4.1.2
