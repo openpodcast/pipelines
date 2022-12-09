@@ -1,4 +1,4 @@
-appleconnector==0.2.0
+appleconnector==0.3.2
 autopep8==1.7.0
 backoff==1.11.1
 certifi==2022.9.24
