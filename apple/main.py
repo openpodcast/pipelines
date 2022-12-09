@@ -11,6 +11,7 @@ import types
 PODCAST_ID = os.environ.get("PODCAST_ID")
 OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT")
 OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
+APPLE_AUTOMATION_ENDPOINT = os.environ.get("APPLE_AUTOMATION_ENDPOINT")
 
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
@@ -51,9 +52,7 @@ def get_cookies():
     """
     Get cookies from API
     """
-    response = requests.get(
-        "https://apple-automation.openpodcast.dev/cookies", timeout=600
-    )
+    response = requests.get(APPLE_AUTOMATION_ENDPOINT, timeout=600)
 
     logger.info(f"Got cookies response: {response.status_code}")
     if response.status_code != 200:
