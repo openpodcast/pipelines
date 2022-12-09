@@ -34,7 +34,7 @@ jobs:
       - name: Run Connector
         run: python main.py
         env:
-          APPLE_AUTOMATION_ENDPOINT: https://apple-automation.openpodcast.dev/cookies?id=Open%20Podcast
+          APPLE_AUTOMATION_ENDPOINT: https://apple-automation.openpodcast.dev/cookies?id=Open%20Podcast%20Podcast
           OPENPODCAST_API_ENDPOINT: https://api.openpodcast.dev
           OPENPODCAST_API_TOKEN: ${{ secrets.OPENPODCAST_API_TOKEN }}
           PODCAST_ID: ${{ secrets.APPLE_PODCAST_ID }}
