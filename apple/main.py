@@ -1,6 +1,8 @@
 import os
 import datetime as dt
 import json
+import sys
+import time
 from loguru import logger
 from appleconnector import AppleConnector, Metric, Dimension
 import requests
@@ -8,9 +10,10 @@ import types
 import itertools
 
 PODCAST_ID = os.environ.get("PODCAST_ID")
-OPENPODCAST_API_ENDPOINT = "https://api.openpodcast.dev/connector"
+OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT")
 # OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
 OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
+APPLE_AUTOMATION_ENDPOINT = os.environ.get("APPLE_AUTOMATION_ENDPOINT")
 
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
@@ -37,16 +40,21 @@ class OpenPodcastApi:
             "range": range,
             "data": data,
         }
-        return requests.post(self.endpoint, headers=headers, json=json)
+        return requests.post(f"{self.endpoint}/connector", headers=headers, json=json)
+
+    def health(self):
+        """
+        Send GET request to the Open Podcast healthcheck endpoint `/health`.
+        """
+        logger.info(f"Checking health of {self.endpoint}/health")
+        return requests.get(f"{self.endpoint}/health")
 
 
 def get_cookies():
     """
     Get cookies from API
     """
-    response = requests.get(
-        "https://apple-automation.openpodcast.dev/cookies", timeout=600
-    )
+    response = requests.get(APPLE_AUTOMATION_ENDPOINT, timeout=600)
 
     logger.info(f"Got cookies response: {response.status_code}")
     if response.status_code != 200:
@@ -64,6 +72,7 @@ def fetch_and_capture(
     start,
     end,
     extra_meta={},
+    fallible=False,
 ):
     """
     Wrapper function to fetch data from Apple and directly send to Open Podcast API.
@@ -73,8 +82,13 @@ def fetch_and_capture(
         data = connector_call()
     except Exception as e:
         logger.error(f"Failed to fetch data from {endpoint_name} endpoint: {e}")
-        # Silently ignore errors because for some endpoints we don't have data (e.g. `performance`)
-        return
+        if fallible:
+            # Silently ignore errors because for some endpoints we don't have
+            # data
+            return
+        else:
+            # Raise error if endpoint is not fallible (default)
+            raise e
 
     if STORE_DATA:
         with open(f"{file_path_prefix}{dt.datetime.now()}.json", "w+") as f:
@@ -98,6 +112,20 @@ def fetch_and_capture(
     logger.info(f"{endpoint_name}: {result.text}")
 
     return data
+
+
+def api_healthcheck(open_podcast_client):
+    """
+    Try three times to get 200 from healthcheck endpoint
+    """
+    for i in range(3):
+        status = open_podcast_client.health()
+        if status.status_code == 200:
+            return True
+        else:
+            logger.info(f"Healthcheck failed, retrying in 5 seconds...")
+            time.sleep(5)
+    return False
 
 
 def main():
@@ -133,6 +161,11 @@ def main():
         endpoint=OPENPODCAST_API_ENDPOINT,
         token=OPENPODCAST_API_TOKEN,
     )
+
+    # Check if API is up before sending data
+    if not api_healthcheck(open_podcast_client):
+        logger.error("Open Podcast API is not up. Quitting")
+        sys.exit(1)
 
     start = dt.datetime.now() - dt.timedelta(days=1)
     end = dt.datetime.now()
