@@ -250,7 +250,7 @@ def main():
             start,
             end,
             extra_meta={
-                "episodeid": episode_id,
+                "episode": episode_id,
             },
         )
 
