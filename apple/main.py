@@ -18,7 +18,7 @@ APPLE_AUTOMATION_ENDPOINT = os.environ.get("APPLE_AUTOMATION_ENDPOINT")
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
-STORE_DATA = os.environ.get("STORE_DATA", 0) == 1
+STORE_DATA = os.environ.get("STORE_DATA", "False") == "True"
 
 
 class OpenPodcastApi:
@@ -91,7 +91,10 @@ def fetch_and_capture(
             raise e
 
     if STORE_DATA:
-        with open(f"{file_path_prefix}{dt.datetime.now()}.json", "w+") as f:
+        filename = f"{file_path_prefix}{dt.datetime.now()}.json"
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, "w+") as f:
             json.dump(data, f)
 
     result = open_podcast_client.capture(
@@ -140,6 +143,7 @@ def main():
     #   ...
     # ]
 
+    print("Getting Apple cookies")
     cookies = get_cookies()
 
     # Get myacinfo cookie
