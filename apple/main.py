@@ -4,19 +4,21 @@ import json
 import sys
 import time
 from loguru import logger
-from appleconnector import AppleConnector
+from appleconnector import AppleConnector, Metric, Dimension
 import requests
 import types
+import itertools
 
 PODCAST_ID = os.environ.get("PODCAST_ID")
 OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT")
+# OPENPODCAST_API_ENDPOINT = "http://localhost:8080/connector"
 OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
 APPLE_AUTOMATION_ENDPOINT = os.environ.get("APPLE_AUTOMATION_ENDPOINT")
 
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
-STORE_DATA = os.environ.get("STORE_DATA", 0) == 1
+STORE_DATA = os.environ.get("STORE_DATA", "False") == "True"
 
 
 class OpenPodcastApi:
@@ -80,7 +82,6 @@ def fetch_and_capture(
         data = connector_call()
     except Exception as e:
         logger.error(f"Failed to fetch data from {endpoint_name} endpoint: {e}")
-
         if fallible:
             # Silently ignore errors because for some endpoints we don't have
             # data
@@ -90,7 +91,10 @@ def fetch_and_capture(
             raise e
 
     if STORE_DATA:
-        with open(f"{file_path_prefix}{dt.datetime.now()}.json", "w+") as f:
+        filename = f"{file_path_prefix}{dt.datetime.now()}.json"
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        with open(filename, "w+") as f:
             json.dump(data, f)
 
     result = open_podcast_client.capture(
@@ -138,6 +142,8 @@ def main():
     #   },
     #   ...
     # ]
+
+    print("Getting Apple cookies")
     cookies = get_cookies()
 
     # Get myacinfo cookie
@@ -180,11 +186,31 @@ def main():
     start = dt.datetime.now() - dt.timedelta(days=7)
     fetch_and_capture(
         "trends",
-        "data/podcast/trends/",
-        lambda: apple_connector.trends(start, end),
+        f"data/podcast/trends/{Metric.FOLLOWERS}/",
+        lambda: apple_connector.trends(start, end, metric=Metric.FOLLOWERS),
         open_podcast_client,
         start,
         end,
+        extra_meta={
+            "metric": Metric.FOLLOWERS,
+        },
+    )
+
+    end = dt.datetime.now()
+    start = dt.datetime.now() - dt.timedelta(days=7)
+    fetch_and_capture(
+        "trends",
+        f"data/podcast/trends/{Metric.LISTENERS}/{Dimension.BY_EPISODES}/",
+        lambda: apple_connector.trends(
+            start, end, metric=Metric.LISTENERS, dimension=Dimension.BY_EPISODES
+        ),
+        open_podcast_client,
+        start,
+        end,
+        extra_meta={
+            "metric": Metric.LISTENERS,
+            "dimension": Dimension.BY_EPISODES,
+        },
     )
 
     # Fetch podcast episodes
