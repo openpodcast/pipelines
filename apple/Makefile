@@ -9,3 +9,6 @@ docker-build:
 .PHONY: docker-run
 docker-run:
 	docker run --init -it --env-file .env -e 'CRON_SCHEDULE=* * * * *' openpodcast/apple-connector
+
+.env.sample:
+	envsync
