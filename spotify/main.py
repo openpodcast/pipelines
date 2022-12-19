@@ -8,14 +8,27 @@ from spotifyconnector import SpotifyConnector
 import requests
 import types
 
+def load_file_or_env(var, default=None):
+    """
+    Load environment variable from file or string
+    """
+    env_file = f"{var}_FILE"
+    if os.path.isfile(env_file):
+        with open(env_file, "r") as f:
+            return f.read().strip()
+    else:
+        return os.environ.get(var, default)
+
 BASE_URL = "https://generic.wg.spotify.com/podcasters/v0"
 CLIENT_ID = "05a1371ee5194c27860b3ff3ff3979d2"
+
+SP_DC = load_file_or_env("SPOTIFY_SP_DC")
+SP_KEY = load_file_or_env("SPOTIFY_SP_KEY")
+OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
+
 SPOTIFY_PODCAST_ID = os.environ.get("SPOTIFY_PODCAST_ID")
-SP_DC = os.environ.get("SPOTIFY_SP_DC")
-SP_KEY = os.environ.get("SPOTIFY_SP_KEY")
 FEED_URL = "https://feeds.redcircle.com/2c2cd740-1c1f-4928-adac-98a692dbf4c2"
-OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT")
-OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
+OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT", "https://api.openpodcast.dev")
 
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
