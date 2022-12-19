@@ -9,11 +9,38 @@ import requests
 import types
 import itertools
 
-PODCAST_ID = os.environ.get("PODCAST_ID")
-OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT")
-OPENPODCAST_API_TOKEN = os.environ.get("OPENPODCAST_API_TOKEN")
+
+def load_file_or_env(var, default=None):
+    """
+    Load environment variable from file or string
+    """
+    env_file = f"{var}_FILE"
+    if os.path.isfile(env_file):
+        with open(env_file, "r") as f:
+            return f.read().strip()
+    else:
+        return os.environ.get(var, default)
+
+
+def test_load_file_or_env():
+    os.environ["TEST_VAR"] = "test"
+    assert load_file_or_env("TEST_VAR") == "test"
+    assert load_file_or_env("TEST_VAR", "default") == "test"
+    assert load_file_or_env("TEST_VAR2", "default") == "default"
+    with open("TEST_VAR2_FILE", "w") as f:
+        f.write("test2")
+    assert load_file_or_env("TEST_VAR2", "default") == "test2"
+
+
 APPLE_AUTOMATION_ENDPOINT = "https://apple-automation.openpodcast.dev/cookies"
-APPLE_AUTOMATION_BEARER_TOKEN = os.environ.get("APPLE_AUTOMATION_BEARER_TOKEN")
+
+OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
+APPLE_AUTOMATION_BEARER_TOKEN = load_file_or_env("APPLE_AUTOMATION_BEARER_TOKEN")
+
+PODCAST_ID = os.environ.get("PODCAST_ID")
+OPENPODCAST_API_ENDPOINT = os.environ.get(
+    "OPENPODCAST_API_ENDPOINT", "https://api.openpodcast.dev"
+)
 
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
