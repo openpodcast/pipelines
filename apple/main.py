@@ -32,15 +32,16 @@ def test_load_file_or_env():
     assert load_file_or_env("TEST_VAR2", "default") == "test2"
 
 
-APPLE_AUTOMATION_ENDPOINT = "https://apple-automation.openpodcast.dev/cookies"
-
-OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
+# endpoint to receive apple cookie to access podcasters API
+APPLE_AUTOMATION_ENDPOINT = load_file_or_env("APPLE_AUTOMATION_ENDPOINT")
 APPLE_AUTOMATION_BEARER_TOKEN = load_file_or_env("APPLE_AUTOMATION_BEARER_TOKEN")
 
-PODCAST_ID = os.environ.get("PODCAST_ID")
-OPENPODCAST_API_ENDPOINT = os.environ.get(
-    "OPENPODCAST_API_ENDPOINT", "https://api.openpodcast.dev"
-)
+# ID of the podcast we want to fetch data for
+APPLE_PODCAST_ID = os.environ.get("APPLE_PODCAST_ID")
+
+# Open Podcast API endpoint and token to submit data fetched from the spotify endpoint
+OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT", "https://api.openpodcast.dev")
+OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
@@ -131,7 +132,7 @@ def fetch_and_capture(
         meta={
             **extra_meta,
             **{
-                "show": PODCAST_ID,
+                "show": APPLE_PODCAST_ID,
                 "endpoint": endpoint_name,
             },
         },
@@ -185,7 +186,7 @@ def main():
     logger.info(f"Got cookies: {myacinfo}, {itctx}")
 
     apple_connector = AppleConnector(
-        podcast_id=PODCAST_ID,
+        podcast_id=APPLE_PODCAST_ID,
         myacinfo=myacinfo,
         itctx=itctx,
     )
