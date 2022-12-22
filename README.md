@@ -1,26 +1,24 @@
-# 📈 Open Podcast Metrics
+# 📈 Open Podcast Metrics Pipelines
 
-We want to make podcast metrics more accessible to the public. We believe that
-podcast metrics should be open and available to everyone.
+This repo contains two pipelines for collecting and processing podcast metrics data
+from Spotify and Apple. It used the following connector libs:
 
-This is a set of connectors and scripts to collect podcast metrics.
-We use the Podcast Hosting API's to get the latest metrics 
-and send them to our [Open Podcast API] instance.
+- Spotify: <https://github.com/openpodcast/spotify-connector> 
+- Apple: <https://github.com/openpodcast/apple-connector> 
 
+A pipeline consists of a docker image which uses cron to run the connector periodically
+and forwards the fetched data to the Open Podcast api.
 
-## Connectors
+# Getting started
 
-So far, we collect data from the following sources:
-
-- Spotify
-- Apple
-
-Please see the subdirectories for more information.
+Have a look at <https://github.com/openpodcast/stack> to see a full stack
+which also consists of the pipeline containers to fetch data from Spotify and Apple.
 
 ## Contributing
 
-If you also want to collect metrics for your podcast, please reach out
-or directly create an issue. We'll get you onboarded.
+If you also want to collect metrics for your podcast,
+have a look at <https://github.com/openpodcast/stack>
+or reach out. We'll get you onboarded.
 
 You can also help contribute or request new connectors.
 
