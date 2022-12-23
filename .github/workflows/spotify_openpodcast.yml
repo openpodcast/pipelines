@@ -35,11 +35,10 @@ jobs:
         run: python main.py
         env:
           OPENPODCAST_API_ENDPOINT: https://api.openpodcast.dev
+          OPENPODCAST_API_TOKEN: ${{ secrets.OPENPODCAST_API_TOKEN }}
           SPOTIFY_PODCAST_ID: ${{ secrets.SPOTIFY_PODCAST_ID }}
           SPOTIFY_SP_DC: ${{ secrets.SPOTIFY_SP_DC }}
           SPOTIFY_SP_KEY: ${{ secrets.SPOTIFY_SP_KEY }}
-          PH_PROJECT_API_KEY: ${{ secrets.PH_PROJECT_API_KEY }}
-          OPENPODCAST_API_TOKEN: ${{ secrets.OPENPODCAST_API_TOKEN }}
           STORE_DATA: ${{ inputs.debug }}
 
       - name: Commit data
