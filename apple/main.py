@@ -1,3 +1,5 @@
+print("Starting Apple connector")
+
 import os
 import datetime as dt
 import json
@@ -9,17 +11,15 @@ import requests
 import types
 import itertools
 
-
 def load_file_or_env(var, default=None):
     """
     Load environment variable from file or string
     """
-    env_file = f"{var}_FILE"
-    if os.path.isfile(env_file):
-        with open(env_file, "r") as f:
+    env_file_path = os.environ.get(f"{var}_FILE", None)
+    if env_file_path and os.path.isfile(env_file_path):
+        with open(env_file_path, "r") as f:
             return f.read().strip()
-    else:
-        return os.environ.get(var, default)
+    return os.environ.get(var, default)
 
 
 def test_load_file_or_env():
@@ -31,6 +31,8 @@ def test_load_file_or_env():
         f.write("test2")
     assert load_file_or_env("TEST_VAR2", "default") == "test2"
 
+print("Launching connector.")
+print("Initializing environment")
 
 # endpoint to receive apple cookie to access podcasters API
 APPLE_AUTOMATION_ENDPOINT = load_file_or_env("APPLE_AUTOMATION_ENDPOINT")
@@ -48,6 +50,7 @@ OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 # Load from environment variable if set, otherwise default to 0
 STORE_DATA = os.environ.get("STORE_DATA", "False") == "True"
 
+print("Done initializing environment")
 
 class OpenPodcastApi:
     def __init__(self, endpoint, token):

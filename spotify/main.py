@@ -1,3 +1,5 @@
+print("Starting Spotify connector")
+
 import os
 import datetime as dt
 import json
@@ -12,12 +14,14 @@ def load_file_or_env(var, default=None):
     """
     Load environment variable from file or string
     """
-    env_file = f"{var}_FILE"
-    if os.path.isfile(env_file):
-        with open(env_file, "r") as f:
+    env_file_path = os.environ.get(f"{var}_FILE", None)
+    if env_file_path and os.path.isfile(env_file_path):
+        with open(env_file_path, "r") as f:
             return f.read().strip()
-    else:
-        return os.environ.get(var, default)
+    return os.environ.get(var, default)
+
+print("Launching connector.")
+print("Initializing environment")
 
 BASE_URL = load_file_or_env("SPOTIFY_BASE_URL","https://generic.wg.spotify.com/podcasters/v0")
 
@@ -39,6 +43,8 @@ OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
 STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
+
+print("Done initializing environment")
 
 class OpenPodcastApi:
     def __init__(self, endpoint, token):
