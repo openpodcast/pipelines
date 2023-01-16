@@ -10,6 +10,7 @@ from spotifyconnector import SpotifyConnector
 import requests
 import types
 
+
 def load_file_or_env(var, default=None):
     """
     Load environment variable from file or string
@@ -20,13 +21,18 @@ def load_file_or_env(var, default=None):
             return f.read().strip()
     return os.environ.get(var, default)
 
+
 print("Launching connector.")
 print("Initializing environment")
 
-BASE_URL = load_file_or_env("SPOTIFY_BASE_URL","https://generic.wg.spotify.com/podcasters/v0")
+BASE_URL = load_file_or_env(
+    "SPOTIFY_BASE_URL", "https://generic.wg.spotify.com/podcasters/v0"
+)
 
 # Spotify client ID which represents the app (in our case the podcasters app)
-SPOTIFY_CLIENT_ID = load_file_or_env("SPOTIFY_CLIENT_ID","05a1371ee5194c27860b3ff3ff3979d2")
+SPOTIFY_CLIENT_ID = load_file_or_env(
+    "SPOTIFY_CLIENT_ID", "05a1371ee5194c27860b3ff3ff3979d2"
+)
 
 # Spotify cookies needed to authenticate
 SP_DC = load_file_or_env("SPOTIFY_SP_DC")
@@ -36,7 +42,9 @@ SP_KEY = load_file_or_env("SPOTIFY_SP_KEY")
 SPOTIFY_PODCAST_ID = load_file_or_env("SPOTIFY_PODCAST_ID")
 
 # Open Podcast API endpoint and token to submit data fetched from the spotify endpoint
-OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT", "https://api.openpodcast.dev")
+OPENPODCAST_API_ENDPOINT = os.environ.get(
+    "OPENPODCAST_API_ENDPOINT", "https://api.openpodcast.dev"
+)
 OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 
 # Store data locally for debugging. If this is set to `False`,
@@ -45,6 +53,7 @@ OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 
 print("Done initializing environment")
+
 
 class OpenPodcastApi:
     def __init__(self, endpoint, token):
@@ -83,7 +92,7 @@ def fetch_and_capture(
     start,
     end,
     extra_meta={},
-    fallible=False,
+    continueOnError=False,
 ):
     """
     Wrapper function to fetch data from Spotify and directly send to Open Podcast API.
@@ -94,9 +103,12 @@ def fetch_and_capture(
     except Exception as e:
         logger.error(f"Failed to fetch data from {endpoint_name} endpoint: {e}")
 
-        if fallible:
-            # Silently ignore errors because for some endpoints we don't have
-            # data
+        if continueOnError:
+            logger.error(
+                f"Encountered a non-critical error while fetching {endpoint_name}: {e}."
+                "Maybe the data is not available yet."
+                "Continuing because continueOnError is set to True"
+            )
             return
         else:
             # Raise error if endpoint is not fallible (default)
@@ -183,7 +195,7 @@ def main():
         open_podcast_client,
         start,
         end,
-        fallible=True,
+        continueOnError=True,
     )
 
     start = dt.datetime.now() - dt.timedelta(days=3)
@@ -195,7 +207,7 @@ def main():
         open_podcast_client,
         start,
         end,
-        fallible=True,
+        continueOnError=True,
     )
 
     for i in range(3):
@@ -208,7 +220,7 @@ def main():
             open_podcast_client,
             start,
             end,
-            fallible=True,
+            continueOnError=True,
         )
 
     start = dt.datetime.now() - dt.timedelta(days=3)
@@ -220,7 +232,7 @@ def main():
         open_podcast_client,
         start,
         end,
-        fallible=True,
+        continueOnError=True,
     )
 
     # Fetch all episodes. We need to specify a range here because the API
@@ -283,7 +295,7 @@ def main():
             extra_meta={
                 "episode": id,
             },
-            fallible=True,
+            continueOnError=True,
         )
 
         # Fetch aggregate data for the episode in 3x1 day changes
