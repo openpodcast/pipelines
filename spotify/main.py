@@ -183,6 +183,7 @@ def main():
         open_podcast_client,
         start,
         end,
+        fallible=True,
     )
 
     start = dt.datetime.now() - dt.timedelta(days=3)
@@ -194,6 +195,7 @@ def main():
         open_podcast_client,
         start,
         end,
+        fallible=True,
     )
 
     for i in range(3):
@@ -206,6 +208,7 @@ def main():
             open_podcast_client,
             start,
             end,
+            fallible=True,
         )
 
     start = dt.datetime.now() - dt.timedelta(days=3)
@@ -217,6 +220,7 @@ def main():
         open_podcast_client,
         start,
         end,
+        fallible=True,
     )
 
     # Fetch all episodes. We need to specify a range here because the API
