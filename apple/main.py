@@ -203,21 +203,10 @@ def main():
         logger.error("Open Podcast API is not up. Quitting")
         sys.exit(1)
 
-    start = dt.datetime.now() - dt.timedelta(days=1)
-    end = dt.datetime.now()
-    fetch_and_capture(
-        "overview",
-        "data/podcast/overview/",
-        lambda: apple_connector.overview(),
-        open_podcast_client,
-        start,
-        end,
-    )
-
     end = dt.datetime.now()
     start = dt.datetime.now() - dt.timedelta(days=7)
     fetch_and_capture(
-        "trends",
+        "showTrends/Followers",
         f"data/podcast/trends/{Metric.FOLLOWERS}/",
         lambda: apple_connector.trends(start, end, metric=Metric.FOLLOWERS),
         open_podcast_client,
@@ -231,7 +220,7 @@ def main():
     end = dt.datetime.now()
     start = dt.datetime.now() - dt.timedelta(days=7)
     fetch_and_capture(
-        "trends",
+        "showTrends/Listeners",
         f"data/podcast/trends/{Metric.LISTENERS}/{Dimension.BY_EPISODES}/",
         lambda: apple_connector.trends(
             start, end, metric=Metric.LISTENERS, dimension=Dimension.BY_EPISODES
