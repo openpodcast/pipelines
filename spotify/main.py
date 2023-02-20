@@ -210,9 +210,12 @@ def main():
         continueOnError=True,
     )
 
+    # Fetch aggregate data for the podcast in 3x1 day changes
+    # (yesterday, the day before yesterday, and the day before that)
+    # Otherwise you get aggregated data of 3 days.
     for i in range(3):
-        end = dt.datetime.now() - dt.timedelta(days=i)
-        start = end - dt.timedelta(days=1)
+        end = dt.datetime.now() - dt.timedelta(days=i+1) #start from yesterday
+        start = end #as we want 1 day we use the same start and end date
         fetch_and_capture(
             "aggregate",
             "data/podcast/aggregate/",
@@ -299,11 +302,11 @@ def main():
         )
 
         # Fetch aggregate data for the episode in 3x1 day changes
-        # (today, yesterday, the day before yesterday)
+        # (yesterday, the day before yesterday, and the day before that)
         # Otherwise you get aggregated data of 3 days.
         for i in range(3):
-            end = dt.datetime.now() - dt.timedelta(days=i)
-            start = end - dt.timedelta(days=1)
+            end = dt.datetime.now() - dt.timedelta(days=i+1) #start from yesterday
+            start = end #as we want 1 day we use the same start and end date
             fetch_and_capture(
                 "aggregate",
                 f"data/episodes/aggregate/{id}-",
