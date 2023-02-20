@@ -6,7 +6,7 @@ from Spotify and Apple. It uses the following connector libs:
 - Spotify: <https://github.com/openpodcast/spotify-connector> 
 - Apple: <https://github.com/openpodcast/apple-connector> 
 
-A pipeline consists of a docker image which uses cron to run the connector periodically
+A pipeline consists of a Docker image which uses cron to run the connector periodically
 and forwards the fetched data to the Open Podcast api.
 
 # Getting started
