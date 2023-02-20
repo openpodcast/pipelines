@@ -1,7 +1,7 @@
 # 📈 Open Podcast Metrics Pipelines
 
 This repo contains two pipelines for collecting and processing podcast metrics data
-from Spotify and Apple. It used the following connector libs:
+from Spotify and Apple. It uses the following connector libs:
 
 - Spotify: <https://github.com/openpodcast/spotify-connector> 
 - Apple: <https://github.com/openpodcast/apple-connector> 
