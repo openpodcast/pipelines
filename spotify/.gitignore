@@ -1,3 +1,4 @@
 .env
 venv
 .env_engineering_kiosk
+envs

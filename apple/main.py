@@ -1,3 +1,5 @@
+print("Starting Apple connector")
+
 import os
 import datetime as dt
 import json
@@ -9,17 +11,15 @@ import requests
 import types
 import itertools
 
-
 def load_file_or_env(var, default=None):
     """
     Load environment variable from file or string
     """
-    env_file = f"{var}_FILE"
-    if os.path.isfile(env_file):
-        with open(env_file, "r") as f:
+    env_file_path = os.environ.get(f"{var}_FILE", None)
+    if env_file_path and os.path.isfile(env_file_path):
+        with open(env_file_path, "r") as f:
             return f.read().strip()
-    else:
-        return os.environ.get(var, default)
+    return os.environ.get(var, default)
 
 
 def test_load_file_or_env():
@@ -31,22 +31,26 @@ def test_load_file_or_env():
         f.write("test2")
     assert load_file_or_env("TEST_VAR2", "default") == "test2"
 
+print("Launching connector.")
+print("Initializing environment")
 
-APPLE_AUTOMATION_ENDPOINT = "https://apple-automation.openpodcast.dev/cookies"
-
-OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
+# endpoint to receive apple cookie to access podcasters API
+APPLE_AUTOMATION_ENDPOINT = load_file_or_env("APPLE_AUTOMATION_ENDPOINT")
 APPLE_AUTOMATION_BEARER_TOKEN = load_file_or_env("APPLE_AUTOMATION_BEARER_TOKEN")
 
-PODCAST_ID = os.environ.get("PODCAST_ID")
-OPENPODCAST_API_ENDPOINT = os.environ.get(
-    "OPENPODCAST_API_ENDPOINT", "https://api.openpodcast.dev"
-)
+# ID of the podcast we want to fetch data for
+APPLE_PODCAST_ID = os.environ.get("APPLE_PODCAST_ID")
+
+# Open Podcast API endpoint and token to submit data fetched from the spotify endpoint
+OPENPODCAST_API_ENDPOINT = os.environ.get("OPENPODCAST_API_ENDPOINT", "https://api.openpodcast.dev")
+OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
 STORE_DATA = os.environ.get("STORE_DATA", "False") == "True"
 
+print("Done initializing environment")
 
 class OpenPodcastApi:
     def __init__(self, endpoint, token):
@@ -131,7 +135,7 @@ def fetch_and_capture(
         meta={
             **extra_meta,
             **{
-                "show": PODCAST_ID,
+                "show": APPLE_PODCAST_ID,
                 "endpoint": endpoint_name,
             },
         },
@@ -185,7 +189,7 @@ def main():
     logger.info(f"Got cookies: {myacinfo}, {itctx}")
 
     apple_connector = AppleConnector(
-        podcast_id=PODCAST_ID,
+        podcast_id=APPLE_PODCAST_ID,
         myacinfo=myacinfo,
         itctx=itctx,
     )
@@ -199,21 +203,10 @@ def main():
         logger.error("Open Podcast API is not up. Quitting")
         sys.exit(1)
 
-    start = dt.datetime.now() - dt.timedelta(days=1)
-    end = dt.datetime.now()
-    fetch_and_capture(
-        "overview",
-        "data/podcast/overview/",
-        lambda: apple_connector.overview(),
-        open_podcast_client,
-        start,
-        end,
-    )
-
     end = dt.datetime.now()
     start = dt.datetime.now() - dt.timedelta(days=7)
     fetch_and_capture(
-        "trends",
+        "showTrends/Followers",
         f"data/podcast/trends/{Metric.FOLLOWERS}/",
         lambda: apple_connector.trends(start, end, metric=Metric.FOLLOWERS),
         open_podcast_client,
@@ -227,7 +220,7 @@ def main():
     end = dt.datetime.now()
     start = dt.datetime.now() - dt.timedelta(days=7)
     fetch_and_capture(
-        "trends",
+        "showTrends/Listeners",
         f"data/podcast/trends/{Metric.LISTENERS}/{Dimension.BY_EPISODES}/",
         lambda: apple_connector.trends(
             start, end, metric=Metric.LISTENERS, dimension=Dimension.BY_EPISODES

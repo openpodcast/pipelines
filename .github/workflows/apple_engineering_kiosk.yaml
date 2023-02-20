@@ -34,10 +34,11 @@ jobs:
       - name: Run Connector
         run: python main.py
         env:
+          APPLE_AUTOMATION_ENDPOINT: https://apple-automation.openpodcast.dev/cookies
           APPLE_AUTOMATION_BEARER_TOKEN: ${{ secrets.APPLE_AUTOMATION_BEARER_TOKEN_ENGINEERING_KIOSK }}
           OPENPODCAST_API_ENDPOINT: https://api.openpodcast.dev
           OPENPODCAST_API_TOKEN: ${{ secrets.OPENPODCAST_API_TOKEN_ENGINEERING_KIOSK }}
-          PODCAST_ID: ${{ secrets.APPLE_PODCAST_ID_ENGINEERING_KIOSK }}
+          APPLE_PODCAST_ID: ${{ secrets.APPLE_PODCAST_ID_ENGINEERING_KIOSK }}
 
       - name: Commit data
         uses: stefanzweifel/git-auto-commit-action@v4.1.2
