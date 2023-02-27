@@ -52,6 +52,11 @@ OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 # Load from environment variable if set, otherwise default to 0
 STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 
+# Start- and end-date for the data we want to fetch
+# Load from environment variable if set, otherwise default to current date
+START_DATE = os.environ.get("START_DATE", (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d"))
+END_DATE = os.environ.get("END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d"))
+
 print("Done initializing environment")
 
 
@@ -158,6 +163,27 @@ def api_healthcheck(open_podcast_client):
 
 
 def main():
+
+    # Convert start and end date to datetime objects
+    try:
+        start_date = dt.datetime.strptime(START_DATE, "%Y-%m-%d")
+    except ValueError:
+        logger.error(f"Start date is not in the correct format. Should be %Y-%m-%d, but is {START_DATE}. Quitting")
+        sys.exit(1)
+
+    try:
+        end_date = dt.datetime.strptime(END_DATE, "%Y-%m-%d")
+    except ValueError:
+        logger.error(f"End date is not in the correct format. Should be %Y-%m-%d, but is {END_DATE}. Quitting")
+        sys.exit(1)
+
+    if start_date > end_date:
+        logger.error("Invalid date range: End date is before start date. Quitting")
+        sys.exit(1)
+
+    # Calculate the number of days between start and end date
+    days_diff_start_end = (end_date - start_date).days
+
     spotify_connector = SpotifyConnector(
         base_url=BASE_URL,
         client_id=SPOTIFY_CLIENT_ID,
@@ -175,47 +201,42 @@ def main():
         logger.error("Open Podcast API is not up. Quitting")
         sys.exit(1)
 
-    start = dt.datetime.now() - dt.timedelta(days=1)
-    end = dt.datetime.now()
     fetch_and_capture(
         "metadata",
         "data/podcast/metadata/",
         lambda: spotify_connector.metadata(),
         open_podcast_client,
-        start,
-        end,
+        start_date,
+        end_date,
     )
 
-    start = dt.datetime.now() - dt.timedelta(days=3)
-    end = dt.datetime.now()
     fetch_and_capture(
         "detailedStreams",
         "data/podcast/streams/",
-        lambda: spotify_connector.streams(start, end),
+        lambda: spotify_connector.streams(start_date, end_date),
         open_podcast_client,
-        start,
-        end,
+        start_date,
+        end_date,
         continueOnError=True,
     )
 
-    start = dt.datetime.now() - dt.timedelta(days=3)
-    end = dt.datetime.now()
     fetch_and_capture(
         "listeners",
         "data/podcast/listeners/",
-        lambda: spotify_connector.listeners(start, end),
+        lambda: spotify_connector.listeners(start_date, end_date),
         open_podcast_client,
-        start,
-        end,
+        start_date,
+        end_date,
         continueOnError=True,
     )
 
     # Fetch aggregate data for the podcast in 3x1 day changes
     # (yesterday, the day before yesterday, and the day before that)
     # Otherwise you get aggregated data of 3 days.
-    for i in range(3):
-        end = dt.datetime.now() - dt.timedelta(days=i+1) #start from yesterday
-        start = end #as we want 1 day we use the same start and end date
+    for i in range(days_diff_start_end):
+        # end date is today, then yesterday, then the day before yesterday
+        end = end_date - dt.timedelta(days=i) 
+        start = end # as we want 1 day we use the same start and end date
         fetch_and_capture(
             "aggregate",
             "data/podcast/aggregate/",
@@ -226,15 +247,13 @@ def main():
             continueOnError=True,
         )
 
-    start = dt.datetime.now() - dt.timedelta(days=3)
-    end = dt.datetime.now()
     fetch_and_capture(
         "followers",
         "data/podcast/followers/",
-        lambda: spotify_connector.followers(start, end),
+        lambda: spotify_connector.followers(start_date, end_date),
         open_podcast_client,
-        start,
-        end,
+        start_date,
+        end_date,
         continueOnError=True,
     )
 
@@ -258,43 +277,39 @@ def main():
         # but we don't use it at the moment.
         # fetch_and_capture("episode_metadata", f"data/episodes/metadata/{id}", lambda: spotify_connector.episode_metadata(id, start, end), open_podcast_client, start, end)
 
-        start = dt.datetime.now() - dt.timedelta(days=3)
-        end = dt.datetime.now()
         fetch_and_capture(
             "detailedStreams",
             f"data/episodes/streams/{id}-",
-            lambda: spotify_connector.streams(start, end, episode=id),
+            lambda: spotify_connector.streams(start_date, end_date, episode=id),
             open_podcast_client,
-            start,
-            end,
+            start_date,
+            end_date,
             extra_meta={
                 "episode": id,
             },
         )
 
-        start = dt.datetime.now() - dt.timedelta(days=30)
-        end = dt.datetime.now()
         fetch_and_capture(
             "listeners",
             f"data/episodes/listeners/{id}-",
-            lambda: spotify_connector.listeners(start, end, episode=id),
+            lambda: spotify_connector.listeners(start_date, end_date, episode=id),
             open_podcast_client,
-            start,
-            end,
+            start_date,
+            end_date,
             extra_meta={
                 "episode": id,
             },
         )
 
-        start = dt.datetime.now() - dt.timedelta(days=30)
-        end = dt.datetime.now()
+        # Performance doesn't consider dates at all, so we can use the default
+        # dates here as it's always the same response.
         fetch_and_capture(
             "performance",
             f"data/episodes/performance/{id}-",
             lambda: spotify_connector.performance(id),
             open_podcast_client,
-            start,
-            end,
+            start_date,
+            end_date,
             extra_meta={
                 "episode": id,
             },
@@ -304,8 +319,8 @@ def main():
         # Fetch aggregate data for the episode in 3x1 day changes
         # (yesterday, the day before yesterday, and the day before that)
         # Otherwise you get aggregated data of 3 days.
-        for i in range(3):
-            end = dt.datetime.now() - dt.timedelta(days=i+1) #start from yesterday
+        for i in range(days_diff_start_end):
+            end = end_date - dt.timedelta(days=i) #start from yesterday
             start = end #as we want 1 day we use the same start and end date
             fetch_and_capture(
                 "aggregate",

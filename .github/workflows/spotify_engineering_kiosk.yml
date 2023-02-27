@@ -8,6 +8,16 @@ on:
         default: false
         required: false
         type: boolean
+      start:
+        description: "Start date"
+        default: "2023-01-01"
+        required: false
+        type: string
+      end:
+        description: "End date"
+        default: "2023-12-31"
+        required: false
+        type: string
   schedule:
     - cron: "00 11 * * *"
 
