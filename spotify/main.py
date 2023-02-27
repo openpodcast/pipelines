@@ -315,8 +315,8 @@ def main():
             continueOnError=True,
         )
 
-    # Fetch aggregate data for the podcast on X defined days
-    # as start and end should be included we need to add 1
+        # Fetch aggregate data for the podcast on X defined days
+        # as start and end should be included we need to add 1
         for i in range(days_diff_start_end+1):
             end = end_date - dt.timedelta(days=i) #start from yesterday
             start = end #as we want 1 day we use the same start and end date
