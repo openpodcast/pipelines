@@ -184,6 +184,10 @@ def main():
     # Calculate the number of days between start and end date
     days_diff_start_end = (end_date - start_date).days
 
+    logger.info(f"Start date: {start_date.strftime('%d %B %Y')}")
+    logger.info(f"End date: {end_date.strftime('%d %B %Y')}")
+    logger.info(f"Number of days: {days_diff_start_end}")
+
     spotify_connector = SpotifyConnector(
         base_url=BASE_URL,
         client_id=SPOTIFY_CLIENT_ID,
