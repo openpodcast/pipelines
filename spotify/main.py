@@ -181,6 +181,9 @@ def main():
         logger.error("Invalid date range: End date is before start date. Quitting")
         sys.exit(1)
 
+    # Calculate the number of days between start and end date
+    days_diff_start_end = (end_datetime - start_datetime).days
+
     spotify_connector = SpotifyConnector(
         base_url=BASE_URL,
         client_id=SPOTIFY_CLIENT_ID,
@@ -233,13 +236,10 @@ def main():
         continueOnError=True,
     )
 
-    # Calculate the number of days between start and end date
-    days = (end_datetime - start_datetime).days
-
     # Fetch aggregate data for the podcast in 3x1 day changes
     # (yesterday, the day before yesterday, and the day before that)
     # Otherwise you get aggregated data of 3 days.
-    for i in range(days):
+    for i in range(days_diff_start_end):
         end = end_datetime - dt.timedelta(days=i+1) #start from yesterday
         start = end #as we want 1 day we use the same start and end date
         fetch_and_capture(
@@ -330,7 +330,7 @@ def main():
         # Fetch aggregate data for the episode in 3x1 day changes
         # (yesterday, the day before yesterday, and the day before that)
         # Otherwise you get aggregated data of 3 days.
-        for i in range(days):
+        for i in range(days_diff_start_end):
             end = end_datetime - dt.timedelta(days=i+1) #start from yesterday
             start = end #as we want 1 day we use the same start and end date
             fetch_and_capture(
