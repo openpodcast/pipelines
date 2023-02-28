@@ -1,5 +1,3 @@
-print("Starting Spotify connector")
-
 import os
 import datetime as dt
 import json
@@ -9,6 +7,8 @@ from loguru import logger
 from spotifyconnector import SpotifyConnector
 import requests
 import types
+
+print("Starting Spotify connector")
 
 
 def load_file_or_env(var, default=None):
@@ -85,7 +85,6 @@ class OpenPodcastApi:
     def __init__(self, endpoint, token):
         self.endpoint = endpoint
         self.token = token
-        pass
 
     def capture(self, data, range, meta={}):
         """
