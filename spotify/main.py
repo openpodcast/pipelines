@@ -65,18 +65,21 @@ END_DATE = os.environ.get(
 # We split them into two groups because some endpoint names are identical
 # This has the added benefit that we can completely skip fetching episode data
 # by setting `EPISODE_ENDPOINTS` to an empty string
-DEFAULT_PODCAST_ENDPOINTS="metadata,detailedStreams,listeners,aggregate,followers,episodes"
+DEFAULT_PODCAST_ENDPOINTS = (
+    "metadata,detailedStreams,listeners,aggregate,followers,episodes"
+)
 PODCAST_ENDPOINTS = os.environ.get("PODCAST_ENDPOINTS")
 # Extra check to make sure we don't end up with an empty string
 if not PODCAST_ENDPOINTS:
     PODCAST_ENDPOINTS = DEFAULT_PODCAST_ENDPOINTS
 
-DEFAULT_EPISODE_ENDPOINTS="detailedStreams,listeners,performance,aggregate"
+DEFAULT_EPISODE_ENDPOINTS = "detailedStreams,listeners,performance,aggregate"
 EPISODE_ENDPOINTS = os.environ.get("EPISODE_ENDPOINTS")
 if not EPISODE_ENDPOINTS:
     EPISODE_ENDPOINTS = DEFAULT_EPISODE_ENDPOINTS
 
 print("Done initializing environment")
+
 
 class OpenPodcastApi:
     def __init__(self, endpoint, token):
@@ -124,7 +127,9 @@ def fetch_and_capture(
     logger.info(f"Fetching {endpoint_name}")
 
     if endpoint_name not in endpoints:
-        logger.info(f"Skipping {endpoint_name} because it's not in the list of endpoints")
+        logger.info(
+            f"Skipping {endpoint_name} because it's not in the list of endpoints"
+        )
         return
 
     try:
@@ -271,9 +276,9 @@ def main():
 
     # Fetch aggregate data for the podcast on X defined days
     # as start and end should be included we need to add 1
-    for i in range(days_diff_start_end+1):
-        end = end_date - dt.timedelta(days=i) 
-        start = end # as we want 1 day we use the same start and end date
+    for i in range(days_diff_start_end + 1):
+        end = end_date - dt.timedelta(days=i)
+        start = end  # as we want 1 day we use the same start and end date
         fetch_and_capture(
             "aggregate",
             "data/podcast/aggregate/",
@@ -361,9 +366,9 @@ def main():
 
         # Fetch aggregate data for the podcast on X defined days
         # as start and end should be included we need to add 1
-        for i in range(days_diff_start_end+1):
-            end = end_date - dt.timedelta(days=i) #start from yesterday
-            start = end #as we want 1 day we use the same start and end date
+        for i in range(days_diff_start_end + 1):
+            end = end_date - dt.timedelta(days=i)  # start from yesterday
+            start = end  # as we want 1 day we use the same start and end date
             fetch_and_capture(
                 "aggregate",
                 f"data/episodes/aggregate/{id}-",
