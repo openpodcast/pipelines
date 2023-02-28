@@ -1,5 +1,3 @@
-print("Starting Spotify connector")
-
 import os
 import datetime as dt
 import json
@@ -9,6 +7,8 @@ from loguru import logger
 from spotifyconnector import SpotifyConnector
 import requests
 import types
+
+print("Starting Spotify connector")
 
 
 def load_file_or_env(var, default=None):
@@ -54,8 +54,29 @@ STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise default to current date
-START_DATE = os.environ.get("START_DATE", (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d"))
-END_DATE = os.environ.get("END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d"))
+START_DATE = os.environ.get(
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d")
+)
+END_DATE = os.environ.get(
+    "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
+)
+
+# List of endpoints to fetch data from
+# We split them into two groups because some endpoint names are identical
+# This has the added benefit that we can completely skip fetching episode data
+# by setting `EPISODE_ENDPOINTS` to an empty string
+DEFAULT_PODCAST_ENDPOINTS = (
+    "metadata,detailedStreams,listeners,aggregate,followers,episodes"
+)
+PODCAST_ENDPOINTS = os.environ.get("PODCAST_ENDPOINTS")
+# Extra check to make sure we don't end up with an empty string
+if not PODCAST_ENDPOINTS:
+    PODCAST_ENDPOINTS = DEFAULT_PODCAST_ENDPOINTS
+
+DEFAULT_EPISODE_ENDPOINTS = "detailedStreams,listeners,performance,aggregate"
+EPISODE_ENDPOINTS = os.environ.get("EPISODE_ENDPOINTS")
+if not EPISODE_ENDPOINTS:
+    EPISODE_ENDPOINTS = DEFAULT_EPISODE_ENDPOINTS
 
 print("Done initializing environment")
 
@@ -64,7 +85,6 @@ class OpenPodcastApi:
     def __init__(self, endpoint, token):
         self.endpoint = endpoint
         self.token = token
-        pass
 
     def capture(self, data, range, meta={}):
         """
@@ -96,6 +116,7 @@ def fetch_and_capture(
     open_podcast_client,
     start,
     end,
+    endpoints,
     extra_meta={},
     continueOnError=False,
 ):
@@ -103,6 +124,13 @@ def fetch_and_capture(
     Wrapper function to fetch data from Spotify and directly send to Open Podcast API.
     """
     logger.info(f"Fetching {endpoint_name}")
+
+    if endpoint_name not in endpoints:
+        logger.info(
+            f"Skipping {endpoint_name} because it's not in the list of endpoints"
+        )
+        return
+
     try:
         data = connector_call()
     except Exception as e:
@@ -168,17 +196,28 @@ def main():
     try:
         start_date = dt.datetime.strptime(START_DATE, "%Y-%m-%d")
     except ValueError:
-        logger.error(f"Start date is not in the correct format. Should be %Y-%m-%d, but is {START_DATE}. Quitting")
+        logger.error(
+            f"Start date is not in the correct format. Should be %Y-%m-%d, but is {START_DATE}. Quitting"
+        )
         sys.exit(1)
 
     try:
         end_date = dt.datetime.strptime(END_DATE, "%Y-%m-%d")
     except ValueError:
-        logger.error(f"End date is not in the correct format. Should be %Y-%m-%d, but is {END_DATE}. Quitting")
+        logger.error(
+            f"End date is not in the correct format. Should be %Y-%m-%d, but is {END_DATE}. Quitting"
+        )
         sys.exit(1)
 
     if start_date > end_date:
         logger.error("Invalid date range: End date is before start date. Quitting")
+        sys.exit(1)
+
+    podcast_endpoints = PODCAST_ENDPOINTS.split(",")
+    episode_endpoints = EPISODE_ENDPOINTS.split(",")
+
+    if not podcast_endpoints and not episode_endpoints:
+        logger.error("No endpoints specified. Quitting")
         sys.exit(1)
 
     # Calculate the number of days between start and end date
@@ -209,6 +248,7 @@ def main():
         open_podcast_client,
         start_date,
         end_date,
+        podcast_endpoints,
     )
 
     fetch_and_capture(
@@ -218,6 +258,7 @@ def main():
         open_podcast_client,
         start_date,
         end_date,
+        podcast_endpoints,
         continueOnError=True,
     )
 
@@ -228,14 +269,15 @@ def main():
         open_podcast_client,
         start_date,
         end_date,
+        podcast_endpoints,
         continueOnError=True,
     )
 
     # Fetch aggregate data for the podcast on X defined days
     # as start and end should be included we need to add 1
-    for i in range(days_diff_start_end+1):
-        end = end_date - dt.timedelta(days=i) 
-        start = end # as we want 1 day we use the same start and end date
+    for i in range(days_diff_start_end + 1):
+        end = end_date - dt.timedelta(days=i)
+        start = end  # as we want 1 day we use the same start and end date
         fetch_and_capture(
             "aggregate",
             "data/podcast/aggregate/",
@@ -243,6 +285,7 @@ def main():
             open_podcast_client,
             start,
             end,
+            podcast_endpoints,
             continueOnError=True,
         )
 
@@ -253,6 +296,7 @@ def main():
         open_podcast_client,
         start_date,
         end_date,
+        podcast_endpoints,
         continueOnError=True,
     )
 
@@ -267,6 +311,7 @@ def main():
         open_podcast_client,
         start,
         end,
+        podcast_endpoints,
     )
 
     for episode in episodes["episodes"]:
@@ -283,6 +328,7 @@ def main():
             open_podcast_client,
             start_date,
             end_date,
+            episode_endpoints,
             extra_meta={
                 "episode": id,
             },
@@ -295,6 +341,7 @@ def main():
             open_podcast_client,
             start_date,
             end_date,
+            episode_endpoints,
             extra_meta={
                 "episode": id,
             },
@@ -309,6 +356,7 @@ def main():
             open_podcast_client,
             start_date,
             end_date,
+            episode_endpoints,
             extra_meta={
                 "episode": id,
             },
@@ -317,9 +365,9 @@ def main():
 
         # Fetch aggregate data for the podcast on X defined days
         # as start and end should be included we need to add 1
-        for i in range(days_diff_start_end+1):
-            end = end_date - dt.timedelta(days=i) #start from yesterday
-            start = end #as we want 1 day we use the same start and end date
+        for i in range(days_diff_start_end + 1):
+            end = end_date - dt.timedelta(days=i)  # start from yesterday
+            start = end  # as we want 1 day we use the same start and end date
             fetch_and_capture(
                 "aggregate",
                 f"data/episodes/aggregate/{id}-",
@@ -327,6 +375,7 @@ def main():
                 open_podcast_client,
                 start,
                 end,
+                episode_endpoints,
                 extra_meta={
                     "episode": id,
                 },

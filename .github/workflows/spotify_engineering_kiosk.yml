@@ -18,6 +18,14 @@ on:
         default: "2023-12-31"
         required: false
         type: string
+      podcast_endpoints:
+        description: "Podcast endpoints"
+        required: false
+        type: string
+      episode_endpoints:
+        description: "Episode endpoints"
+        required: false
+        type: string
   schedule:
     - cron: "00 11 * * *"
 
@@ -49,6 +57,10 @@ jobs:
           SPOTIFY_PODCAST_ID: ${{ secrets.SPOTIFY_PODCAST_ID_ENGINEERING_KIOSK }}
           SPOTIFY_SP_DC: ${{ secrets.SPOTIFY_SP_DC_ENGINEERING_KIOSK }}
           SPOTIFY_SP_KEY: ${{ secrets.SPOTIFY_SP_KEY_ENGINEERING_KIOSK }}
+          START_DATE: ${{ inputs.start }}
+          END_DATE: ${{ inputs.end }}
+          PODCAST_ENDPOINTS: ${{ inputs.podcast_endpoints }}}
+          EPISODE_ENDPOINTS: ${{ inputs.episode_endpoints }}}
           STORE_DATA: ${{ inputs.debug }}
 
       - name: Commit data
