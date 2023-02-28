@@ -217,6 +217,7 @@ def main():
         sys.exit(1)
 
     # Calculate the number of days between start and end date
+    # e.g. if start_date is 2020-01-01 and end_date is 2020-01-10, this will be 9
     days_diff_start_end = (end_date - start_date).days
 
     spotify_connector = SpotifyConnector(
@@ -268,13 +269,11 @@ def main():
         continueOnError=True,
     )
 
-    # Fetch aggregate data for the podcast in 3x1 day changes
-    # (yesterday, the day before yesterday, and the day before that)
-    # Otherwise you get aggregated data of 3 days.
-    for i in range(days_diff_start_end):
-        # end date is today, then yesterday, then the day before yesterday
-        end = end_date - dt.timedelta(days=i)
-        start = end  # as we want 1 day we use the same start and end date
+    # Fetch aggregate data for the podcast on X defined days
+    # as start and end should be included we need to add 1
+    for i in range(days_diff_start_end+1):
+        end = end_date - dt.timedelta(days=i) 
+        start = end # as we want 1 day we use the same start and end date
         fetch_and_capture(
             "aggregate",
             "data/podcast/aggregate/",
@@ -360,12 +359,11 @@ def main():
             continueOnError=True,
         )
 
-        # Fetch aggregate data for the episode in 1-day changes
-        # (i.e. yesterday, the day before yesterday, the day before that, etc.)
-        # Otherwise you get aggregated data of all days.
-        for i in range(days_diff_start_end):
-            end = end_date - dt.timedelta(days=i)  # start from yesterday
-            start = end  # as we want 1 day we use the same start and end date
+        # Fetch aggregate data for the podcast on X defined days
+        # as start and end should be included we need to add 1
+        for i in range(days_diff_start_end+1):
+            end = end_date - dt.timedelta(days=i) #start from yesterday
+            start = end #as we want 1 day we use the same start and end date
             fetch_and_capture(
                 "aggregate",
                 f"data/episodes/aggregate/{id}-",
