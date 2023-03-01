@@ -1,12 +1,19 @@
+"""
+Spotify importer for Open Podcast API
+"""
+
 import os
 import datetime as dt
 import json
 import sys
 import time
+import types
+
 from loguru import logger
 from spotifyconnector import SpotifyConnector
 import requests
-import types
+
+print("Starting Spotify connector")
 
 print("Starting Spotify connector")
 
@@ -17,8 +24,8 @@ def load_file_or_env(var, default=None):
     """
     env_file_path = os.environ.get(f"{var}_FILE", None)
     if env_file_path and os.path.isfile(env_file_path):
-        with open(env_file_path, "r") as f:
-            return f.read().strip()
+        with open(env_file_path, "r", encoding="utf-8") as env_file:
+            return env_file.read().strip()
     return os.environ.get(var, default)
 
 
@@ -82,31 +89,40 @@ print("Done initializing environment")
 
 
 class OpenPodcastApi:
+    """
+    Client for Open Podcast API.
+    """
+
     def __init__(self, endpoint, token):
         self.endpoint = endpoint
         self.token = token
 
-    def capture(self, data, range, meta={}):
+    def capture(self, data, data_range, meta=None):
         """
         Send POST request to Open Podcast API.
         """
+        if meta is None:
+            meta = {}
+
         headers = {"Authorization": f"Bearer {self.token}"}
-        json = {
+        payload = {
             "provider": "spotify",
             "version": 1,
             "retrieved": dt.datetime.now().isoformat(),
             "meta": meta,
-            "range": range,
+            "range": data_range,
             "data": data,
         }
-        return requests.post(f"{self.endpoint}/connector", headers=headers, json=json)
+        return requests.post(
+            f"{self.endpoint}/connector", headers=headers, json=payload, timeout=60
+        )
 
     def health(self):
         """
         Send GET request to the Open Podcast healthcheck endpoint `/health`.
         """
         logger.info(f"Checking health of {self.endpoint}/health")
-        return requests.get(f"{self.endpoint}/health")
+        return requests.get(f"{self.endpoint}/health", timeout=60)
 
 
 def fetch_and_capture(
@@ -117,13 +133,16 @@ def fetch_and_capture(
     start,
     end,
     endpoints,
-    extra_meta={},
-    continueOnError=False,
+    extra_meta=None,
+    continue_on_error=False,
 ):
     """
     Wrapper function to fetch data from Spotify and directly send to Open Podcast API.
     """
     logger.info(f"Fetching {endpoint_name}")
+
+    if extra_meta is None:
+        extra_meta = {}
 
     if endpoint_name not in endpoints:
         logger.info(
@@ -133,19 +152,18 @@ def fetch_and_capture(
 
     try:
         data = connector_call()
-    except Exception as e:
-        logger.error(f"Failed to fetch data from {endpoint_name} endpoint: {e}")
+    except requests.exceptions.RequestException as error:
+        logger.error(f"Failed to fetch data from {endpoint_name} endpoint: {error}")
 
-        if continueOnError:
+        if continue_on_error:
             logger.error(
-                f"Encountered a non-critical error while fetching {endpoint_name}: {e}."
+                f"Encountered a non-critical error while fetching {endpoint_name}: {error}."
                 "Maybe the data is not available yet."
-                "Continuing because continueOnError is set to True"
+                "Continuing because `continue_on_error` is set to True"
             )
             return
-        else:
-            # Raise error if endpoint is not fallible (default)
-            raise e
+        # Raise error if endpoint is not fallible (default)
+        raise error
 
     # If the data is a generator, we need convert it to a list with
     # `endpoint_name` as the key (e.g. for `episodes` and `detailedStreams`)
@@ -153,8 +171,8 @@ def fetch_and_capture(
         data = {endpoint_name: list(data)}
 
     if STORE_DATA:
-        with open(f"{file_path_prefix}{dt.datetime.now()}.json", "w+") as f:
-            json.dump(data, f)
+        with open(f"{file_path_prefix}{dt.datetime.now()}.json", "w+", encoding='utf-8') as debug_file:
+            json.dump(data, debug_file)
 
     result = open_podcast_client.capture(
         data,
@@ -166,7 +184,7 @@ def fetch_and_capture(
                 "endpoint": endpoint_name,
             },
         },
-        range={
+        data_range={
             "start": start.strftime("%Y-%m-%d"),
             "end": end.strftime("%Y-%m-%d"),
         },
@@ -180,17 +198,19 @@ def api_healthcheck(open_podcast_client):
     """
     Try three times to get 200 from healthcheck endpoint
     """
-    for i in range(3):
+    for _ in range(3):
         status = open_podcast_client.health()
         if status.status_code == 200:
             return True
-        else:
-            logger.info(f"Healthcheck failed, retrying in 5 seconds...")
-            time.sleep(5)
+        logger.info("Healthcheck failed, retrying in 5 seconds...")
+        time.sleep(5)
     return False
 
 
 def main():
+    """
+    Main function to fetch data from Spotify and send to Open Podcast API.
+    """
 
     # Convert start and end date to datetime objects
     try:
@@ -259,7 +279,7 @@ def main():
         start_date,
         end_date,
         podcast_endpoints,
-        continueOnError=True,
+        continue_on_error=True,
     )
 
     fetch_and_capture(
@@ -270,12 +290,13 @@ def main():
         start_date,
         end_date,
         podcast_endpoints,
-        continueOnError=True,
+        continue_on_error=True,
     )
 
     # Fetch aggregate data for the podcast on X defined days
     # as start and end should be included we need to add 1
     for i in range(days_diff_start_end + 1):
+
         end = end_date - dt.timedelta(days=i)
         start = end  # as we want 1 day we use the same start and end date
         fetch_and_capture(
@@ -286,7 +307,7 @@ def main():
             start,
             end,
             podcast_endpoints,
-            continueOnError=True,
+            continue_on_error=True,
         )
 
     fetch_and_capture(
@@ -297,7 +318,7 @@ def main():
         start_date,
         end_date,
         podcast_endpoints,
-        continueOnError=True,
+        continue_on_error=True,
     )
 
     # Fetch all episodes. We need to specify a range here because the API
@@ -315,7 +336,7 @@ def main():
     )
 
     for episode in episodes["episodes"]:
-        id = episode["id"]
+        episode_id = episode["id"]
 
         # Do we want to fetch episode metadata? It is supported by the client
         # but we don't use it at the moment.
@@ -323,27 +344,27 @@ def main():
 
         fetch_and_capture(
             "detailedStreams",
-            f"data/episodes/streams/{id}-",
-            lambda: spotify_connector.streams(start_date, end_date, episode=id),
+            f"data/episodes/streams/{episode_id}-",
+            lambda: spotify_connector.streams(start_date, end_date, episode=episode_id),
             open_podcast_client,
             start_date,
             end_date,
             episode_endpoints,
             extra_meta={
-                "episode": id,
+                "episode": episode_id,
             },
         )
 
         fetch_and_capture(
             "listeners",
-            f"data/episodes/listeners/{id}-",
-            lambda: spotify_connector.listeners(start_date, end_date, episode=id),
+            f"data/episodes/listeners/{episode_id}-",
+            lambda: spotify_connector.listeners(start_date, end_date, episode=episode_id),
             open_podcast_client,
             start_date,
             end_date,
             episode_endpoints,
             extra_meta={
-                "episode": id,
+                "episode": episode_id,
             },
         )
 
@@ -351,16 +372,16 @@ def main():
         # dates here as it's always the same response.
         fetch_and_capture(
             "performance",
-            f"data/episodes/performance/{id}-",
-            lambda: spotify_connector.performance(id),
+            f"data/episodes/performance/{episode_id}-",
+            lambda: spotify_connector.performance(episode_id),
             open_podcast_client,
             start_date,
             end_date,
             episode_endpoints,
             extra_meta={
-                "episode": id,
+                "episode": episode_id,
             },
-            continueOnError=True,
+            continue_on_error=True,
         )
 
         # Fetch aggregate data for the podcast on X defined days
@@ -370,14 +391,14 @@ def main():
             start = end  # as we want 1 day we use the same start and end date
             fetch_and_capture(
                 "aggregate",
-                f"data/episodes/aggregate/{id}-",
-                lambda: spotify_connector.aggregate(start, end, episode=id),
+                f"data/episodes/aggregate/{episode_id}-",
+                lambda: spotify_connector.aggregate(start, end, episode=episode_id),
                 open_podcast_client,
                 start,
                 end,
                 episode_endpoints,
                 extra_meta={
-                    "episode": id,
+                    "episode": episode_id,
                 },
             )
 
