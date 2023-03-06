@@ -85,7 +85,6 @@ if response.status_code != 200:
     exit(1)
 
 
-
 # Define a list of FetchParams objects with the parameters for each API call
 endpoints = [
     FetchParams(
@@ -141,7 +140,9 @@ ids = [episode["id"] for episode in episodes]
 endpoints += [
     FetchParams(
         openpodcast_endpoint="detailedStreams",
-        spotify_call=lambda: spotify.streams(date_range.start, date_range.end, episode=episode_id),
+        spotify_call=lambda: spotify.streams(
+            date_range.start, date_range.end, episode=episode_id
+        ),
         start_date=date_range.start,
         end_date=date_range.end,
         meta={"episode": episode_id},

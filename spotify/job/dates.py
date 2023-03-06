@@ -2,9 +2,10 @@ import datetime as dt
 from loguru import logger
 import sys
 
+
 class DateRange:
     """
-    Represents a range of dates. 
+    Represents a range of dates.
     """
 
     def __init__(self, start: dt.datetime, end: dt.datetime) -> None:
@@ -34,9 +35,7 @@ def try_convert_date(date: str) -> dt.datetime:
     return date
 
 
-def get_date_range(
-    start_date: str, end_date: str
-) -> DateRange:
+def get_date_range(start_date: str, end_date: str) -> DateRange:
     """
     Convert start and end date to datetime objects.
     This immediately exits the program if the dates are invalid.
@@ -50,4 +49,3 @@ def get_date_range(
         sys.exit(1)
 
     return DateRange(start, end)
-
