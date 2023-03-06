@@ -2,6 +2,10 @@
 run dev:
 	python3 -m job
 
+.PHONY: install
+install:
+	pip3 install -r requirements.txt
+
 .PHONY: docker-build
 docker-build:
 	docker build -t openpodcast/spotify-connector .
