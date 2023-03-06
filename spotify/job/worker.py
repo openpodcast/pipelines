@@ -4,8 +4,8 @@ from time import sleep
 import requests
 from loguru import logger
 
-from fetch_params import FetchParams
-from open_podcast import OpenPodcastConnector
+from job.fetch_params import FetchParams
+from job.open_podcast import OpenPodcastConnector
 
 
 def worker(q: queue.Queue, openpodcast: OpenPodcastConnector, delay) -> None:
@@ -25,7 +25,14 @@ def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
     """
     try:
         data = params.spotify_call()
-        openpodcast.post(params.meta, data, params.start, params.end)
+        if data:
+            openpodcast.post(
+                params.openpodcast_endpoint,
+                params.meta,
+                data,
+                params.start_date,
+                params.end_date,
+            )
     except requests.exceptions.HTTPError as e:
         logger.error(e)
         return
