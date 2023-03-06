@@ -63,12 +63,12 @@ STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 # Load from environment variable if set, otherwise default to current date
 START_DATE = os.environ.get("START_DATE")
 # Github Actions defines an empty string if the variable is not explicitly set
-if not START_DATE:
+if not START_DATE or START_DATE == "":
     # If no start date is set, we fetch data for the last 4 days by default
     START_DATE = (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d")
 
 END_DATE = os.environ.get("END_DATE")
-if not END_DATE:
+if not END_DATE or END_DATE == "":
     END_DATE = (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 
 # List of endpoints to fetch data from
@@ -80,12 +80,12 @@ DEFAULT_PODCAST_ENDPOINTS = (
 )
 PODCAST_ENDPOINTS = os.environ.get("PODCAST_ENDPOINTS")
 # Extra check to make sure we don't end up with an empty string
-if not PODCAST_ENDPOINTS:
+if not PODCAST_ENDPOINTS or PODCAST_ENDPOINTS == "":
     PODCAST_ENDPOINTS = DEFAULT_PODCAST_ENDPOINTS
 
 DEFAULT_EPISODE_ENDPOINTS = "detailedStreams,listeners,performance,aggregate"
 EPISODE_ENDPOINTS = os.environ.get("EPISODE_ENDPOINTS")
-if not EPISODE_ENDPOINTS:
+if not EPISODE_ENDPOINTS or EPISODE_ENDPOINTS == "":
     EPISODE_ENDPOINTS = DEFAULT_EPISODE_ENDPOINTS
 
 print("Done initializing environment")
