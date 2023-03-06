@@ -1,6 +1,6 @@
 .PHONY: run dev
 run dev:
-	python3 main.py
+	python3 -m job
 
 .PHONY: docker-build
 docker-build:
