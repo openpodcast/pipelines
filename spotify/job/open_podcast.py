@@ -9,30 +9,41 @@ class OpenPodcastConnector:
     Client for Open Podcast API.
     """
 
-    def __init__(self, endpoint: str, token: str, podcast_id: str):
-        self.endpoint = endpoint
+    def __init__(self, url: str, token: str, podcast_id: str):
+        self.url = url
         self.token = token
         self.headers = {"Authorization": f"Bearer {self.token}"}
         self.default_meta = {
             "show": podcast_id,
         }
 
-    def post(self, meta, data, start, end):
+    def merge_meta(self, endpoint: str, extra_meta: dict):
+        """
+        Merge meta data with default meta data.
+        """
+        meta = {
+            **self.default_meta,
+            "endpoint": endpoint,
+        }
+        if extra_meta:
+            meta = {
+                **meta,
+                **extra_meta,
+            }
+        return meta
+
+    def post(self, endpoint, extra_meta, data, start, end):
         """
         Send POST request to Open Podcast API.
         """
-        logger.info(f"Sending data for {meta.endpoint} to Open Podcast API")
+        logger.info(f"Storing data for {endpoint} [{start} - {end}]")
+
+        meta = self.merge_meta(endpoint, extra_meta)
 
         # If the data is a generator, we need convert it to a list with
         # `endpoint_name` as the key (e.g. for `episodes` and `detailedStreams`)
         if isinstance(data, types.GeneratorType):
-            data = {meta.endpoint: list(data)}
-
-        # Merge meta data
-        meta = {
-            **self.default_meta,
-            **meta,
-        }
+            data = {endpoint: list(data)}
 
         payload = {
             "provider": "spotify",
@@ -47,12 +58,12 @@ class OpenPodcastConnector:
         }
 
         return requests.post(
-            f"{self.endpoint}/connector", headers=self.headers, json=payload, timeout=60
+            f"{self.url}/connector", headers=self.headers, json=payload, timeout=60
         )
 
     def health(self):
         """
         Send GET request to the Open Podcast healthcheck endpoint `/health`.
         """
-        logger.info(f"Checking health of {self.endpoint}/health")
-        return requests.get(f"{self.endpoint}/health", timeout=60)
+        logger.info(f"Checking health of {self.url}/health")
+        return requests.get(f"{self.url}/health", timeout=60)
