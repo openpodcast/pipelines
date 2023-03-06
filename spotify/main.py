@@ -149,7 +149,7 @@ def fetch_and_capture(
 
     if endpoint_name not in endpoints:
         logger.info(
-            f"Skipping {endpoint_name} because it's not in the list of endpoints"
+            f"Skipping {endpoint_name} because it's not in the list of endpoints. Accepted endpoints: {endpoints}"
         )
         return
 
