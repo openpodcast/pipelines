@@ -9,4 +9,6 @@ def load_file_or_env(var, default=None):
     if env_file_path and os.path.isfile(env_file_path):
         with open(env_file_path, "r", encoding="utf-8") as env_file:
             return env_file.read().strip()
-    return os.environ.get(var, default)
+    var = os.environ.get(var, default)
+    if var is None or var == "":
+        return default
