@@ -1,14 +1,13 @@
 import threading
 import os
 import datetime as dt
-import sys
-
 from queue import Queue
-from fetch_params import FetchParams
-from worker import worker
-from open_podcast import OpenPodcastConnector
-from load_env import load_file_or_env
-from dates import try_convert_dates
+
+from job.fetch_params import FetchParams
+from job.worker import worker
+from job.open_podcast import OpenPodcastConnector
+from job.load_env import load_file_or_env
+from job.dates import get_date_range
 
 from loguru import logger
 from spotifyconnector import SpotifyConnector
@@ -44,6 +43,12 @@ SPOTIFY_PODCAST_ID = load_file_or_env("SPOTIFY_PODCAST_ID")
 # Load from environment variable if set, otherwise default to 0
 STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 
+
+# Number of worker threads to fetch data from the Spotify API by default
+NUM_WORKERS = os.environ.get("NUM_WORKERS", 4)
+
+TASK_DELAY = os.environ.get("TASK_DELAY", 2)
+
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
 START_DATE = os.environ.get(
@@ -53,10 +58,7 @@ END_DATE = os.environ.get(
     "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 )
 
-# Number of worker threads to fetch data from the Spotify API by default
-NUM_WORKERS = os.environ.get("NUM_WORKERS", 4)
-
-TASK_DELAY = os.environ.get("TASK_DELAY", 2)
+date_range = get_date_range(START_DATE, END_DATE)
 
 print("Done initializing environment")
 
@@ -82,7 +84,6 @@ if response.status_code != 200:
     )
     exit(1)
 
-(start_date, end_date, days_diff_start_end) = try_convert_dates(START_DATE, END_DATE)
 
 
 # Define a list of FetchParams objects with the parameters for each API call
@@ -90,30 +91,30 @@ endpoints = [
     FetchParams(
         openpodcast_endpoint="metadata",
         spotify_call=lambda: spotify.metadata(),
-        start_date=start_date,
-        end_date=end_date,
+        start_date=date_range.start,
+        end_date=date_range.end,
     ),
     FetchParams(
         openpodcast_endpoint="listeners",
-        spotify_call=lambda: spotify.listeners(start_date, end_date),
-        start_date=start_date,
-        end_date=end_date,
+        spotify_call=lambda: spotify.listeners(date_range.start, date_range.end),
+        start_date=date_range.start,
+        end_date=date_range.end,
     ),
     FetchParams(
         openpodcast_endpoint="detailedStreams",
-        spotify_call=lambda: spotify.streams(start_date, end_date),
-        start_date=start_date,
-        end_date=end_date,
+        spotify_call=lambda: spotify.streams(date_range.start, date_range.end),
+        start_date=date_range.start,
+        end_date=date_range.end,
     ),
     FetchParams(
         openpodcast_endpoint="followers",
-        spotify_call=lambda: spotify.followers(start_date, end_date),
-        start_date=start_date,
-        end_date=end_date,
+        spotify_call=lambda: spotify.followers(date_range.start, date_range.end),
+        start_date=date_range.start,
+        end_date=date_range.end,
     ),
     FetchParams(
         openpodcast_endpoint="episodes",
-        spotify_call=lambda: spotify.episodes(start_date, end_date),
+        spotify_call=lambda: spotify.episodes(date_range.start, date_range.end),
         start_date=dt.datetime(2015, 5, 1),
         end_date=dt.datetime.now(),
     ),
@@ -123,13 +124,13 @@ endpoints = [
     FetchParams(
         openpodcast_endpoint="aggregate",
         spotify_call=lambda: spotify.aggregate(
-            start_date - dt.timedelta(days=i),
-            end_date - dt.timedelta(days=i),
+            date_range.start - dt.timedelta(days=i),
+            date_range.end - dt.timedelta(days=i),
         ),
-        start_date=start_date - dt.timedelta(days=i),
-        end_date=end_date - dt.timedelta(days=i),
+        start_date=start_date,
+        end_date=end_date,
     )
-    for i in range(days_diff_start_end)
+    for (start_date, end_date) in date_range
 ]
 
 # Fetch all episodes. Use a longer time range to make sure we get all episodes
@@ -140,11 +141,9 @@ ids = [episode["id"] for episode in episodes]
 endpoints += [
     FetchParams(
         openpodcast_endpoint="detailedStreams",
-        spotify_call=lambda: spotify.streams(
-            start_date, end_date, episode=episode_id
-        ),
-        start_date=start_date,
-        end_date=end_date,
+        spotify_call=lambda: spotify.streams(date_range.start, date_range.end, episode=episode_id),
+        start_date=date_range.start,
+        end_date=date_range.end,
         meta={"episode": episode_id},
     )
     for episode_id in ids
@@ -154,10 +153,10 @@ endpoints += [
     FetchParams(
         openpodcast_endpoint="listeners",
         spotify_call=lambda: spotify.listeners(
-            start_date, end_date, episode=episode_id
+            date_range.start, date_range.end, episode=episode_id
         ),
-        start_date=start_date,
-        end_date=end_date,
+        start_date=date_range.start,
+        end_date=date_range.end,
         meta={"episode": episode_id},
     )
     for episode_id in ids
@@ -167,8 +166,8 @@ endpoints += [
     FetchParams(
         openpodcast_endpoint="performance",
         spotify_call=lambda: spotify.performance(episode=episode_id),
-        start_date=start_date,
-        end_date=end_date,
+        start_date=date_range.start,
+        end_date=date_range.end,
         meta={"episode": episode_id},
     )
     for episode_id in ids
@@ -178,16 +177,16 @@ endpoints += [
     FetchParams(
         openpodcast_endpoint="aggregate",
         spotify_call=lambda: spotify.aggregate(
-            start_date - dt.timedelta(days=i),
-            end_date - dt.timedelta(days=i),
+            date_range.start - dt.timedelta(days=i),
+            date_range.end - dt.timedelta(days=i),
             episode=episode_id,
         ),
-        start_date=start_date - dt.timedelta(days=i),
-        end_date=end_date - dt.timedelta(days=i),
+        start_date=start_date,
+        end_date=end_date,
         meta={"episode": episode_id},
     )
     for episode_id in ids
-    for i in range(days_diff_start_end)
+    for (start_date, end_date) in date_range
 ]
 
 # Create a queue to hold the FetchParams objects
