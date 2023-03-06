@@ -2,6 +2,25 @@ import datetime as dt
 from loguru import logger
 import sys
 
+class DateRange:
+    """
+    Represents a range of dates. 
+    """
+
+    def __init__(self, start: dt.datetime, end: dt.datetime) -> None:
+        self.start = start
+        self.end = end
+
+        # Calculate the number of days between start and end date
+        self.days = (end - start).days
+
+    def __iter__(self):
+        """
+        Iterate over all days in the range
+        """
+        for i in range(self.days):
+            yield (self.start - dt.timedelta(days=i), self.end - dt.timedelta(days=i))
+
 
 def try_convert_date(date: str) -> dt.datetime:
     try:
@@ -15,22 +34,20 @@ def try_convert_date(date: str) -> dt.datetime:
     return date
 
 
-def try_convert_dates(
+def get_date_range(
     start_date: str, end_date: str
-) -> tuple[dt.datetime, dt.datetime, int]:
+) -> DateRange:
     """
     Convert start and end date to datetime objects.
     This immediately exits the program if the dates are invalid.
     """
 
-    start_date = try_convert_date(start_date)
-    end_date = try_convert_date(end_date)
+    start = try_convert_date(start_date)
+    end = try_convert_date(end_date)
 
-    if start_date > end_date:
+    if start > end:
         logger.error("Invalid date range: End date is before start date. Quitting")
         sys.exit(1)
 
-    # Calculate the number of days between start and end date
-    days_diff_start_end = (end_date - start_date).days
+    return DateRange(start, end)
 
-    return (start_date, end_date, days_diff_start_end)
