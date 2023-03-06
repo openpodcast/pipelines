@@ -13,11 +13,9 @@ class OpenPodcastConnector:
         self.endpoint = endpoint
         self.token = token
         self.headers = {"Authorization": f"Bearer {self.token}"}
-        self.meta = (
-            {
-                "show": podcast_id,
-            },
-        )
+        self.default_meta = {
+            "show": podcast_id,
+        }
 
     def post(self, meta, data, start, end):
         """
@@ -32,7 +30,7 @@ class OpenPodcastConnector:
 
         # Merge meta data
         meta = {
-            **self.meta,
+            **self.default_meta,
             **meta,
         }
 
