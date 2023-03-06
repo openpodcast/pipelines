@@ -1,4 +1,5 @@
 import queue
+from time import sleep
 
 import requests
 from loguru import logger
@@ -7,7 +8,7 @@ from fetch_params import FetchParams
 from open_podcast import OpenPodcastConnector
 
 
-def worker(q: queue.Queue, openpodcast: OpenPodcastConnector) -> None:
+def worker(q: queue.Queue, openpodcast: OpenPodcastConnector, delay) -> None:
     """
     A worker thread that fetches data from the Spotify API
     """
@@ -15,6 +16,7 @@ def worker(q: queue.Queue, openpodcast: OpenPodcastConnector) -> None:
         params = q.get()
         fetch(openpodcast, params)
         q.task_done()
+        sleep(delay)
 
 
 def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:

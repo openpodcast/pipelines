@@ -56,6 +56,8 @@ END_DATE = os.environ.get(
 # Number of worker threads to fetch data from the Spotify API by default
 NUM_WORKERS = os.environ.get("NUM_WORKERS", 4)
 
+TASK_DELAY = os.environ.get("TASK_DELAY", 2)
+
 print("Done initializing environment")
 
 spotify = SpotifyConnector(
@@ -193,7 +195,7 @@ queue = Queue()
 
 # Start a pool of worker threads to process items from the queue
 for i in range(NUM_WORKERS):
-    t = threading.Thread(target=worker, args=(open_podcast))
+    t = threading.Thread(target=worker, args=(queue, open_podcast, TASK_DELAY))
     t.daemon = True
     t.start()
 
