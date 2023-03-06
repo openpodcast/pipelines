@@ -84,7 +84,7 @@ if response.status_code != 200:
 
 
 # Define a list of FetchParams objects with the parameters for each API call
-podcast_endpoints = [
+endpoints = [
     FetchParams(
         openpodcast_endpoint="metadata",
         spotify_call=lambda: spotify.metadata(),
@@ -130,18 +130,63 @@ podcast_endpoints = [
     for i in range(days_diff_start_end)
 ]
 
-# Fetch all episodes. We need to specify a range here because the API
-# requires it, so let's use a long range.
+# Fetch all episodes. Use a longer time range to make sure we get all episodes
 episodes = spotify.episodes(dt.datetime(2015, 5, 1), dt.datetime.now())
+ids = [episode["id"] for episode in episodes]
 
+# Fetch data for each episode
+endpoints += [
+    FetchParams(
+        openpodcast_endpoint="detailedStreams",
+        spotify_call=lambda: spotify.streams(
+            start_date, end_date, episode=episode_id
+        ),
+        start_date=start_date,
+        end_date=end_date,
+        meta={"episode": episode_id},
+    )
+    for episode_id in ids
+]
 
-# FetchParams(
-#     openpodcast_endpoint="detailedStreams",
-#     spotify_call=lambda: spotify.streams(start_date, end_date, episode=1),
-#     start_date=start_date,
-#     end_date=end_date,
-#     meta={"episode": 1},
-# )
+endpoints += [
+    FetchParams(
+        openpodcast_endpoint="listeners",
+        spotify_call=lambda: spotify.listeners(
+            start_date, end_date, episode=episode_id
+        ),
+        start_date=start_date,
+        end_date=end_date,
+        meta={"episode": episode_id},
+    )
+    for episode_id in ids
+]
+
+endpoints += [
+    FetchParams(
+        openpodcast_endpoint="performance",
+        spotify_call=lambda: spotify.performance(episode=episode_id),
+        start_date=start_date,
+        end_date=end_date,
+        meta={"episode": episode_id},
+    )
+    for episode_id in ids
+]
+
+endpoints += [
+    FetchParams(
+        openpodcast_endpoint="aggregate",
+        spotify_call=lambda: spotify.aggregate(
+            start_date - dt.timedelta(days=i),
+            end_date - dt.timedelta(days=i),
+            episode=episode_id,
+        ),
+        start_date=start_date - dt.timedelta(days=i),
+        end_date=end_date - dt.timedelta(days=i),
+        meta={"episode": episode_id},
+    )
+    for episode_id in ids
+    for i in range(days_diff_start_end)
+]
 
 # Create a queue to hold the FetchParams objects
 queue = Queue()
@@ -153,8 +198,8 @@ for i in range(NUM_WORKERS):
     t.start()
 
 # Add all FetchParams objects to the queue
-for podcast_endpoint in podcast_endpoints:
-    queue.put(podcast_endpoint)
+for endpoint in endpoints:
+    queue.put(endpoint)
 
 # Wait for all items in the queue to be processed
 queue.join()
