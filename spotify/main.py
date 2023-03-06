@@ -61,12 +61,15 @@ STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise default to current date
-START_DATE = os.environ.get(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d")
-)
-END_DATE = os.environ.get(
-    "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
-)
+START_DATE = os.environ.get("START_DATE")
+# Github Actions defines an empty string if the variable is not explicitly set
+if not START_DATE:
+    # If no start date is set, we fetch data for the last 4 days by default
+    START_DATE = (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d")
+
+END_DATE = os.environ.get("END_DATE")
+if not END_DATE:
+    END_DATE = (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 
 # List of endpoints to fetch data from
 # We split them into two groups because some endpoint names are identical
