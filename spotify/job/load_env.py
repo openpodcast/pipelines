@@ -12,3 +12,4 @@ def load_file_or_env(var, default=None):
     var = os.environ.get(var, default)
     if var is None or var == "":
         return default
+    return var
