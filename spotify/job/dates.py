@@ -22,8 +22,18 @@ class DateRange:
         for i in range(self.days):
             yield (self.start - dt.timedelta(days=i), self.end - dt.timedelta(days=i))
 
+    def __str__(self) -> str:
+        """
+        Return a string representation of the date range
+        """
+        return f"[{self.start} - {self.end}]"
+
 
 def try_convert_date(date: str) -> dt.datetime:
+    """
+    Convert a date string to a datetime object.
+    This immediately exits the program if the date is invalid.
+    """
     try:
         date = dt.datetime.strptime(date, "%Y-%m-%d")
     except ValueError:
