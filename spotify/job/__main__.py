@@ -8,6 +8,7 @@ from job.worker import worker
 from job.open_podcast import OpenPodcastConnector
 from job.load_env import load_file_or_env
 from job.dates import get_date_range
+from job.spotify import get_episode_date_range
 
 from loguru import logger
 from spotifyconnector import SpotifyConnector
@@ -84,7 +85,6 @@ if response.status_code != 200:
     )
     exit(1)
 
-
 # Define a list of FetchParams objects with the parameters for each API call
 endpoints = [
     FetchParams(
@@ -123,8 +123,8 @@ endpoints = [
     FetchParams(
         openpodcast_endpoint="aggregate",
         spotify_call=lambda: spotify.aggregate(
-            date_range.start - dt.timedelta(days=i),
-            date_range.end - dt.timedelta(days=i),
+            start_date,
+            end_date,
         ),
         start_date=start_date,
         end_date=end_date,
@@ -133,62 +133,58 @@ endpoints = [
 ]
 
 # Fetch all episodes. Use a longer time range to make sure we get all episodes
+# Convert to list to avoid making multiple API calls as we iterate over the generator
 episodes = spotify.episodes(dt.datetime(2015, 5, 1), dt.datetime.now())
-ids = [episode["id"] for episode in episodes]
 
-# Fetch data for each episode
-endpoints += [
-    FetchParams(
-        openpodcast_endpoint="detailedStreams",
-        spotify_call=lambda: spotify.streams(
-            date_range.start, date_range.end, episode=episode_id
+for episode in episodes:
+    episode_id = episode["id"]
+
+    # Fetch data for each episode
+    endpoints += [
+        FetchParams(
+            openpodcast_endpoint="detailedStreams",
+            spotify_call=lambda: spotify.streams(
+                date_range.start, date_range.end, episode=episode_id
+            ),
+            start_date=date_range.start,
+            end_date=date_range.end,
+            meta={"episode": episode_id},
         ),
-        start_date=date_range.start,
-        end_date=date_range.end,
-        meta={"episode": episode_id},
-    )
-    for episode_id in ids
-]
-
-endpoints += [
-    FetchParams(
-        openpodcast_endpoint="listeners",
-        spotify_call=lambda: spotify.listeners(
-            date_range.start, date_range.end, episode=episode_id
+        FetchParams(
+            openpodcast_endpoint="listeners",
+            spotify_call=lambda: spotify.listeners(
+                date_range.start, date_range.end, episode=episode_id
+            ),
+            start_date=date_range.start,
+            end_date=date_range.end,
+            meta={"episode": episode_id},
         ),
-        start_date=date_range.start,
-        end_date=date_range.end,
-        meta={"episode": episode_id},
-    )
-    for episode_id in ids
-]
-
-endpoints += [
-    FetchParams(
-        openpodcast_endpoint="performance",
-        spotify_call=lambda: spotify.performance(episode=episode_id),
-        start_date=date_range.start,
-        end_date=date_range.end,
-        meta={"episode": episode_id},
-    )
-    for episode_id in ids
-]
-
-endpoints += [
-    FetchParams(
-        openpodcast_endpoint="aggregate",
-        spotify_call=lambda: spotify.aggregate(
-            date_range.start - dt.timedelta(days=i),
-            date_range.end - dt.timedelta(days=i),
-            episode=episode_id,
+        FetchParams(
+            openpodcast_endpoint="performance",
+            spotify_call=lambda: spotify.performance(episode=episode_id),
+            start_date=date_range.start,
+            end_date=date_range.end,
+            meta={"episode": episode_id},
         ),
-        start_date=start_date,
-        end_date=end_date,
-        meta={"episode": episode_id},
-    )
-    for episode_id in ids
-    for (start_date, end_date) in date_range
-]
+    ]
+
+    # Calculate the date range for the episode to avoid unnecessary API calls
+    episode_date_range = get_episode_date_range(episode, date_range)
+
+    endpoints += [
+        FetchParams(
+            openpodcast_endpoint="aggregate",
+            spotify_call=lambda: spotify.aggregate(
+                start_date,
+                end_date,
+                episode=episode_id,
+            ),
+            start_date=start_date,
+            end_date=end_date,
+            meta={"episode": episode_id},
+        )
+        for (start_date, end_date) in episode_date_range
+    ]
 
 # Create a queue to hold the FetchParams objects
 queue = Queue()
