@@ -36,7 +36,12 @@ class OpenPodcastConnector:
         """
         Send POST request to Open Podcast API.
         """
-        logger.info(f"Storing data for {endpoint} [{start} - {end}]")
+        if extra_meta and "episode" in extra_meta:
+            logger.info(
+                f"Storing `{endpoint}` [{start} - {end}] for episode {extra_meta['episode']}"
+            )
+        else:
+            logger.info(f"Storing `{endpoint}` [{start} - {end}]")
 
         meta = self.merge_meta(endpoint, extra_meta)
 
