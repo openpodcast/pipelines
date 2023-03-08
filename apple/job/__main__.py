@@ -46,7 +46,9 @@ TASK_DELAY = os.environ.get("TASK_DELAY", 1.5)
 
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
-START_DATE = os.environ.get( "START_DATE", (dt.datetime.now() - dt.timedelta(days=7)).strftime("%Y-%m-%d"))
+START_DATE = os.environ.get(
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=7)).strftime("%Y-%m-%d")
+)
 END_DATE = os.environ.get("END_DATE", (dt.datetime.now()).strftime("%Y-%m-%d"))
 
 date_range = get_date_range(START_DATE, END_DATE)
