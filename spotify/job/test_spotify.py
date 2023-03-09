@@ -4,6 +4,7 @@ import unittest
 from job.dates import DateRange
 from job.spotify import get_episode_release_date
 
+
 class TestGetEpisodeReleaseDate(unittest.TestCase):
     def setUp(self):
         self.episode1 = {"id": 1, "releaseDate": "2022-03-10"}
@@ -24,5 +25,6 @@ class TestGetEpisodeReleaseDate(unittest.TestCase):
         result = get_episode_release_date(self.episode4)
         self.assertIsNone(result)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

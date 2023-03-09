@@ -1,3 +1,4 @@
+from typing import Tuple
 import datetime as dt
 from loguru import logger
 import sys
@@ -17,16 +18,27 @@ class DateRange:
 
     def __iter__(self):
         """
-        Iterate over all days in the range
+        Iterate over all days in the range.
         """
-        for i in range(self.days):
-            yield (self.start - dt.timedelta(days=i), self.end - dt.timedelta(days=i))
+        for i in range(self.days + 1):
+            yield self.start + dt.timedelta(days=i)
+
+    def chunks(self, days_per_chunk: int) -> Tuple[dt.datetime, dt.datetime]:
+        """
+        Iterate over all days in the range in chunks of `days_per_chunk`
+        The chunks should return (start, start+days_per_chunk), (start+days_per_chunk, start+2*days_per_chunk), etc.
+        until (start+days_per_chunk*n, end) and not go beyond the end date.
+        """
+        for i in range(0, self.days, days_per_chunk):
+            start = self.start + dt.timedelta(days=i)
+            end = min(self.start + dt.timedelta(days=i + days_per_chunk), self.end)
+            yield (start, end)
 
     def __str__(self) -> str:
         """
-        Return a string representation of the date range
+        Return a string representation of the date range.
         """
-        return f"[{self.start} - {self.end}]"
+        return f"Date range: {self.start} - {self.end} ({self.days} days)"
 
 
 def try_convert_date(date: str) -> dt.datetime:
@@ -48,14 +60,15 @@ def try_convert_date(date: str) -> dt.datetime:
 def get_date_range(start_date: str, end_date: str) -> DateRange:
     """
     Convert start and end date to datetime objects.
-    This immediately exits the program if the dates are invalid.
     """
 
     start = try_convert_date(start_date)
     end = try_convert_date(end_date)
 
     if start > end:
-        logger.error("Invalid date range: End date is before start date. Quitting")
-        sys.exit(1)
+        logger.error(
+            f"Invalid date range: End date is before start date. (Start: {start}, End: {end}) Quitting"
+        )
+        raise Exception("Invalid date range")
 
     return DateRange(start, end)

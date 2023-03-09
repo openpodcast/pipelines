@@ -48,6 +48,8 @@ STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 # Number of worker threads to fetch data from the Spotify API by default
 NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
 
+# api has a rate limit of around 20req/30sec.
+# using 1.5 seems to lead to almost no rate limit errors
 TASK_DELAY = os.environ.get("TASK_DELAY", 1.5)
 
 # Start- and end-date for the data we want to fetch
@@ -124,12 +126,12 @@ endpoints = [
         openpodcast_endpoint="aggregate",
         spotify_call=lambda: spotify.aggregate(
             start_date,
-            end_date,
+            start_date + dt.timedelta(days=1),
         ),
         start_date=start_date,
-        end_date=end_date,
+        end_date=start_date + dt.timedelta(days=1),
     )
-    for (start_date, end_date) in date_range
+    for start_date in date_range
 ]
 
 # Fetch all episodes. Use a longer time range to make sure we get all episodes
@@ -176,14 +178,14 @@ for episode in episodes:
             openpodcast_endpoint="aggregate",
             spotify_call=lambda: spotify.aggregate(
                 start_date,
-                end_date,
+                start_date + dt.timedelta(days=1),
                 episode=episode_id,
             ),
             start_date=start_date,
-            end_date=end_date,
+            end_date=start_date + dt.timedelta(days=1),
             meta={"episode": episode_id},
         )
-        for (start_date, end_date) in episode_date_range
+        for start_date in episode_date_range
     ]
 
 # Create a queue to hold the FetchParams objects

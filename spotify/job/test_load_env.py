@@ -4,6 +4,7 @@ import unittest
 
 from job.load_env import load_file_or_env
 
+
 class TestLoadFileOrEnv(unittest.TestCase):
     def setUp(self):
         self.var = "MY_VAR"
@@ -42,5 +43,6 @@ class TestLoadFileOrEnv(unittest.TestCase):
         result = load_file_or_env(self.var, "")
         self.assertEqual(result, "")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

@@ -1,24 +1,54 @@
 import datetime as dt
 import unittest
+from typing import Tuple
 
 from job.dates import DateRange
+from job.dates import get_date_range
+
 
 class TestDateRange(unittest.TestCase):
-    def setUp(self):
-        self.start = dt.datetime(2023, 1, 1)
-        self.end = dt.datetime(2023, 1, 5)
-        self.daterange = DateRange(self.start, self.end)
-
     def test_iterator(self):
-        expected_output = [(dt.datetime(2023, 1, 1), dt.datetime(2023, 1, 5)),
-                           (dt.datetime(2022, 12, 31), dt.datetime(2023, 1, 4)),
-                           (dt.datetime(2022, 12, 30), dt.datetime(2023, 1, 3)),
-                           (dt.datetime(2022, 12, 29), dt.datetime(2023, 1, 2))]
-        self.assertEqual(list(self.daterange), expected_output)
+        self.start = dt.datetime(2022, 1, 1)
+        self.end = dt.datetime(2022, 1, 10)
+        self.date_range = DateRange(self.start, self.end)
+        expected_dates = [dt.datetime(2022, 1, i) for i in range(1, 11)]
 
-    def test_string_representation(self):
-        expected_output = "[2023-01-01 00:00:00 - 2023-01-05 00:00:00]"
-        self.assertEqual(str(self.daterange), expected_output)
+        dates = list(self.date_range)
+        self.assertEqual(dates, expected_dates)
 
-if __name__ == '__main__':
+    def test_chunks(self):
+        self.start = dt.datetime(2022, 1, 1)
+        self.end = dt.datetime(2022, 1, 11)
+        self.date_range = DateRange(self.start, self.end)
+        expected_chunks = [
+            (dt.datetime(2022, 1, 1), dt.datetime(2022, 1, 4)),
+            (dt.datetime(2022, 1, 4), dt.datetime(2022, 1, 7)),
+            (dt.datetime(2022, 1, 7), dt.datetime(2022, 1, 10)),
+            # Last chunk yields the remainder of the dates
+            (dt.datetime(2022, 1, 10), dt.datetime(2022, 1, 11)),
+        ]
+
+        chunks = list(self.date_range.chunks(3))
+        self.assertEqual(chunks, expected_chunks)
+
+
+class TestGetDateRange(unittest.TestCase):
+    def test_valid_date_range(self):
+        start_date = "2022-01-01"
+        end_date = "2022-01-10"
+        date_range = get_date_range(start_date, end_date)
+
+        self.assertEqual(date_range.start, dt.datetime(2022, 1, 1))
+        self.assertEqual(date_range.end, dt.datetime(2022, 1, 10))
+        self.assertEqual(date_range.days, 9)
+
+    def test_invalid_date_range(self):
+        start_date = "2022-01-10"
+        end_date = "2022-01-01"
+
+        with self.assertRaises(Exception):
+            get_date_range(start_date, end_date)
+
+
+if __name__ == "__main__":
     unittest.main()
