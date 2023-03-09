@@ -59,8 +59,8 @@ jobs:
           SPOTIFY_SP_KEY: ${{ secrets.SPOTIFY_SP_KEY_ENGINEERING_KIOSK }}
           START_DATE: ${{ inputs.start }}
           END_DATE: ${{ inputs.end }}
-          PODCAST_ENDPOINTS: ${{ inputs.podcast_endpoints }}}
-          EPISODE_ENDPOINTS: ${{ inputs.episode_endpoints }}}
+          PODCAST_ENDPOINTS: ${{ inputs.podcast_endpoints }}
+          EPISODE_ENDPOINTS: ${{ inputs.episode_endpoints }}
           STORE_DATA: ${{ inputs.debug }}
 
       - name: Commit data
