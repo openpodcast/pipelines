@@ -126,10 +126,10 @@ endpoints = [
         openpodcast_endpoint="aggregate",
         spotify_call=lambda: spotify.aggregate(
             start_date,
-            start_date + dt.timedelta(days=1),
+            start_date,
         ),
         start_date=start_date,
-        end_date=start_date + dt.timedelta(days=1),
+        end_date=start_date,
     )
     for start_date in date_range
 ]
@@ -178,11 +178,11 @@ for episode in episodes:
             openpodcast_endpoint="aggregate",
             spotify_call=lambda: spotify.aggregate(
                 start_date,
-                start_date + dt.timedelta(days=1),
+                start_date,
                 episode=episode_id,
             ),
             start_date=start_date,
-            end_date=start_date + dt.timedelta(days=1),
+            end_date=start_date,
             meta={"episode": episode_id},
         )
         for start_date in episode_date_range
