@@ -4,3 +4,4 @@ venv
 .env_engineering_kiosk
 envs
 job/__pycache__
+.venv

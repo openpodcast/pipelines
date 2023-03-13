@@ -87,6 +87,15 @@ if response.status_code != 200:
     )
     exit(1)
 
+
+def get_request_lambda(f, *args, **kwargs):
+    """
+    Capture arguments in the closure so we can use them later in the call
+    to ensure call by value and not call by reference.
+    """
+    return lambda: f(*args, **kwargs)
+
+
 # Define a list of FetchParams objects with the parameters for each API call
 endpoints = [
     FetchParams(
@@ -97,25 +106,33 @@ endpoints = [
     ),
     FetchParams(
         openpodcast_endpoint="listeners",
-        spotify_call=lambda: spotify.listeners(date_range.start, date_range.end),
+        spotify_call=get_request_lambda(
+            spotify.listeners, date_range.start, date_range.end
+        ),
         start_date=date_range.start,
         end_date=date_range.end,
     ),
     FetchParams(
         openpodcast_endpoint="detailedStreams",
-        spotify_call=lambda: spotify.streams(date_range.start, date_range.end),
+        spotify_call=get_request_lambda(
+            spotify.streams, date_range.start, date_range.end
+        ),
         start_date=date_range.start,
         end_date=date_range.end,
     ),
     FetchParams(
         openpodcast_endpoint="followers",
-        spotify_call=lambda: spotify.followers(date_range.start, date_range.end),
+        spotify_call=get_request_lambda(
+            spotify.followers, date_range.start, date_range.end
+        ),
         start_date=date_range.start,
         end_date=date_range.end,
     ),
     FetchParams(
         openpodcast_endpoint="episodes",
-        spotify_call=lambda: spotify.episodes(date_range.start, date_range.end),
+        spotify_call=get_request_lambda(
+            spotify.episodes, dt.datetime(2015, 5, 1), dt.datetime.now()
+        ),
         start_date=dt.datetime(2015, 5, 1),
         end_date=dt.datetime.now(),
     ),
@@ -124,19 +141,17 @@ endpoints = [
     # Otherwise we get all data merged into one
     FetchParams(
         openpodcast_endpoint="aggregate",
-        spotify_call=lambda: spotify.aggregate(
-            start_date,
-            start_date,
-        ),
-        start_date=start_date,
-        end_date=start_date,
+        spotify_call=get_request_lambda(spotify.aggregate, current_date, current_date),
+        start_date=current_date,
+        end_date=current_date,
     )
-    for start_date in date_range
+    for current_date in date_range
 ]
 
 # Fetch all episodes. Use a longer time range to make sure we get all episodes
 # Convert to list to avoid making multiple API calls as we iterate over the generator
 episodes = spotify.episodes(dt.datetime(2015, 5, 1), dt.datetime.now())
+
 
 for episode in episodes:
     episode_id = episode["id"]
@@ -145,8 +160,8 @@ for episode in episodes:
     endpoints += [
         FetchParams(
             openpodcast_endpoint="detailedStreams",
-            spotify_call=lambda: spotify.streams(
-                date_range.start, date_range.end, episode=episode_id
+            spotify_call=get_request_lambda(
+                spotify.streams, date_range.start, date_range.end, episode=episode_id
             ),
             start_date=date_range.start,
             end_date=date_range.end,
@@ -154,8 +169,8 @@ for episode in episodes:
         ),
         FetchParams(
             openpodcast_endpoint="listeners",
-            spotify_call=lambda: spotify.listeners(
-                date_range.start, date_range.end, episode=episode_id
+            spotify_call=get_request_lambda(
+                spotify.listeners, date_range.start, date_range.end, episode=episode_id
             ),
             start_date=date_range.start,
             end_date=date_range.end,
@@ -163,7 +178,7 @@ for episode in episodes:
         ),
         FetchParams(
             openpodcast_endpoint="performance",
-            spotify_call=lambda: spotify.performance(episode=episode_id),
+            spotify_call=get_request_lambda(spotify.performance, episode=episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
             meta={"episode": episode_id},
@@ -176,16 +191,17 @@ for episode in episodes:
     endpoints += [
         FetchParams(
             openpodcast_endpoint="aggregate",
-            spotify_call=lambda: spotify.aggregate(
-                start_date,
-                start_date,
+            spotify_call=get_request_lambda(
+                spotify.aggregate,
+                current_date,
+                current_date,
                 episode=episode_id,
             ),
-            start_date=start_date,
-            end_date=start_date,
+            start_date=current_date,
+            end_date=current_date,
             meta={"episode": episode_id},
         )
-        for start_date in episode_date_range
+        for current_date in episode_date_range
     ]
 
 # Create a queue to hold the FetchParams objects
