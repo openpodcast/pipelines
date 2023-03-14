@@ -3,6 +3,7 @@ autopep8==1.7.0
 backoff==1.11.1
 certifi==2022.9.24
 charset-normalizer==2.1.1
+filecache==0.81
 idna==3.4
 loguru==0.6.0
 monotonic==1.6
