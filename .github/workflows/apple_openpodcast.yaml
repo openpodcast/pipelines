@@ -32,7 +32,7 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Run Connector
-        run: python main.py
+        run: make run
         env:
           APPLE_AUTOMATION_ENDPOINT: https://apple-automation.openpodcast.dev/cookies
           APPLE_AUTOMATION_BEARER_TOKEN: ${{ secrets.APPLE_AUTOMATION_BEARER_TOKEN }}

@@ -50,7 +50,7 @@ jobs:
           python -m pip install -r requirements.txt
 
       - name: Run Connector
-        run: python main.py
+        run: make run
         env:
           OPENPODCAST_API_ENDPOINT: https://api.openpodcast.dev
           OPENPODCAST_API_TOKEN: ${{ secrets.OPENPODCAST_API_TOKEN }}
