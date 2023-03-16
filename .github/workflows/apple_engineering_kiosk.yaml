@@ -3,11 +3,14 @@ on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
-      debug:
-        description: "Store debug output in repo"
-        default: false
+      start:
+        description: "Start date"
         required: false
-        type: boolean
+        type: string
+      end:
+        description: "End date"
+        required: false
+        type: string
   schedule:
     - cron: "40 11 * * *"
 

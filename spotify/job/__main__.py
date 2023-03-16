@@ -7,6 +7,7 @@ from job.fetch_params import FetchParams
 from job.worker import worker
 from job.open_podcast import OpenPodcastConnector
 from job.load_env import load_file_or_env
+from job.load_env import load_env
 from job.dates import get_date_range
 from job.spotify import get_episode_date_range
 
@@ -54,10 +55,10 @@ TASK_DELAY = os.environ.get("TASK_DELAY", 1.5)
 
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
-START_DATE = os.environ.get(
+START_DATE = load_env(
     "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d")
 )
-END_DATE = os.environ.get(
+END_DATE = load_env(
     "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 )
 

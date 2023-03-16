@@ -7,6 +7,7 @@ from job.fetch_params import FetchParams
 from job.worker import worker
 from job.open_podcast import OpenPodcastConnector
 from job.load_env import load_file_or_env
+from job.load_env import load_env
 from job.dates import get_date_range
 import job.apple as apple
 
@@ -54,12 +55,14 @@ date_range = get_date_range(START_DATE, END_DATE)
 
 print("Done initializing environment")
 
+
 def get_request_lambda(f, *args, **kwargs):
     """
     Capture arguments in the closure so we can use them later in the call
     to ensure call by value and not call by reference.
     """
     return lambda: f(*args, **kwargs)
+
 
 open_podcast = OpenPodcastConnector(
     OPENPODCAST_API_ENDPOINT,
@@ -75,7 +78,9 @@ if response.status_code != 200:
     )
     exit(1)
 
-logger.info(f"Receiving cookies from Apple from automation endpoint {APPLE_AUTOMATION_ENDPOINT}")
+logger.info(
+    f"Receiving cookies from Apple from automation endpoint {APPLE_AUTOMATION_ENDPOINT}"
+)
 cookies = apple.get_cookies(APPLE_AUTOMATION_BEARER_TOKEN, APPLE_AUTOMATION_ENDPOINT)
 
 apple_connector = AppleConnector(
