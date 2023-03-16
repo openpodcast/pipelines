@@ -46,14 +46,22 @@ TASK_DELAY = os.environ.get("TASK_DELAY", 1.5)
 
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
-START_DATE = os.environ.get(
+START_DATE = load_env(
     "START_DATE", (dt.datetime.now() - dt.timedelta(days=7)).strftime("%Y-%m-%d")
 )
-END_DATE = os.environ.get("END_DATE", (dt.datetime.now()).strftime("%Y-%m-%d"))
+END_DATE = load_env("END_DATE", (dt.datetime.now()).strftime("%Y-%m-%d"))
+
+# The trends API supports historical data imports with daily resolution
+# up to 4 months in the past.
+# If we want to import a longer date-range, we split the date range into chunks
+# of 4 months to fetch the data in multiple requests.
+# This allows us to fetch the data quicker and avoid hitting the rate limit.
+DAYS_PER_CHUNK = os.environ.get("DAYS_PER_CHUNK", 4 * 30)
 
 date_range = get_date_range(START_DATE, END_DATE)
 
 print("Done initializing environment")
+print(f"Import date range: ", date_range)
 
 
 def get_request_lambda(f, *args, **kwargs):
@@ -90,35 +98,42 @@ apple_connector = AppleConnector(
 )
 
 # Define a list of FetchParams objects with the parameters for each API call
-endpoints = [
-    FetchParams(
-        openpodcast_endpoint="showTrends/Followers",
-        call=get_request_lambda(
-            apple_connector.trends,
-            date_range.start,
-            date_range.end,
-            metric=Metric.FOLLOWERS,
+endpoints = []
+
+for chunk_id, (start_date, end_date) in enumerate(date_range.chunks(DAYS_PER_CHUNK)):
+    print(f"Chunk {chunk_id} from {start_date} to {end_date}...")
+    endpoints += [
+        FetchParams(
+            openpodcast_endpoint="showTrends/Followers",
+            call=get_request_lambda(
+                apple_connector.trends,
+                start_date,
+                end_date,
+                metric=Metric.FOLLOWERS,
+            ),
+            start_date=start_date,
+            end_date=end_date,
+            meta={"metric": Metric.FOLLOWERS},
         ),
-        start_date=date_range.start,
-        end_date=date_range.end,
-        meta={"metric": Metric.FOLLOWERS},
-    ),
-    FetchParams(
-        openpodcast_endpoint="showTrends/Listeners",
-        call=get_request_lambda(
-            apple_connector.trends,
-            date_range.start,
-            date_range.end,
-            metric=Metric.LISTENERS,
-            dimension=Dimension.BY_EPISODES,
+        FetchParams(
+            openpodcast_endpoint="showTrends/Listeners",
+            call=get_request_lambda(
+                apple_connector.trends,
+                start_date,
+                end_date,
+                metric=Metric.LISTENERS,
+                dimension=Dimension.BY_EPISODES,
+            ),
+            start_date=start_date,
+            end_date=end_date,
+            meta={
+                "metric": Metric.LISTENERS,
+                "dimension": Dimension.BY_EPISODES,
+            },
         ),
-        start_date=date_range.start,
-        end_date=date_range.end,
-        meta={
-            "metric": Metric.LISTENERS,
-            "dimension": Dimension.BY_EPISODES,
-        },
-    ),
+    ]
+
+endpoints += [
     FetchParams(
         openpodcast_endpoint="episodes",
         call=lambda: apple_connector.episodes(),
