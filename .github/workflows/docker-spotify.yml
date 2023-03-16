@@ -3,7 +3,8 @@ on:
   repository_dispatch:
   workflow_dispatch:
   workflow_run:
-    workflows: ["release"]
+    workflows:
+      - release
     types:
       - completed
   push:

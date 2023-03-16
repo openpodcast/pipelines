@@ -3,25 +3,12 @@ on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
-      debug:
-        description: "Store debug output in repo"
-        default: false
-        required: false
-        type: boolean
       start:
         description: "Start date"
         required: false
         type: string
       end:
         description: "End date"
-        required: false
-        type: string
-      podcast_endpoints:
-        description: "Podcast endpoints"
-        required: false
-        type: string
-      episode_endpoints:
-        description: "Episode endpoints"
         required: false
         type: string
   schedule:
