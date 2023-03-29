@@ -133,7 +133,7 @@ for chunk_id, (start_date, end_date) in enumerate(date_range.chunks(DAYS_PER_CHU
         ),
         # fetch podcast listening time grouped by (non)followers
         FetchParams(
-            openpodcast_endpoint="showTrends/FollowersListeningTime",
+            openpodcast_endpoint="showTrends/ListeningTimeFollowers",
             call=get_request_lambda(
                 apple_connector.trends,
                 start_date,
@@ -150,7 +150,7 @@ for chunk_id, (start_date, end_date) in enumerate(date_range.chunks(DAYS_PER_CHU
         ),
         # fetch podcast listening time grouped by episodes
         FetchParams(
-            openpodcast_endpoint="showTrends/EpisodesListeningTime",
+            openpodcast_endpoint="showTrends/ListeningTimeEpisodes",
             call=get_request_lambda(
                 apple_connector.trends,
                 start_date,
