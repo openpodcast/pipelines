@@ -42,6 +42,8 @@ jobs:
           OPENPODCAST_API_ENDPOINT: https://api.openpodcast.dev
           OPENPODCAST_API_TOKEN: ${{ secrets.OPENPODCAST_API_TOKEN }}
           APPLE_PODCAST_ID: ${{ secrets.APPLE_PODCAST_ID }}
+          START_DATE: ${{ inputs.start }}
+          END_DATE: ${{ inputs.end }}
 
       - name: Commit data
         uses: stefanzweifel/git-auto-commit-action@v4.1.2
