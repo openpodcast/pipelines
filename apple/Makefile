@@ -2,6 +2,10 @@
 run dev:
 	python3 -m job
 
+.PHONY: test
+test:
+	python3 -m pytest
+
 .PHONY: install
 install:
 	pip3 install -r requirements.txt
