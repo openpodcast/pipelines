@@ -42,7 +42,8 @@ STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 # Number of worker threads to fetch data from the Spotify API by default
 NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
 
-TASK_DELAY = os.environ.get("TASK_DELAY", 1.5)
+# Apple seems to be ok without a delay between requests
+TASK_DELAY = os.environ.get("TASK_DELAY", 0)
 
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
