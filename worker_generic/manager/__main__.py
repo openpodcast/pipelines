@@ -33,7 +33,7 @@ except Exception as e:
     print("Error connecting to mysql: ", e)
     exit(1)
 
-print("Fetching all podcast tasts from database...")
+print("Fetching all podcast tasks from database...")
 
 sql = """
   SELECT account_id, source_name, source_podcast_id, source_access_keys_encrypted, pod_name
