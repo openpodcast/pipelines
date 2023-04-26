@@ -4,13 +4,13 @@ import json
 
 gpg = gnupg.GPG()
 
-'''
-Decrypts a json string
-The json object keys are plain text, the value is gpg encrypted and base64 encoded
-e.g. {"key1": "base64encodedgpgencryptedvalue1", "key2": "base64encodedgpgencryptedvalue2"}
-the method supports only one level of nesting, deeper nesting is not supported yet
-'''
 def decrypt_json(json_encrypted, key):
+    '''
+    Decrypts a json string
+    The json object keys are plain text, the value is gpg encrypted and base64 encoded
+    e.g. {"key1": "base64encodedgpgencryptedvalue1", "key2": "base64encodedgpgencryptedvalue2"}
+    the method supports only one level of nesting, deeper nesting is not supported yet
+    '''    
     dict_encrypted = json.loads(json_encrypted)
     for k in dict_encrypted:
         encrypted_binary = base64.b64decode(dict_encrypted[k])
