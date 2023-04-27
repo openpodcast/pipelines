@@ -55,7 +55,5 @@ for (account_id, source_name, source_podcast_id, source_access_keys_encrypted, p
     cwd = Path(CONNECTORS_PATH) / source_name
 
     # run an external process, switch to right fetcher depending on source_name, and set env variables from source_access_keys
-    # the ourput is forwarded to stdout and stderr of the parent process
     subprocess.run(["python", "-m", "job"], cwd=cwd, env={
-                   **os.environ, **source_access_keys}, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    print("Fetcher finished", flush=True)
+                   **os.environ, **source_access_keys})
