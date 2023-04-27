@@ -18,7 +18,8 @@ print("Initializing environment")
 
 # endpoint to receive apple cookie to access podcasters API
 APPLE_AUTOMATION_ENDPOINT = load_file_or_env("APPLE_AUTOMATION_ENDPOINT")
-APPLE_AUTOMATION_BEARER_TOKEN = load_file_or_env("APPLE_AUTOMATION_BEARER_TOKEN")
+APPLE_AUTOMATION_BEARER_TOKEN = load_file_or_env(
+    "APPLE_AUTOMATION_BEARER_TOKEN")
 
 # ID of the podcast we want to fetch data for
 APPLE_PODCAST_ID = os.environ.get("APPLE_PODCAST_ID")
@@ -37,7 +38,8 @@ STORE_DATA = os.environ.get("STORE_DATA", "False") == "True"
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
-STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
+STORE_DATA = os.environ.get(
+    "STORE_DATA", "False").lower() in ("true", "1", "t")
 
 # Number of worker threads to fetch data from the Spotify API by default
 NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
@@ -48,7 +50,8 @@ TASK_DELAY = os.environ.get("TASK_DELAY", 0)
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
 START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=7)).strftime("%Y-%m-%d")
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=7)
+                   ).strftime("%Y-%m-%d")
 )
 END_DATE = load_env("END_DATE", (dt.datetime.now()).strftime("%Y-%m-%d"))
 
@@ -60,6 +63,15 @@ END_DATE = load_env("END_DATE", (dt.datetime.now()).strftime("%Y-%m-%d"))
 DAYS_PER_CHUNK = os.environ.get("DAYS_PER_CHUNK", 4 * 30)
 
 date_range = get_date_range(START_DATE, END_DATE)
+
+# check if all needed environment variables are set
+missing_vars = list(filter(lambda x: globals()[x] is None, [
+                    "APPLE_AUTOMATION_ENDPOINT", "APPLE_AUTOMATION_BEARER_TOKEN", "APPLE_PODCAST_ID", "OPENPODCAST_API_TOKEN"]))
+
+if len(missing_vars):
+    logger.error(
+        f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting...")
+    exit(1)
 
 print("Done initializing environment")
 print(f"Import date range: ", date_range)
@@ -90,7 +102,8 @@ if response.status_code != 200:
 logger.info(
     f"Receiving cookies from Apple from automation endpoint {APPLE_AUTOMATION_ENDPOINT}"
 )
-cookies = apple.get_cookies(APPLE_AUTOMATION_BEARER_TOKEN, APPLE_AUTOMATION_ENDPOINT)
+cookies = apple.get_cookies(
+    APPLE_AUTOMATION_BEARER_TOKEN, APPLE_AUTOMATION_ENDPOINT)
 
 apple_connector = AppleConnector(
     podcast_id=APPLE_PODCAST_ID,

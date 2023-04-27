@@ -43,7 +43,8 @@ SPOTIFY_PODCAST_ID = load_file_or_env("SPOTIFY_PODCAST_ID")
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
-STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
+STORE_DATA = os.environ.get(
+    "STORE_DATA", "False").lower() in ("true", "1", "t")
 
 
 # Number of worker threads to fetch data from the Spotify API by default
@@ -56,13 +57,23 @@ TASK_DELAY = os.environ.get("TASK_DELAY", 1.5)
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
 START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d")
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)
+                   ).strftime("%Y-%m-%d")
 )
 END_DATE = load_env(
     "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
 )
 
 date_range = get_date_range(START_DATE, END_DATE)
+
+# check if all needed environment variables are set
+missing_vars = list(filter(lambda x: globals()[x] is None,
+                    ["SP_DC", "SP_KEY", "SPOTIFY_PODCAST_ID", "OPENPODCAST_API_TOKEN"]))
+
+if len(missing_vars):
+    logger.error(
+        f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting...")
+    exit(1)
 
 print("Done initializing environment")
 
@@ -142,7 +153,8 @@ endpoints = [
     # Otherwise we get all data merged into one
     FetchParams(
         openpodcast_endpoint="aggregate",
-        spotify_call=get_request_lambda(spotify.aggregate, current_date, current_date),
+        spotify_call=get_request_lambda(
+            spotify.aggregate, current_date, current_date),
         start_date=current_date,
         end_date=current_date,
     )
@@ -179,7 +191,8 @@ for episode in episodes:
         ),
         FetchParams(
             openpodcast_endpoint="performance",
-            spotify_call=get_request_lambda(spotify.performance, episode=episode_id),
+            spotify_call=get_request_lambda(
+                spotify.performance, episode=episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
             meta={"episode": episode_id},
