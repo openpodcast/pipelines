@@ -12,3 +12,11 @@ docker-build:
 .PHONY: docker-run
 docker-run:
 	docker run --init -it --env-file .env -e 'CRON_SCHEDULE=* * * * *' openpodcast/connector-manager
+
+.PHONY: run up
+run: ## run the dev stack using a mysql instance and the manager
+	docker compose up
+
+.PHONY: down
+down: ## stop the dev stack and remove volumes
+	docker compose down -v

@@ -1,6 +1,7 @@
 import gnupg
 import base64
 import json
+import binascii
 
 gpg = gnupg.GPG()
 
@@ -13,9 +14,9 @@ def decrypt_json(json_encrypted, key):
     '''    
     dict_encrypted = json.loads(json_encrypted)
     for k in dict_encrypted:
-        encrypted_binary = base64.b64decode(dict_encrypted[k])
         try:
+            encrypted_binary = base64.b64decode(dict_encrypted[k])
             dict_encrypted[k] = gpg.decrypt(encrypted_binary, passphrase=key).data.decode("utf-8")
-        except Exception as e:
-            print("Error decrypting element: ", k)
+        except (binascii.Error, ValueError) as e: 
+            print(f"Error decrypting {k}, assuming plain text and continuing, error: {e}")
     return dict_encrypted

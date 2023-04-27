@@ -1,6 +1,6 @@
 FROM python:3.11-slim-bullseye
 
-# Install cron
+# Install cron and gpg for decrypting data fetched from db
 RUN apt-get update \
     && apt-get install -y cron gpg \
     && rm -rf /var/lib/apt/lists/*

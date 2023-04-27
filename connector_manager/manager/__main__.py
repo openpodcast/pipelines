@@ -19,7 +19,7 @@ MYSQL_DATABASE = load_env("MYSQL_DATABASE", "openpodcast_auth")
 OPENPODCAST_ENCRYPTION_KEY = load_file_or_env("OPENPODCAST_ENCRYPTION_KEY")
 if not OPENPODCAST_ENCRYPTION_KEY:
     print("No OPENPODCAST_ENCRYPTION_KEY found")
-    exit(1)    
+    exit(1)
 
 # try to connect to mysql or exit otherwise
 try:
@@ -45,12 +45,17 @@ with db.cursor() as cursor:
     results = cursor.fetchall()
 
 for (account_id, source_name, source_podcast_id, source_access_keys_encrypted, pod_name) in results:
-  source_access_keys = decrypt_json(source_access_keys_encrypted, OPENPODCAST_ENCRYPTION_KEY) # all keys that are needed to access the source
-  print(f"Starting fetcher for {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}")
+    # all keys that are needed to access the source
+    source_access_keys = decrypt_json(
+        source_access_keys_encrypted, OPENPODCAST_ENCRYPTION_KEY)
+    print(
+        f"Starting fetcher for {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}")
 
-  # parent path of fetcher/connector
-  cwd = Path(CONNECTORS_PATH) / source_name
+    # parent path of fetcher/connector
+    cwd = Path(CONNECTORS_PATH) / source_name
 
-  # run an external process, switch to right fetcher depending on source_name, and set env variables from source_access_keys  
-  subprocess.run(["python","-m","job"], cwd=cwd, env={**os.environ, **source_access_keys})
-
+    # run an external process, switch to right fetcher depending on source_name, and set env variables from source_access_keys
+    # the ourput is forwarded to stdout and stderr of the parent process
+    subprocess.run(["python", "-m", "job"], cwd=cwd, env={
+                   **os.environ, **source_access_keys}, shell=False, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    print("Fetcher finished", flush=True)

@@ -1,0 +1,31 @@
+version: '3.7'
+services:
+    manager:
+        image: openpodcast/connector-manager
+        build:
+            context: .
+            dockerfile: Dockerfile
+        environment:
+            - MYSQL_HOST=db
+            - MYSQL_PORT=3306
+            - MYSQL_USER=openpodcast
+            - MYSQL_PASSWORD=openpodcast
+            - MYSQL_DATABASE=openpodcast_auth
+            - OPENPODCAST_ENCRYPTION_KEY=supersecret
+            - CRON_SCHEDULE=* * * * *
+        links:
+            - db
+    db:
+        image: mysql:8.0
+        volumes:
+            - mysqldata:/var/lib/mysql
+            - ./db_local_dev/schema.sql:/docker-entrypoint-initdb.d/00_schema.sql
+        environment:
+            MYSQL_DATABASE: openpodcast_auth
+            MYSQL_USER: openpodcast
+            MYSQL_ROOT_PASSWORD: openpodcast
+            MYSQL_PASSWORD: openpodcast
+        command: --innodb-buffer-pool-size=128M --innodb-buffer-pool-chunk-size=64M --key-buffer-size=5M --event-scheduler=ON
+
+volumes:
+    mysqldata:
