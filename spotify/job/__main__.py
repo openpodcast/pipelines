@@ -81,6 +81,7 @@ if not OPENPODCAST_API_TOKEN:
     logger.error("OPENPODCAST_API_TOKEN not set")
     critical_env_var_missing = True
 if critical_env_var_missing == True:
+    logger.error("Critical environment variables are missing, exiting")
     exit(1)
 
 print("Done initializing environment")
