@@ -8,7 +8,7 @@ from pathlib import Path
 
 print("Initializing worker environment")
 
-CONNECTORS_PATH = load_env("CONNECTORS_PATH", "./../")
+CONNECTORS_PATH = load_env("CONNECTORS_PATH", ".")
 
 MYSQL_HOST = load_env("MYSQL_HOST", "localhost")
 MYSQL_PORT = load_env("MYSQL_PORT", 3306)
