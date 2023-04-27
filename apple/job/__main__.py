@@ -65,21 +65,12 @@ DAYS_PER_CHUNK = os.environ.get("DAYS_PER_CHUNK", 4 * 30)
 date_range = get_date_range(START_DATE, END_DATE)
 
 # check if all needed environment variables are set
-critical_env_var_missing = False
-if not APPLE_AUTOMATION_ENDPOINT:
-    logger.error("APPLE_AUTOMATION_ENDPOINT is not set")
-    critical_env_var_missing = True
-if not APPLE_AUTOMATION_BEARER_TOKEN:
-    logger.error("APPLE_AUTOMATION_BEARER_TOKEN is not set")
-    critical_env_var_missing = True
-if not APPLE_PODCAST_ID:
-    logger.error("APPLE_PODCAST_ID is not set")
-    critical_env_var_missing = True
-if not OPENPODCAST_API_TOKEN:
-    logger.error("OPENPODCAST_API_TOKEN is not set")
-    critical_env_var_missing = True
-if critical_env_var_missing == True:
-    logger.error("Critical environment variables are missing, exiting")
+missing_vars = list(filter(lambda x: globals()[x] is None, [
+                    "APPLE_AUTOMATION_ENDPOINT", "APPLE_AUTOMATION_BEARER_TOKEN", "APPLE_PODCAST_ID", "OPENPODCAST_API_TOKEN"]))
+
+if len(missing_vars):
+    logger.error(
+        f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting...")
     exit(1)
 
 print("Done initializing environment")

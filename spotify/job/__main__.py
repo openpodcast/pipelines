@@ -67,21 +67,12 @@ END_DATE = load_env(
 date_range = get_date_range(START_DATE, END_DATE)
 
 # check if all needed environment variables are set
-critical_env_var_missing = False
-if not SP_DC:
-    logger.error("SP_DC not set")
-    critical_env_var_missing = True
-if not SP_KEY:
-    logger.error("SP_KEY not set")
-    critical_env_var_missing = True
-if not SPOTIFY_PODCAST_ID:
-    logger.error("SPOTIFY_PODCAST_ID not set")
-    critical_env_var_missing = True
-if not OPENPODCAST_API_TOKEN:
-    logger.error("OPENPODCAST_API_TOKEN not set")
-    critical_env_var_missing = True
-if critical_env_var_missing == True:
-    logger.error("Critical environment variables are missing, exiting")
+missing_vars = list(filter(lambda x: globals()[x] is None,
+                    ["SP_DC", "SP_KEY", "SPOTIFY_PODCAST_ID", "OPENPODCAST_API_TOKEN"]))
+
+if len(missing_vars):
+    logger.error(
+        f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting...")
     exit(1)
 
 print("Done initializing environment")
