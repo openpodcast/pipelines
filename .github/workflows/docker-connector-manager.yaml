@@ -17,7 +17,7 @@ on:
       - "main"
 
 env:
-  IMAGE_NAME: openpodcast/spotify-connector
+  IMAGE_NAME: openpodcast/connector-manager
   DOCKER_PLATFORMS: linux/amd64,linux/arm64/v8
 
 jobs:
@@ -63,8 +63,8 @@ jobs:
       - name: Push Image
         uses: docker/build-push-action@v3
         with:
-          context: spotify
-          file: spotify/Dockerfile
+          context: .
+          file: ./Dockerfile
           platforms: ${{ env.DOCKER_PLATFORMS }}
           push: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
           tags: ${{ steps.meta.outputs.tags }}
@@ -76,4 +76,4 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
           repository: ${{ env.IMAGE_NAME }}
-          readme-filepath: spotify/README.md
+          readme-filepath: README.md
