@@ -5,6 +5,7 @@ from manager.cryptography import decrypt_json
 import os
 import subprocess
 from pathlib import Path
+from loguru import logger
 
 print("Initializing worker environment")
 
@@ -18,7 +19,7 @@ MYSQL_DATABASE = load_env("MYSQL_DATABASE", "openpodcast_auth")
 
 OPENPODCAST_ENCRYPTION_KEY = load_file_or_env("OPENPODCAST_ENCRYPTION_KEY")
 if not OPENPODCAST_ENCRYPTION_KEY:
-    print("No OPENPODCAST_ENCRYPTION_KEY found")
+    logger.error("No OPENPODCAST_ENCRYPTION_KEY found")
     exit(1)
 
 # try to connect to mysql or exit otherwise
@@ -31,7 +32,7 @@ try:
         database=MYSQL_DATABASE,
     )
 except mysql.connector.Error as e:
-    print("Error connecting to mysql: ", e)
+    logger.error("Error connecting to mysql: ", e)
     exit(1)
 
 print("Fetching all podcast tasks from database...")
@@ -48,7 +49,7 @@ for (account_id, source_name, source_podcast_id, source_access_keys_encrypted, p
     # all keys that are needed to access the source
     source_access_keys = decrypt_json(
         source_access_keys_encrypted, OPENPODCAST_ENCRYPTION_KEY)
-    print(
+    logger.info(
         f"Starting fetcher for {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}")
 
     # parent path of fetcher/connector
