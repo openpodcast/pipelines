@@ -19,8 +19,9 @@ def decrypt_json(json_encrypted, key):
     for k in dict_encrypted:
         try:
             encrypted_binary = base64.b64decode(dict_encrypted[k])
+            # decrypt the value and remove trailing whitespace which might added by piping stuff around
             dict_encrypted[k] = gpg.decrypt(
-                encrypted_binary, passphrase=key).data.decode("utf-8")
+                encrypted_binary, passphrase=key).data.decode("utf-8").strip()
         except (binascii.Error, ValueError) as e:
             logger.debug(
                 f"Error decrypting {k}, assuming plain text and continuing, error: {e}")
