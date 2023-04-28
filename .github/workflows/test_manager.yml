@@ -1,4 +1,4 @@
-name: Apple Tests
+name: Connector Manager Tests
 
 on:
   push:
