@@ -40,6 +40,11 @@ OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 # ID of the podcast we want to fetch data for
 SPOTIFY_PODCAST_ID = load_file_or_env("SPOTIFY_PODCAST_ID")
 
+# if SPOTIFY_PODCAST_ID is not set, try to use PODCAST_ID instead
+# this is used by the connector manager to be more generic
+if not SPOTIFY_PODCAST_ID:
+    SPOTIFY_PODCAST_ID = os.environ.get("PODCAST_ID")
+
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
