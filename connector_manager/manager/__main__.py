@@ -57,4 +57,4 @@ for (account_id, source_name, source_podcast_id, source_access_keys_encrypted, p
 
     # run an external process, switch to right fetcher depending on source_name, and set env variables from source_access_keys
     subprocess.run(["python", "-m", "job"], cwd=cwd, env={
-                   **os.environ, **source_access_keys})
+                   **os.environ, **source_access_keys, "PODCAST_ID": source_podcast_id, "PODCAST_NAME": pod_name})
