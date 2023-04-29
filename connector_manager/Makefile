@@ -9,6 +9,10 @@ help: ## help message, list all command
 run: ## run the job
 	python3 -m manager
 
+.PHONY: test
+test: ## run the test
+	python3 -m pytest
+
 .PHONY: install
 install:
 	pip3 install -r requirements.txt
