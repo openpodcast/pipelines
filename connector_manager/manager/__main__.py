@@ -6,6 +6,7 @@ import os
 import subprocess
 from pathlib import Path
 from loguru import logger
+import sys
 
 print("Initializing worker environment")
 
@@ -35,6 +36,12 @@ except mysql.connector.Error as e:
     logger.error("Error connecting to mysql: ", e)
     exit(1)
 
+# if module was started with flag --interactive, every podcast has to be approved manually
+interactiveMode = False
+if "--interactive" in sys.argv:
+    logger.info("Interactive mode enabled")
+    interactiveMode = True
+
 print("Fetching all podcast tasks from database...")
 
 sql = """
@@ -46,6 +53,12 @@ with db.cursor() as cursor:
     results = cursor.fetchall()
 
 for (account_id, source_name, source_podcast_id, source_access_keys_encrypted, pod_name) in results:
+    if interactiveMode:
+        print(
+            f"Fetch podcast {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}? [y/n]")
+        if input() != "y":
+            continue
+
     # all keys that are needed to access the source
     source_access_keys = decrypt_json(
         source_access_keys_encrypted, OPENPODCAST_ENCRYPTION_KEY)
