@@ -13,6 +13,7 @@ RUN pip3 install -r requirements.txt
 COPY connector_manager/manager manager
 COPY spotify spotify
 COPY apple apple
+COPY anchor anchor
 
 COPY entrypoint.sh entrypoint.sh
 
