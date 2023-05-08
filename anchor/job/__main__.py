@@ -116,7 +116,7 @@ start = end - timedelta(days=30)
 
 endpoints = [
     FetchParams(
-        openpodcast_endpoint="podcast_episode",
+        openpodcast_endpoint="podcastEpisode",
         anchor_call=lambda: anchor.podcast_episode(),
         start_date=date_range.start,
         end_date=date_range.end,
@@ -128,7 +128,7 @@ endpoints = [
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="plays_by_age_range",
+        openpodcast_endpoint="playsByAgeRange",
         anchor_call=get_request_lambda(
             anchor.plays_by_age_range, date_range.start, date_range.end
         ),
@@ -136,7 +136,7 @@ endpoints = [
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="plays_by_app",
+        openpodcast_endpoint="playsByApp",
         anchor_call=get_request_lambda(
             anchor.plays_by_app, date_range.start, date_range.end
         ),
@@ -144,7 +144,7 @@ endpoints = [
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="plays_by_device",
+        openpodcast_endpoint="playsByDevice",
         anchor_call=get_request_lambda(
             anchor.plays_by_device, date_range.start, date_range.end
         ),
@@ -152,7 +152,7 @@ endpoints = [
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="plays_by_episode",
+        openpodcast_endpoint="playsByEpisode",
         anchor_call=get_request_lambda(
             anchor.plays_by_episode, date_range.start, date_range.end
         ),
@@ -160,7 +160,7 @@ endpoints = [
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="plays_by_gender",
+        openpodcast_endpoint="playsByGender",
         anchor_call=get_request_lambda(
             anchor.plays_by_gender, date_range.start, date_range.end
         ),
@@ -168,7 +168,7 @@ endpoints = [
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="plays_by_geo",
+        openpodcast_endpoint="playsByGeo",
         anchor_call=get_request_lambda(
             anchor.plays_by_geo, date_range.start, date_range.end
         ),
@@ -176,25 +176,25 @@ endpoints = [
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="unique_listeners",
+        openpodcast_endpoint="uniqueListeners",
         anchor_call=anchor.unique_listeners,
         start_date=date_range.start,
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="audience_size",
+        openpodcast_endpoint="audienceSize",
         anchor_call=anchor.audience_size,
         start_date=date_range.start,
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="total_plays_by_episode",
+        openpodcast_endpoint="totalPlaysByEpisode",
         anchor_call=anchor.total_plays_by_episode,
         start_date=date_range.start,
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="total_plays",
+        openpodcast_endpoint="totalPlays",
         anchor_call=get_request_lambda(anchor.total_plays, True),
         start_date=date_range.start,
         end_date=date_range.end,
@@ -208,21 +208,21 @@ for episode in episodes:
 
     endpoints += [
         FetchParams(
-            openpodcast_endpoint="episode_plays",
+            openpodcast_endpoint="episodePlays",
             anchor_call=get_request_lambda(anchor.episode_plays, web_episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
             meta={"web_episode_id": web_episode_id},
         ),
         FetchParams(
-            openpodcast_endpoint="episode_performance",
+            openpodcast_endpoint="episodePerformance",
             anchor_call=get_request_lambda(anchor.episode_performance, web_episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
             meta={"web_episode_id": web_episode_id},
         ),
         FetchParams(
-            openpodcast_endpoint="episode_aggregated_performance",
+            openpodcast_endpoint="episodeAggregatedPerformance",
             anchor_call=get_request_lambda(
                 anchor.episode_aggregated_performance, web_episode_id
             ),
@@ -231,7 +231,7 @@ for episode in episodes:
             meta={"web_episode_id": web_episode_id},
         ),
         FetchParams(
-            openpodcast_endpoint="episode_all_time_video_data",
+            openpodcast_endpoint="episodeAllTimeVideoData",
             anchor_call=get_request_lambda(
                 episode_all_time_video_data,
                 anchor,
