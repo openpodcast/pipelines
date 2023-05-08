@@ -222,7 +222,7 @@ for episode in episodes:
             meta={"web_episode_id": web_episode_id},
         ),
         FetchParams(
-            openpodcast_endpoint="episodeAggregatedPerformance",
+            openpodcast_endpoint="aggregatedPerformance",
             anchor_call=get_request_lambda(
                 anchor.episode_aggregated_performance, web_episode_id
             ),
