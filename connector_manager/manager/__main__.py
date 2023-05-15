@@ -60,6 +60,7 @@ for (account_id, source_name, source_podcast_id, source_access_keys_encrypted, p
             continue
 
     # all keys that are needed to access the source
+    print(f"Decrypting keys for {pod_name} {account_id} for {source_name}")
     source_access_keys = decrypt_json(
         source_access_keys_encrypted, OPENPODCAST_ENCRYPTION_KEY)
     logger.info(
