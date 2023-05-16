@@ -207,6 +207,11 @@ for episode in episodes:
     # Calculate the date range for the episode to avoid unnecessary API calls
     episode_date_range = get_episode_date_range(episode, date_range)
 
+    # if the end date is smaller than the start date, the episode was just released
+    # and we don't need to fetch any data for now
+    if episode_date_range.end < episode_date_range.start:
+        continue
+
     endpoints += [
         FetchParams(
             openpodcast_endpoint="aggregate",
