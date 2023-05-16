@@ -9,7 +9,7 @@ from job.open_podcast import OpenPodcastConnector
 from job.load_env import load_file_or_env
 from job.load_env import load_env
 from job.dates import get_date_range
-from job.spotify import get_episode_date_range, get_episode_release_date
+from job.spotify import get_episode_release_date
 
 from loguru import logger
 from spotifyconnector import SpotifyConnector
