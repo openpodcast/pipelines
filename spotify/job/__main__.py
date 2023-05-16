@@ -9,7 +9,7 @@ from job.open_podcast import OpenPodcastConnector
 from job.load_env import load_file_or_env
 from job.load_env import load_env
 from job.dates import get_date_range
-from job.spotify import get_episode_date_range
+from job.spotify import get_episode_date_range, get_episode_release_date
 
 from loguru import logger
 from spotifyconnector import SpotifyConnector
@@ -205,12 +205,24 @@ for episode in episodes:
     ]
 
     # Calculate the date range for the episode to avoid unnecessary API calls
-    episode_date_range = get_episode_date_range(episode, date_range)
+    release_date = get_episode_release_date(episode)
+    if not release_date:
+        release_date = date_range
+
+    # Start at the release date of the episode or the start date of the time
+    # range, whichever is later
+    episode_start_date = max(release_date, date_range.start)
+    episode_end_date = date_range.end
 
     # if the end date is smaller than the start date, the episode was just released
-    # and we don't need to fetch any data for now
-    if episode_date_range.end < episode_date_range.start:
+    # return None so the caller can skip the episode
+    if episode_end_date < episode_start_date:
         continue
+
+    episode_date_range = get_date_range(
+        episode_start_date.strftime("%Y-%m-%d"),
+        episode_end_date.strftime("%Y-%m-%d")
+    )
 
     endpoints += [
         FetchParams(
