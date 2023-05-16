@@ -215,7 +215,7 @@ for episode in episodes:
     episode_end_date = date_range.end
 
     # if the end date is smaller than the start date, the episode was just released
-    # return None so the caller can skip the episode
+    # and we don't have any data for it yet, so we skip it
     if episode_end_date < episode_start_date:
         continue
 
