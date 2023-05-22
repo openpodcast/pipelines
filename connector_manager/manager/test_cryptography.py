@@ -28,7 +28,7 @@ class TestDecrypt(unittest.TestCase):
                          ["testkey"], "testvalue")
 
     def test_unencrypted_url(self):
-        # apparently the url can be bas64 encoded and the gpg fails without an error msg, just an empty string
+        # apparently the url can be base64-encoded and the gpg fails without an error msg, just an empty string
         json = '{"APPLE_AUTOMATION_ENDPOINT": "https://apple-automation.somedomain.com/endpoint"}'
         self.assertEqual(decrypt_json(json, passphrase)
                          ["APPLE_AUTOMATION_ENDPOINT"], "https://apple-automation.somedomain.com/endpoint")
