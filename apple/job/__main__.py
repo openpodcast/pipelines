@@ -22,12 +22,12 @@ APPLE_AUTOMATION_BEARER_TOKEN = load_file_or_env(
     "APPLE_AUTOMATION_BEARER_TOKEN")
 
 # ID of the podcast we want to fetch data for
-APPLE_PODCAST_ID = os.environ.get("APPLE_PODCAST_ID")
+APPLE_PODCAST_ID = load_file_or_env("APPLE_PODCAST_ID")
 
 # if APPLE_PODCAST_ID is not set, try to use PODCAST_ID instead
 # this is used by the connector manager to be more generic
 if not APPLE_PODCAST_ID:
-    APPLE_PODCAST_ID = os.environ.get("PODCAST_ID")
+    APPLE_PODCAST_ID = load_file_or_env("PODCAST_ID")
 
 # Open Podcast API endpoint and token to submit data fetched from the spotify endpoint
 OPENPODCAST_API_ENDPOINT = os.environ.get(
