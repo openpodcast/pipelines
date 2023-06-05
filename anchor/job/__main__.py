@@ -46,8 +46,7 @@ NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
 START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)
-                   ).strftime("%Y-%m-%d")
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d")
 )
 END_DATE = load_env(
     "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
@@ -129,8 +128,7 @@ endpoints = [
     ),
     FetchParams(
         openpodcast_endpoint="plays",
-        anchor_call=get_request_lambda(
-            anchor.plays, date_range.start, date_range.end),
+        anchor_call=get_request_lambda(anchor.plays, date_range.start, date_range.end),
         start_date=date_range.start,
         end_date=date_range.end,
     ),
@@ -176,9 +174,7 @@ endpoints = [
     ),
     FetchParams(
         openpodcast_endpoint="playsByGeo",
-        anchor_call=get_request_lambda(
-            anchor.plays_by_geo, date_range.start, date_range.end
-        ),
+        anchor_call=get_request_lambda(anchor.plays_by_geo),
         start_date=date_range.start,
         end_date=date_range.end,
     ),
@@ -216,16 +212,14 @@ for episode in episodes:
     endpoints += [
         FetchParams(
             openpodcast_endpoint="episodePlays",
-            anchor_call=get_request_lambda(
-                anchor.episode_plays, web_episode_id),
+            anchor_call=get_request_lambda(anchor.episode_plays, web_episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
             meta={"episode": web_episode_id},
         ),
         FetchParams(
             openpodcast_endpoint="episodePerformance",
-            anchor_call=get_request_lambda(
-                anchor.episode_performance, web_episode_id),
+            anchor_call=get_request_lambda(anchor.episode_performance, web_episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
             meta={"episode": web_episode_id},
