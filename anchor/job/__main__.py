@@ -204,6 +204,31 @@ endpoints = [
     ),
 ]
 
+# Fetch geo city data
+#
+# First get the list of all countries
+# then get the list of all cities in each country
+# (The geo data does not have a date range)
+countries = anchor.plays_by_geo()
+
+# Iterate over the list of countries
+for row in countries["data"]["rows"]:
+    print(row)
+    # The country name is in the first column of each row
+    country = row[0]
+    print(f"Fetching geo city data for {country}")
+
+    # Add the endpoint to the list of endpoints
+    endpoints += [
+        FetchParams(
+            openpodcast_endpoint="playsByGeoCity",
+            anchor_call=get_request_lambda(anchor.plays_by_geo_city, country),
+            start_date=date_range.start,
+            end_date=date_range.end,
+            meta={"country": country},
+        )
+    ]
+
 episodes = anchor.episodes()
 
 for episode in episodes:
