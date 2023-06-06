@@ -26,7 +26,6 @@ def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
         data = params.anchor_call()
         if data:
             logger.info(f"Sending {params.openpodcast_endpoint} to Open Podcast")
-            # print(data)
             openpodcast.post(
                 params.openpodcast_endpoint,
                 params.meta,

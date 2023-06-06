@@ -213,10 +213,8 @@ countries = anchor.plays_by_geo()
 
 # Iterate over the list of countries
 for row in countries["data"]["rows"]:
-    print(row)
     # The country name is in the first column of each row
     country = row[0]
-    print(f"Fetching geo city data for {country}")
 
     # Add the endpoint to the list of endpoints
     endpoints += [
