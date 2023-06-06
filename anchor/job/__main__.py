@@ -46,7 +46,7 @@ NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
 START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d")
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=30)).strftime("%Y-%m-%d")
 )
 END_DATE = load_env(
     "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
@@ -116,8 +116,6 @@ def episode_all_time_video_data(connector, web_episode_id):
             raise
 
 
-end = datetime.now()
-start = end - timedelta(days=30)
 
 endpoints = [
     FetchParams(
