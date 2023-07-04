@@ -155,14 +155,6 @@ endpoints = [
         end_date=date_range.end,
     ),
     FetchParams(
-        openpodcast_endpoint="playsByEpisode",
-        anchor_call=get_request_lambda(
-            anchor.plays_by_episode, date_range.start, date_range.end
-        ),
-        start_date=date_range.start,
-        end_date=date_range.end,
-    ),
-    FetchParams(
         openpodcast_endpoint="playsByGender",
         anchor_call=get_request_lambda(
             anchor.plays_by_gender, date_range.start, date_range.end
