@@ -46,7 +46,7 @@ NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
 START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)).strftime("%Y-%m-%d")
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=30)).strftime("%Y-%m-%d")
 )
 END_DATE = load_env(
     "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
@@ -116,8 +116,6 @@ def episode_all_time_video_data(connector, web_episode_id):
             raise
 
 
-end = datetime.now()
-start = end - timedelta(days=30)
 
 endpoints = [
     FetchParams(
@@ -203,6 +201,29 @@ endpoints = [
         end_date=date_range.end,
     ),
 ]
+
+# Fetch geo city data
+#
+# First get the list of all countries
+# then get the list of all cities in each country
+# (The geo data does not have a date range)
+countries = anchor.plays_by_geo()
+
+# Iterate over the list of countries
+for row in countries["data"]["rows"]:
+    # The country name is in the first column of each row
+    country = row[0]
+
+    # Add the endpoint to the list of endpoints
+    endpoints += [
+        FetchParams(
+            openpodcast_endpoint="playsByGeoCity",
+            anchor_call=get_request_lambda(anchor.plays_by_geo_city, country),
+            start_date=date_range.start,
+            end_date=date_range.end,
+            meta={"country": country},
+        )
+    ]
 
 episodes = anchor.episodes()
 
