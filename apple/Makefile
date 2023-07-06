@@ -1,6 +1,6 @@
 .PHONY: run dev
 run dev:
-	python3 -m job
+	set -a && source ./.env && python3 -m job
 
 .PHONY: test
 test:
