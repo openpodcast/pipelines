@@ -24,8 +24,8 @@ class AppleCookies:
 # Add a cache decorator to the function that fetches the cookies
 # so that we don't have to fetch them every time as we pay for every single
 # login.
-# The cache will be invalidated after 1 hour.
-@filecache(60 * 60)
+# The cache will be invalidated after 4 hours.
+@filecache(4 * 60 * 60)
 def fetch_all_cookies(bearer_token: str, apple_automation_endpoint: str):
     """
     Get Apple cookies from API
