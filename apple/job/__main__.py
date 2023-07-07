@@ -166,23 +166,6 @@ for chunk_id, (start_date, end_date) in enumerate(date_range.chunks(DAYS_PER_CHU
                 "metric": Metric.TIME_LISTENED,
                 "dimension": Dimension.BY_FOLLOW_STATE,
             },
-        ),
-        # fetch podcast listening time grouped by episodes
-        FetchParams(
-            openpodcast_endpoint="showTrends/ListeningTimeEpisodes",
-            call=get_request_lambda(
-                apple_connector.trends,
-                start_date,
-                end_date,
-                metric=Metric.TIME_LISTENED,
-                dimension=Dimension.BY_EPISODES,
-            ),
-            start_date=start_date,
-            end_date=end_date,
-            meta={
-                "metric": Metric.TIME_LISTENED,
-                "dimension": Dimension.BY_EPISODES,
-            },
         )
     ]
 
