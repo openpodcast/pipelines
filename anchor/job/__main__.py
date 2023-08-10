@@ -219,6 +219,18 @@ for row in countries["data"]["rows"]:
 
 episodes = anchor.episodes()
 
+# We already store episode metadata from the `podcast_episode()` method above,
+# but we get additional data from the `episodes()` method (e.g. the mapping
+# between `episodeId` and `webEpisodeId`)
+logger.info(f"Sending episodesPage data to Open Podcast")
+open_podcast.post(
+    "episodesPage",
+    None,
+    episodes,
+    date_range.start,
+    date_range.end,
+)
+
 for episode in episodes:
     # Note: Anchor has two IDs for each episode, the `episodeId` and the
     # `webEpisodeId` We use the `webEpisodeId` to identify the episode because
@@ -259,17 +271,19 @@ for episode in episodes:
             end_date=date_range.end,
             meta=meta,
         ),
-        FetchParams(
-            openpodcast_endpoint="episodeAllTimeVideoData",
-            anchor_call=get_request_lambda(
-                episode_all_time_video_data,
-                anchor,
-                web_episode_id,
-            ),
-            start_date=date_range.start,
-            end_date=date_range.end,
-            meta=meta,
-        ),
+
+        # TODO: This endpoint is not supported by the Open Podcast API yet
+        # FetchParams(
+        #     openpodcast_endpoint="episodeAllTimeVideoData",
+        #     anchor_call=get_request_lambda(
+        #         episode_all_time_video_data,
+        #         anchor,
+        #         web_episode_id,
+        #     ),
+        #     start_date=date_range.start,
+        #     end_date=date_range.end,
+        #     meta=meta,
+        # ),
     ]
 
 # Create a queue to hold the FetchParams objects
