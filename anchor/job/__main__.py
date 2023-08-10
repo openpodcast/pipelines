@@ -220,7 +220,20 @@ for row in countries["data"]["rows"]:
 episodes = anchor.episodes()
 
 for episode in episodes:
+    # Note: Anchor has two IDs for each episode, the `episodeId` and the
+    # `webEpisodeId` We use the `webEpisodeId` to identify the episode because
+    # it gets used in the URL of the API endpoints.
+    # The `episodeId` is just returned in `totalPlaysByEpisode` and
+    # `episodesPage` endpoints.
     web_episode_id = episode["webEpisodeId"]
+
+    # To ensure backwards compatibility,
+    # we include the raw ids in the meta data.
+    meta={
+        "episode": web_episode_id,
+        "episodeIdNum": episode["episodeId"],
+        "webEpisodeId": web_episode_id,
+    },
 
     endpoints += [
         FetchParams(
@@ -228,14 +241,14 @@ for episode in episodes:
             anchor_call=get_request_lambda(anchor.episode_plays, web_episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
-            meta={"episode": web_episode_id},
+            meta=meta,
         ),
         FetchParams(
             openpodcast_endpoint="episodePerformance",
             anchor_call=get_request_lambda(anchor.episode_performance, web_episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
-            meta={"episode": web_episode_id},
+            meta=meta,
         ),
         FetchParams(
             openpodcast_endpoint="aggregatedPerformance",
@@ -244,7 +257,7 @@ for episode in episodes:
             ),
             start_date=date_range.start,
             end_date=date_range.end,
-            meta={"episode": web_episode_id},
+            meta=meta,
         ),
         FetchParams(
             openpodcast_endpoint="episodeAllTimeVideoData",
@@ -255,7 +268,7 @@ for episode in episodes:
             ),
             start_date=date_range.start,
             end_date=date_range.end,
-            meta={"episode": web_episode_id},
+            meta=meta,
         ),
     ]
 
