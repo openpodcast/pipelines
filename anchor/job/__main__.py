@@ -222,11 +222,12 @@ episodes = anchor.episodes()
 # We already store episode metadata from the `podcast_episode()` method above,
 # but we get additional data from the `episodes()` method (e.g. the mapping
 # between `episodeId` and `webEpisodeId`)
+all_episodes = list(episodes)
 logger.info(f"Sending episodesPage data to Open Podcast")
 open_podcast.post(
     "episodesPage",
     None,
-    episodes,
+    all_episodes,
     date_range.start,
     date_range.end,
 )
