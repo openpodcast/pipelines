@@ -113,6 +113,10 @@ def get_request_lambda(f, *args, **kwargs):
     return lambda: f(*args, **kwargs)
 
 
+todayDate = dt.datetime.now()
+yesterdayDate = todayDate - dt.timedelta(days=1)
+oldestDate = dt.datetime(2015, 5, 1)
+
 # Define a list of FetchParams objects with the parameters for each API call
 endpoints = [
     FetchParams(
@@ -148,10 +152,13 @@ endpoints = [
     FetchParams(
         openpodcast_endpoint="episodes",
         spotify_call=get_request_lambda(
-            spotify.episodes, dt.datetime(2015, 5, 1), dt.datetime.now()
+            # as Spotify sometimes returns empty values if the end date is set to today,
+            # we set the end date to yesterday just to be on the safe side
+            # see issue https://github.com/openpodcast/api/issues/133
+            spotify.episodes, oldestDate, yesterdayDate
         ),
-        start_date=dt.datetime(2015, 5, 1),
-        end_date=dt.datetime.now(),
+        start_date=oldestDate,
+        end_date=todayDate,
     ),
 ] + [
     # Fetch aggregate data for the podcast for each individual day
@@ -168,8 +175,7 @@ endpoints = [
 
 # Fetch all episodes. Use a longer time range to make sure we get all episodes
 # Convert to list to avoid making multiple API calls as we iterate over the generator
-episodes = spotify.episodes(dt.datetime(2015, 5, 1), dt.datetime.now())
-
+episodes = spotify.episodes(oldestDate, todayDate)
 
 for episode in episodes:
     episode_id = episode["id"]
