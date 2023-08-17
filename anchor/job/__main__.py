@@ -46,7 +46,8 @@ NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
 START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=30)).strftime("%Y-%m-%d")
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=30)
+                   ).strftime("%Y-%m-%d")
 )
 END_DATE = load_env(
     "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
@@ -116,7 +117,6 @@ def episode_all_time_video_data(connector, web_episode_id):
             raise
 
 
-
 endpoints = [
     FetchParams(
         openpodcast_endpoint="podcastEpisode",
@@ -126,7 +126,8 @@ endpoints = [
     ),
     FetchParams(
         openpodcast_endpoint="plays",
-        anchor_call=get_request_lambda(anchor.plays, date_range.start, date_range.end),
+        anchor_call=get_request_lambda(
+            anchor.plays, date_range.start, date_range.end),
         start_date=date_range.start,
         end_date=date_range.end,
     ),
@@ -242,7 +243,7 @@ for episode in episodes:
 
     # To ensure backwards compatibility,
     # we include the raw ids in the meta data.
-    meta={
+    meta = {
         "episode": web_episode_id,
         "episodeIdNum": episode["episodeId"],
         "webEpisodeId": web_episode_id,
@@ -251,14 +252,16 @@ for episode in episodes:
     endpoints += [
         FetchParams(
             openpodcast_endpoint="episodePlays",
-            anchor_call=get_request_lambda(anchor.episode_plays, web_episode_id),
+            anchor_call=get_request_lambda(
+                anchor.episode_plays, web_episode_id, date_range.start, date_range.end, "daily"),
             start_date=date_range.start,
             end_date=date_range.end,
             meta=meta,
         ),
         FetchParams(
             openpodcast_endpoint="episodePerformance",
-            anchor_call=get_request_lambda(anchor.episode_performance, web_episode_id),
+            anchor_call=get_request_lambda(
+                anchor.episode_performance, web_episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
             meta=meta,
