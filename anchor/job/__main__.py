@@ -233,7 +233,7 @@ open_podcast.post(
     date_range.end,
 )
 
-for episode in episodes:
+for episode in all_episodes:
     # Note: Anchor has two IDs for each episode, the `episodeId` and the
     # `webEpisodeId` We use the `webEpisodeId` to identify the episode because
     # it gets used in the URL of the API endpoints.
