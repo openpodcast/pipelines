@@ -247,7 +247,7 @@ for episode in episodes:
         "episode": web_episode_id,
         "episodeIdNum": episode["episodeId"],
         "webEpisodeId": web_episode_id,
-    },
+    }
 
     endpoints += [
         FetchParams(
