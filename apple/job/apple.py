@@ -5,6 +5,7 @@ from filecache import filecache
 from appleconnector import AppleConnector
 import requests
 from loguru import logger
+import time
 
 # Set a very long timeout for the cookie request as we use browser automation to
 # get the cookies, which can take a while
@@ -37,7 +38,16 @@ def fetch_all_cookies(bearer_token: str, apple_automation_endpoint: str):
 
     logger.info(f"Got cookies response: {response.status_code}")
     if response.status_code != 200:
-        raise Exception(f"Failed to get cookies: {response.text}")
+        # wait for 20 minutes and try again
+        waitForMinutes = 20
+        logger.info(f"Waiting for {waitForMinutes} minutes...")
+        time.sleep(waitForMinutes * 60)
+        response = requests.get(
+            apple_automation_endpoint, headers=headers, timeout=COOKIE_TIMEOUT
+        )
+        if response.status_code != 200:
+            raise Exception(
+                f"Failed to get cookies (second time): {response.text}")
 
     cookies = response.json()
     return cookies
