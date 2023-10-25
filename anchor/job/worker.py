@@ -25,14 +25,17 @@ def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
     try:
         data = params.anchor_call()
         if data:
-            logger.info(f"Sending {params.openpodcast_endpoint} to Open Podcast")
-            openpodcast.post(
+            logger.info(
+                f"Sending {params.openpodcast_endpoint} to Open Podcast")
+            response = openpodcast.post(
                 params.openpodcast_endpoint,
                 params.meta,
                 data,
                 params.start_date,
                 params.end_date,
             )
+            logger.debug(
+                f"Response: {response.status_code} - {response.text}")
     except requests.exceptions.HTTPError as e:
         logger.error(e)
         return
