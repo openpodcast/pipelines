@@ -62,9 +62,17 @@ class OpenPodcastConnector:
             "data": data,
         }
 
-        return requests.post(
+        response = requests.post(
             f"{self.url}/connector", headers=self.headers, json=payload, timeout=60
         )
+
+        # log error if response is not 200
+        if response.status_code != 200:
+            logger.error(
+                f"Failed to store `{endpoint}` [{start} - {end}] with status code {response.status_code} and response {response.text}"
+            )
+
+        return response
 
     def health(self):
         """
