@@ -3,11 +3,12 @@
 [![OpenPodcast Banner](https://raw.githubusercontent.com/openpodcast/banner/main/openpodcast-banner.png)](https://openpodcast.app/)
 
 This repo contains two pipelines for collecting and processing podcast metrics data
-from Spotify, Apple, and Anchor. It uses the following connector libs:
+from Spotify, Apple, Podigee, and Anchor. It uses the following connector libs:
 
-- Spotify: <https://github.com/openpodcast/spotify-connector> 
-- Apple: <https://github.com/openpodcast/apple-connector> 
 - Anchor: <https://github.com/openpodcast/anchor-connector>
+- Apple: <https://github.com/openpodcast/apple-connector> 
+- Podigee: <https://github.com/openpodcast/podigee-connector>
+- Spotify: <https://github.com/openpodcast/spotify-connector> 
 
 A pipeline consists of a Docker image which uses cron to run the connector periodically
 and forwards the fetched data to the Open Podcast API.
