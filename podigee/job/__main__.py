@@ -74,7 +74,7 @@ print("Done initializing environment")
 
 podigee = PodigeeConnector.from_credentials(
     base_url=BASE_URL,
-    podcast_id=PODCAST_ID,
+    podcast_id=PODIGEE_PODCAST_ID,
     username=PODIGEE_USERNAME,
     password=PODIGEE_PASSWORD,
 )
@@ -115,11 +115,12 @@ endpoints = [
 episodes = podigee.episodes()
 
 for episode in episodes:
+    print(episode)
     endpoints += [
         FetchParams(
             openpodcast_endpoint="episodeAnalytics",
             podigee_call=get_request_lambda(
-                podigee.episode_analytics, episode.id),
+                podigee.episode_analytics, episode["id"]),
             start_date=date_range.start,
             end_date=date_range.end,
         ),
