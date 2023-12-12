@@ -60,7 +60,7 @@ START_DATE = load_env(
 )
 END_DATE = load_env("END_DATE", (dt.datetime.now()).strftime("%Y-%m-%d"))
 
-# due to weird behaviour of the apple API when fetching just a few days,
+# Due to weird behaviour of the Apple API when fetching just a few days,
 # extend the date range to 30 days if shorter
 if (dt.datetime.strptime(END_DATE, "%Y-%m-%d") - dt.datetime.strptime(START_DATE, "%Y-%m-%d")).days < 30:
     START_DATE = (dt.datetime.strptime(END_DATE, "%Y-%m-%d") -
