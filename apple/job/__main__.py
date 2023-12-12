@@ -60,6 +60,14 @@ START_DATE = load_env(
 )
 END_DATE = load_env("END_DATE", (dt.datetime.now()).strftime("%Y-%m-%d"))
 
+# due to weird behaviour of the apple API when fetching just a few days,
+# extend the date range to 30 days if shorter
+if (dt.datetime.strptime(END_DATE, "%Y-%m-%d") - dt.datetime.strptime(START_DATE, "%Y-%m-%d")).days < 30:
+    START_DATE = (dt.datetime.strptime(END_DATE, "%Y-%m-%d") -
+                  dt.timedelta(days=30)).strftime("%Y-%m-%d")
+    print(
+        f"Date range too short, extending to 30 days. New start date: {START_DATE}")
+
 # The trends API supports historical data imports with daily resolution
 # up to 4 months in the past.
 # If we want to import a longer date-range, we split the date range into chunks
