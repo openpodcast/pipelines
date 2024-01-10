@@ -184,6 +184,14 @@ endpoints += [
         start_date=date_range.start,
         end_date=date_range.end,
     ),
+
+    # For weekly aggregated data:
+    FetchParams(
+        openpodcast_endpoint="episodes",
+        call=lambda: apple_connector.episodes(),
+        start_date=date_range.start,
+    ),
+
 ]
 
 # Fetch all episodes to get the episode IDs
