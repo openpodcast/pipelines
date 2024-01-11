@@ -12,7 +12,7 @@ from job.dates import get_date_range
 import job.apple as apple
 
 from loguru import logger
-from appleconnector import AppleConnector, Metric, Dimension
+from appleconnector import AppleConnector, Metric, Dimension, Mode
 
 print("Initializing environment")
 
@@ -127,6 +127,13 @@ apple_connector = AppleConnector(
 # Define a list of FetchParams objects with the parameters for each API call
 endpoints = []
 
+def last_week_monday():
+    """
+    Get the date of Monday of the last week
+    """
+    today = dt.date.today()
+    return today - dt.timedelta(days=today.weekday(), weeks=1)
+
 for chunk_id, (start_date, end_date) in enumerate(date_range.chunks(DAYS_PER_CHUNK)):
     print(f"Chunk {chunk_id} from {start_date} to {end_date}...")
     endpoints += [
@@ -188,10 +195,19 @@ endpoints += [
     # For weekly aggregated data:
     FetchParams(
         openpodcast_endpoint="episodes",
-        call=lambda: apple_connector.episodes(),
-        start_date=date_range.start,
+        call=get_request_lambda(
+            apple_connector.episodes,
+            # Weekly aggregated data returns the 7 days
+            # starting from start date
+            last_week_monday(),
+            mode=Mode.WEEKLY,
+        ),
+        # We discern the weekly aggregated data from the daily
+        # aggregated data by setting the dates from Monday to Sunday
+        # of the last week
+        start_date=last_week_monday(),
+        end_date=last_week_monday() + dt.timedelta(days=6),
     ),
-
 ]
 
 # Fetch all episodes to get the episode IDs
