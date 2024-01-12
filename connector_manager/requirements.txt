@@ -2,7 +2,7 @@ mysql_connector_python==8.0.33
 python_gnupg==0.5.0
 appleconnector==0.4.0
 spotifyconnector==0.8.1
-anchorconnector==0.3.2
+anchorconnector==0.4.0
 autopep8==1.7.0
 backoff==1.11.1
 certifi==2022.9.24
