@@ -1,5 +1,7 @@
 # 📈 Open Podcast Metrics Pipelines
 
+[![OpenPodcast Banner](https://raw.githubusercontent.com/openpodcast/banner/main/openpodcast-banner.png)](https://openpodcast.app/)
+
 This repo contains two pipelines for collecting and processing podcast metrics data
 from Spotify, Apple, and Anchor. It uses the following connector libs:
 
