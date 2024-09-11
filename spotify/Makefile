@@ -1,25 +1,14 @@
-.PHONY: run dev
-run dev:
-	python3 -m job
+SHELL := /bin/bash
+.DEFAULT_GOAL := help
 
-.PHONY: test
-test:
-	python3 -m pytest
+.PHONY: help
+help: ## help message, list all command
+	@echo -e "$$(grep -hE '^\S+.*:.*##' $(MAKEFILE_LIST) | sed -e 's/:.*##\s*/:/' -e 's/^\(.\+\):\(.*\)/\\x1b[36m\1\\x1b[m:\2/' | column -c2 -t -s :)"
+
+.PHONY: run
+run: ## run onl this connector using the env variables
+	source .env && python -m job
 
 .PHONY: install
-install:
-	pip3 install -r requirements.txt
-
-.PHONY: docker-build
-docker-build:
-	docker build -t openpodcast/spotify-connector .
-
-.PHONY: docker-run
-docker-run:
-	docker run --init -it --env-file .env -e 'CRON_SCHEDULE=* * * * *' openpodcast/spotify-connector
-
-.env.sample:
-	@envsync -e OPENPODCAST_API_ENDPOINT=https://api.openpodcast.dev \
-	        -e SPOTIFY_BASE_URL=https://generic.wg.spotify.com/podcasters/v0 \
-			-e SPOTIFY_CLIENT_ID=05a1371ee5194c27860b3ff3ff3979d2 \
-			-e STORE_DATA=False	
+install: ## install the dependencies
+	pip install -r requirements.txt

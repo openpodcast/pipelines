@@ -100,13 +100,17 @@ try:
     )
 
     # Check that the Open Podcast API is healthy
-    response = open_podcast.health()
-    if response.status_code != 200:
-        logger.error(
-            f"Open Podcast API healthcheck failed with status code {
-                response.status_code}"
-        )
-        exit(1)
+    # if we store everything to files, we do not need to check the health of the API
+    if STORE_DATA is True:
+        logger.warning("Data will be stored locally. Skipping healthcheck.")
+    else:
+        response = open_podcast.health()
+        if response.status_code != 200:
+            logger.error(
+                f"Open Podcast API healthcheck failed with status code {
+                    response.status_code}"
+            )
+            exit(1)
 
     def get_request_lambda(f, *args, **kwargs):
         """
@@ -212,7 +216,7 @@ try:
             ),
             # fetch daily impressions of the date range
             FetchParams(
-                openpodcast_endpoint="impressions"
+                openpodcast_endpoint="impressions",
                 spotify_call=get_request_lambda(
                     spotify.impressions, "daily", date_range.start, date_range.end, episode=episode_id
                 ),
