@@ -54,7 +54,6 @@ try:
     STORE_DATA = os.environ.get(
         "STORE_DATA", "False").lower() in ("true", "1", "t")
 
-
     # Number of worker threads to fetch data from the Spotify API by default
     NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
 
@@ -66,10 +65,11 @@ try:
     # Load from environment variable if set, otherwise set to defaults
     START_DATE = load_env(
         "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)
-                    ).strftime("%Y-%m-%d")
+                       ).strftime("%Y-%m-%d")
     )
     END_DATE = load_env(
-        "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
+        "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)
+                     ).strftime("%Y-%m-%d")
     )
 
     date_range = get_date_range(START_DATE, END_DATE)
@@ -103,10 +103,10 @@ try:
     response = open_podcast.health()
     if response.status_code != 200:
         logger.error(
-            f"Open Podcast API healthcheck failed with status code {response.status_code}"
+            f"Open Podcast API healthcheck failed with status code {
+                response.status_code}"
         )
         exit(1)
-
 
     def get_request_lambda(f, *args, **kwargs):
         """
@@ -114,7 +114,6 @@ try:
         to ensure call by value and not call by reference.
         """
         return lambda: f(*args, **kwargs)
-
 
     todayDate = dt.datetime.now()
     yesterdayDate = todayDate - dt.timedelta(days=1)
@@ -211,6 +210,28 @@ try:
                 end_date=date_range.end,
                 meta={"episode": episode_id},
             ),
+            # fetch daily impressions of the date range
+            FetchParams(
+                openpodcast_endpoint="impressions"
+                spotify_call=get_request_lambda(
+                    spotify.impressions, "daily", date_range.start, date_range.end, episode=episode_id
+                ),
+                start_date=date_range.start,
+                end_date=date_range.end,
+                meta={"episode": episode_id},
+            ),
+            # and faceted information (always aggregates 30 days) where it was shown
+            # the date range has to be 30 days, so we take the end date of the range
+            # and subtract 30 days
+            FetchParams(
+                openpodcast_endpoint="impressionsfaceted",
+                spotify_call=get_request_lambda(
+                    spotify.impressions, "faceted", date_range.end - dt.timedelta(days=30), date_range.end, episode=episode_id
+                ),
+                start_date=date_range.end - dt.timedelta(days=30),
+                end_date=date_range.end,
+                meta={"episode": episode_id},
+            ),
         ]
 
         # Calculate the date range for the episode to avoid unnecessary API calls
@@ -254,7 +275,8 @@ try:
 
     # Start a pool of worker threads to process items from the queue
     for i in range(NUM_WORKERS):
-        t = threading.Thread(target=worker, args=(queue, open_podcast, TASK_DELAY))
+        t = threading.Thread(target=worker, args=(
+            queue, open_podcast, TASK_DELAY))
         t.daemon = True
         t.start()
 
@@ -270,4 +292,4 @@ try:
 except CredentialsExpired as e:
     # Cleanly handle expired credential cookie
     logger.error(f"Authentication failed: {e}")
-    sys.exit(1)  
+    sys.exit(1)
