@@ -1,4 +1,6 @@
-FROM python:3.11-slim-bullseye
+# syntax=docker/dockerfile:1
+# Pin to linux/amd64 as we deploy to x86_64 servers
+FROM --platform=linux/amd64 python:3.11-slim-bullseye
 
 # Install cron
 RUN apt-get update \
