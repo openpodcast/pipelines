@@ -54,20 +54,29 @@ with db.cursor() as cursor:
     cursor.execute(sql)
     results = cursor.fetchall()
 
-for (account_id, source_name, source_podcast_id, source_access_keys_encrypted, pod_name) in results:
+for (
+    account_id,
+    source_name,
+    source_podcast_id,
+    source_access_keys_encrypted,
+    pod_name,
+) in results:
     if interactiveMode:
         print(
-            f"Fetch podcast {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}? [y/n]")
+            f"Fetch podcast {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}? [y/n]"
+        )
         if input() != "y":
             continue
 
     # all keys that are needed to access the source
     print(f"Decrypting keys for {pod_name} {account_id} for {source_name}")
     source_access_keys = decrypt_json(
-        source_access_keys_encrypted, OPENPODCAST_ENCRYPTION_KEY)
+        source_access_keys_encrypted, OPENPODCAST_ENCRYPTION_KEY
+    )
 
     logger.info(
-        f"Starting fetcher for {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}")
+        f"Starting fetcher for {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}"
+    )
 
     # parent path of fetcher/connector
     cwd = Path(CONNECTORS_PATH) / source_name
@@ -77,11 +86,14 @@ for (account_id, source_name, source_podcast_id, source_access_keys_encrypted, p
         result = subprocess.run(
             ["python", "-m", "job"],
             cwd=cwd,
-            env={**os.environ, **source_access_keys, 
-                 "PODCAST_ID": source_podcast_id, 
-                 "PODCAST_NAME": pod_name},
+            env={
+                **os.environ,
+                **source_access_keys,
+                "PODCAST_ID": source_podcast_id,
+                "PODCAST_NAME": pod_name,
+            },
             capture_output=True,
-            text=True
+            text=True,
         )
         if result.returncode == 0:
             successful += 1
