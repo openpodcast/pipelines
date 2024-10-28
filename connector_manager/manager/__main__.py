@@ -92,7 +92,6 @@ for (
                 "PODCAST_ID": source_podcast_id,
                 "PODCAST_NAME": pod_name,
             },
-            capture_output=True,
             text=True,
         )
         if result.returncode == 0:
