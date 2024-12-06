@@ -41,6 +41,10 @@ if "--interactive" in sys.argv:
     logger.info("Interactive mode enabled")
     interactiveMode = True
 
+# check for new entries in the waiting list table
+if not interactiveMode:
+    check_for_new_waiting_list_entries(db, OPENPODCAST_ENCRYPTION_KEY)
+
 print("Fetching all podcast tasks from database...")
 sql = """
   SELECT account_id, source_name, source_podcast_id, source_access_keys_encrypted, pod_name

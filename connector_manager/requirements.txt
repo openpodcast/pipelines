@@ -18,3 +18,4 @@ six==1.16.0
 tenacity==8.1.0
 toml==0.10.2
 urllib3==1.26.12
+gnupg==2.3.1
