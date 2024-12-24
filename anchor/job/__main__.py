@@ -29,6 +29,8 @@ BASE_URL = load_file_or_env(
     "ANCHOR_BASE_URL", "https://podcasters.spotify.com/pod/api/proxy/v3"
 )
 
+BASE_GRAPHQL_URL = os.environ.get("ANCHOR_BASE_GRAPHQL_URL", "https://creators.spotify.com/pod/graphql")
+
 # Anchor webstation ID which represents the podcast, which we fetch data for
 ANCHOR_WEBSTATION_ID = load_file_or_env("ANCHOR_WEBSTATION_ID")
 
@@ -73,6 +75,7 @@ print("Done initializing environment")
 
 anchor = AnchorConnector(
     base_url=BASE_URL,
+    base_graphql_url=BASE_GRAPHQL_URL,
     webstation_id=ANCHOR_WEBSTATION_ID,
     anchorpw_s=ANCHOR_PW_S,
 )
@@ -178,6 +181,15 @@ endpoints = [
     FetchParams(
         openpodcast_endpoint="audienceSize",
         anchor_call=anchor.audience_size,
+        start_date=date_range.start,
+        end_date=date_range.end,
+    ),
+    FetchParams(
+        openpodcast_endpoint="impressions",
+        anchor_call=get_request_lambda(
+            anchor.impressions,
+            date_range.end
+        ),
         start_date=date_range.start,
         end_date=date_range.end,
     ),
