@@ -8,15 +8,7 @@ test:
 
 .PHONY: install
 install:
-	pip3 install -r requirements.txt
-
-.PHONY: docker-build
-docker-build:
-	docker build -t openpodcast/anchor-connector .
-
-.PHONY: docker-run
-docker-run:
-	docker run --init -it --env-file .env -e 'CRON_SCHEDULE=* * * * *' openpodcast/anchor-connector
+	pipenv run pip3 install -r requirements.txt
 
 .env.sample:
 	@envsync -e OPENPODCAST_API_ENDPOINT=https://api.openpodcast.dev \
