@@ -119,12 +119,6 @@ def episode_all_time_video_data(connector, web_episode_id):
 
 endpoints = [
     FetchParams(
-        openpodcast_endpoint="podcastEpisode",
-        anchor_call=lambda: anchor.podcast_episode(),
-        start_date=date_range.start,
-        end_date=date_range.end,
-    ),
-    FetchParams(
         openpodcast_endpoint="plays",
         anchor_call=get_request_lambda(
             anchor.plays, date_range.start, date_range.end),
@@ -271,6 +265,13 @@ for episode in all_episodes:
             anchor_call=get_request_lambda(
                 anchor.episode_aggregated_performance, web_episode_id
             ),
+            start_date=date_range.start,
+            end_date=date_range.end,
+            meta=meta,
+        ),
+        FetchParams(
+            openpodcast_endpoint="podcastEpisode",
+            anchor_call = (lambda: [get_request_lambda(anchor.episode_metadata, web_episode_id)])(),
             start_date=date_range.start,
             end_date=date_range.end,
             meta=meta,
