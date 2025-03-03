@@ -190,7 +190,10 @@ endpoints = [
             anchor.impressions,
             date_range.end
         ),
-        start_date=date_range.start,
+        # Anchor always returns a fixed range of 30 days
+        # To store the correct date range in the DB, we use a fixed date range
+        # for the API.
+        start_date=(datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
         end_date=date_range.end,
     ),
     FetchParams(
