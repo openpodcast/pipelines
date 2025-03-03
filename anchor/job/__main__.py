@@ -48,8 +48,7 @@ NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
 START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=30)
-                   ).strftime("%Y-%m-%d")
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=30)).strftime("%Y-%m-%d")
 )
 END_DATE = load_env(
     "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
@@ -75,7 +74,7 @@ print("Done initializing environment")
 
 anchor = AnchorConnector(
     base_url=BASE_URL,
-    base_graphql_url=BASE_GRAPHQL_URL,
+    base_graphql_url="http://example.com",
     webstation_id=ANCHOR_WEBSTATION_ID,
     anchorpw_s=ANCHOR_PW_S,
 )
@@ -122,15 +121,8 @@ def episode_all_time_video_data(connector, web_episode_id):
 
 endpoints = [
     FetchParams(
-        openpodcast_endpoint="podcastEpisode",
-        anchor_call=lambda: anchor.podcast_episode(),
-        start_date=date_range.start,
-        end_date=date_range.end,
-    ),
-    FetchParams(
         openpodcast_endpoint="plays",
-        anchor_call=get_request_lambda(
-            anchor.plays, date_range.start, date_range.end),
+        anchor_call=get_request_lambda(anchor.plays, date_range.start, date_range.end),
         start_date=date_range.start,
         end_date=date_range.end,
     ),
@@ -248,6 +240,54 @@ open_podcast.post(
     date_range.end,
 )
 
+
+def wrap_episode_metadata(data):
+    """
+    Transform the episode data to match the expected format
+
+    This is a special case compared to the other endpoints because the
+    episode metadata is returned as a list of episodes, but we only want to
+    send one episode at a time to the Open Podcast API.
+    The reason is that we use a new Anchor/Spotify API endpoint to fetch the
+    individual episodes, which only returns one episode at a time.
+    """
+
+    # This is the inner podcast data, which we have to wrap in a JSON object
+    transformed_episode = {
+        "adCount": 0,
+        "created": data.get("created"),
+        "createdUnixTimestamp": data.get("createdUnixTimestamp"),
+        "description": data.get("description"),
+        "duration": data.get("totalDuration"),
+        "hourOffset": data.get("hourOffset"),
+        "isDeleted": data.get("isDeleted", False),
+        "isPublished": data.get("isPublished", False),
+        "podcastEpisodeId": data.get("webEpisodeId"),
+        "publishOn": data.get("publishOn"),
+        "publishOnUnixTimestamp": data.get("publishOnUnixTimestamp", 0)
+        * 1000,  # Convert to milliseconds
+        "title": data.get("title"),
+        "url": (
+            data.get("episodeAudios", [{}])[0].get("url")
+            if data.get("episodeAudios")
+            else None
+        ),
+        "trackedUrl": data.get("spotifyUrl"),
+        "episodeImage": data.get("episodeImage"),
+        "shareLinkPath": data.get("shareLinkPath"),
+        "shareLinkEmbedPath": data.get("shareLinkEmbedPath"),
+    }
+
+    return {
+        "allEpisodeWebIds": [data.get("webEpisodeId")],
+        "podcastId": data.get("webStationId"),
+        "podcastEpisodes": [transformed_episode],
+        "totalPodcastEpisodes": 1,
+        "vanitySlug": "dummy",
+        "stationCreatedDate": "dummy",
+    }
+
+
 for episode in all_episodes:
     # Note: Anchor has two IDs for each episode, the `episodeId` and the
     # `webEpisodeId` We use the `webEpisodeId` to identify the episode because
@@ -268,15 +308,19 @@ for episode in all_episodes:
         FetchParams(
             openpodcast_endpoint="episodePlays",
             anchor_call=get_request_lambda(
-                anchor.episode_plays, web_episode_id, date_range.start, date_range.end, "daily"),
+                anchor.episode_plays,
+                web_episode_id,
+                date_range.start,
+                date_range.end,
+                "daily",
+            ),
             start_date=date_range.start,
             end_date=date_range.end,
             meta=meta,
         ),
         FetchParams(
             openpodcast_endpoint="episodePerformance",
-            anchor_call=get_request_lambda(
-                anchor.episode_performance, web_episode_id),
+            anchor_call=get_request_lambda(anchor.episode_performance, web_episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
             meta=meta,
@@ -290,7 +334,21 @@ for episode in all_episodes:
             end_date=date_range.end,
             meta=meta,
         ),
-
+        FetchParams(
+            openpodcast_endpoint="podcastEpisode",
+            # Note: We pass the `web_episode_id` as a default argument to the
+            # lambda function. This creates a new binding for each iteration of
+            # the loop, effectively capturing the correct value of
+            # web_episode_id for each episode.
+            anchor_call=(
+                lambda episode_id=web_episode_id: wrap_episode_metadata(
+                    get_request_lambda(anchor.episode_metadata, episode_id)()
+                )
+            ),
+            start_date=date_range.start,
+            end_date=date_range.end,
+            meta=meta,
+        ),
         # TODO: This endpoint is not supported by the Open Podcast API yet
         # FetchParams(
         #     openpodcast_endpoint="episodeAllTimeVideoData",
