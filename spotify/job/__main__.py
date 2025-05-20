@@ -152,17 +152,6 @@ try:
             start_date=date_range.start,
             end_date=date_range.end,
         ),
-        FetchParams(
-            openpodcast_endpoint="episodes",
-            spotify_call=get_request_lambda(
-                # as Spotify sometimes returns empty values if the end date is set to today,
-                # we set the end date to yesterday just to be on the safe side
-                # see issue https://github.com/openpodcast/api/issues/133
-                spotify.episodes, oldestDate, yesterdayDate
-            ),
-            start_date=oldestDate,
-            end_date=todayDate,
-        ),
     ] + [
         # Fetch aggregate data for the podcast for each individual day
         # Otherwise we get all data merged into one
@@ -185,6 +174,15 @@ try:
 
         # Fetch data for each episode
         endpoints += [
+            FetchParams(
+                openpodcast_endpoint="episodeMetadata",
+                spotify_call=get_request_lambda(
+                    spotify.metadata, episode=episode_id
+                ),
+                start_date=date_range.start,
+                end_date=date_range.end,
+                meta={"episode": episode_id},
+            ),
             FetchParams(
                 openpodcast_endpoint="detailedStreams",
                 spotify_call=get_request_lambda(
