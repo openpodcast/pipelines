@@ -23,8 +23,6 @@ OPENPODCAST_API_ENDPOINT = os.environ.get(
 )
 OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 
-# Note: Podigee API uses Spotify as base URL because it was acquired by Spotify.
-# This is not a typo.
 BASE_URL = load_file_or_env(
     "PODIGEE_BASE_URL", "https://app.podigee.com/api/v1"
 )
