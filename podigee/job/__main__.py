@@ -2,6 +2,7 @@ import threading
 import os
 import datetime as dt
 import requests
+import json
 
 from queue import Queue
 from datetime import datetime, timedelta
@@ -27,20 +28,15 @@ BASE_URL = load_file_or_env(
     "PODIGEE_BASE_URL", "https://app.podigee.com/api/v1"
 )
 
-# Podigee webstation ID which represents the podcast, which we fetch data for
-PODIGEE_PODCAST_ID = load_file_or_env("PODIGEE_PODCAST_ID")
-
-# if PODIGEE_PODCAST_ID is not set, try to use PODCAST_ID instead
-# this is used by the connector manager to be more generic
-if not PODIGEE_PODCAST_ID:
-    PODIGEE_PODCAST_ID = load_file_or_env("PODCAST_ID")
+# Podigee podcast IDs are integers
+PODCAST_ID = int(load_file_or_env("PODCAST_ID"))
 
 # Podigee authentication
 PODIGEE_USERNAME = load_file_or_env("PODIGEE_USERNAME")
 PODIGEE_PASSWORD = load_file_or_env("PODIGEE_PASSWORD")
 
 # Number of worker threads to fetch data from the Podigee API by default
-NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
+NUM_WORKERS = int(os.environ.get("NUM_WORKERS", 1))
 
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
@@ -58,7 +54,7 @@ date_range = get_date_range(START_DATE, END_DATE)
 missing_vars = list(
     filter(
         lambda x: globals()[x] is None,
-        ["OPENPODCAST_API_TOKEN", "PODIGEE_PODCAST_ID", "PODIGEE_USERNAME", "PODIGEE_PASSWORD"],
+        ["OPENPODCAST_API_TOKEN", "PODCAST_ID", "PODIGEE_USERNAME", "PODIGEE_PASSWORD"],
     )
 )
 
@@ -72,16 +68,28 @@ print("Done initializing environment")
 
 podigee = PodigeeConnector.from_credentials(
     base_url=BASE_URL,
-    podcast_id=PODIGEE_PODCAST_ID,
     username=PODIGEE_USERNAME,
     password=PODIGEE_PASSWORD,
 )
 
+podcasts = podigee.podcasts()
+logger.debug("Podcasts = {}", json.dumps(podcasts, indent=4))
+
+if not podcasts:
+    logger.error("No podcasts found")
+    exit(1)
+
+# Check if the specified podcast exists
+if PODCAST_ID not in [podcast["id"] for podcast in podcasts]:
+    logger.error(
+        f"Podcast with ID {PODCAST_ID} not found. Available podcasts: {[podcast['id'] for podcast in podcasts]}"
+    )
+    exit(1)
+
 open_podcast = OpenPodcastConnector(
     OPENPODCAST_API_ENDPOINT,
     OPENPODCAST_API_TOKEN,
-    # The podcast ID is used to identify the podcast
-    PODIGEE_PODCAST_ID,
+    PODCAST_ID, # The podcast ID is used to identify the podcast
 )
 
 # Check that the Open Podcast API is healthy
