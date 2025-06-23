@@ -99,7 +99,8 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
     # Update the refresh token in the database
     try:
         with db_connection.cursor() as cursor:
-            encrypted_keys = 
+            # Encrypt the access keys before storing them
+            access_keys_json = encrypt_json(source_access_keys, encryption_key)
             
             # Update the database with the new encrypted keys
             sql = """
