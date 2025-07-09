@@ -107,7 +107,7 @@ for (
             redirect_uri=PODIGEE_REDIRECT_URI
         )
 
-        if not source_access_keys or "accessToken" not in source_access_keys:
+        if (not source_access_keys) or ("access_token" not in source_access_keys):
             logger.error(f"Failed to refresh Podigee token for {pod_name} {account_id}. Skipping this source.")
             continue
 

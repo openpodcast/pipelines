@@ -1,6 +1,7 @@
 """
 Handles Podigee OAuth operations, including token refresh and database updates.
 """
+from manager.cryptography import encrypt_json
 import mysql.connector
 import json
 from loguru import logger
@@ -99,16 +100,24 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
     # Update the refresh token in the database
     try:
         with db_connection.cursor() as cursor:
+            # We only need to store the refresh token. Throw away the rest of the JSON
+            if not "refresh_token" in source_access_keys:
+                raise ValueError("No refresh token found in the response from Podigee, got " + str(source_access_keys))
+
+            refresh_token = source_access_keys["refresh_token"]
+            if len(refresh_token) < 20:
+                raise ValueError("Refresh token is too short, got " + str(refresh_token)) 
+
             # Encrypt the access keys before storing them
-            access_keys_json = encrypt_json(source_access_keys, encryption_key)
-            
+            refresh_token_json = encrypt_json({ "refreshToken": refresh_token }, encryption_key)
+
             # Update the database with the new encrypted keys
             sql = """
                 UPDATE podcastSources 
                 SET source_access_keys_encrypted = %s
                 WHERE account_id = %s AND source_name = "podigee"
             """
-            cursor.execute(sql, (access_keys_json, account_id))
+            cursor.execute(sql, (refresh_token_json, account_id))
             db_connection.commit()
             logger.info(f"Updated Podigee refresh token for {pod_name}")
     except mysql.connector.Error as e:
