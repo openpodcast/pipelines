@@ -21,6 +21,10 @@ run up: docker-build ## run the dev stack using a mysql instance and the manager
 shell-%: ## run a shell in the container
 	docker compose exec $* bash
 
+.PHONY: db-shell
+db-shell: ## Opens the mysql shell inside the db container
+	docker compose exec db bash -c 'mysql -uopenpodcast -popenpodcast openpodcast'
+
 .PHONY: down
 down: ## stop the dev stack and remove volumes
 	docker compose down -v

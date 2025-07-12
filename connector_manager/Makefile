@@ -7,12 +7,14 @@ help: ## help message, list all command
 
 .PHONY: run dev
 run dev: ## run the job
-	python3 -m manager
+	. .venv/bin/activate && python3 -m manager
 
 .PHONY: test
-test: ## run the test
-	python3 -m pytest
+test: ## run the test and activate venv
+	. .venv/bin/activate && pytest -v --cov=manager --cov-report=term-missing
 
 .PHONY: install
-install:
-	pip3 install -r requirements.txt
+install: ## init venv and install dependencies
+	python3 -m venv .venv
+	. .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt
+	

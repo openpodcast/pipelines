@@ -16,6 +16,7 @@ COPY connector_manager/manager manager
 COPY spotify spotify
 COPY apple apple
 COPY anchor anchor
+COPY podigee podigee
 
 COPY entrypoint.sh entrypoint.sh
 
