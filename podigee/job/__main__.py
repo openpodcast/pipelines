@@ -111,11 +111,23 @@ if not podcasts:
     logger.error("No podcasts found")
     exit(1)
 
-# Check if the specified podcast exists
-if PODIGEE_PODCAST_ID not in [podcast["id"] for podcast in podcasts]:
+# Find the podcast we want to work with
+podcast = None
+for p in podcasts:
+    if p["id"] == PODIGEE_PODCAST_ID:
+        podcast = p
+        break
+
+if not podcast:
     logger.error(
-        f"Podcast with ID {PODIGEE_PODCAST_ID} not found. Available podcasts: {[podcast['id'] for podcast in podcasts]}"
+        f"Podcast with ID {PODIGEE_PODCAST_ID} not found. Available podcasts: {[p['id'] for p in podcasts]}"
     )
+    exit(1)
+
+# Extract and validate podcast title
+podcast_title = podcast.get("title")
+if not podcast_title:
+    logger.error(f"Podcast with ID {PODIGEE_PODCAST_ID} has no title")
     exit(1)
 
 open_podcast = OpenPodcastConnector(
@@ -141,13 +153,20 @@ def get_request_lambda(f, *args, **kwargs):
     return lambda: f(*args, **kwargs)
 
 
+def get_podcast_metadata():
+    """
+    Get podcast metadata formatted for OpenPodcast API.
+    """
+    return {
+        "name": podcast_title
+    }
+
+
 endpoints = [
     # Podcast metadata - get basic podcast information
     FetchParams(
         openpodcast_endpoint="metadata",
-        podigee_call=lambda: {
-            "name": next((p for p in podigee.podcasts() if p["id"] == PODIGEE_PODCAST_ID), {}).get("title", "")
-        },
+        podigee_call=get_podcast_metadata,
         start_date=date_range.start,
         end_date=date_range.end,
     ),
