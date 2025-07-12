@@ -86,7 +86,7 @@ if has_api_token:
         podigee_access_token=PODIGEE_ACCESS_TOKEN,
     )
 else:
-    logger.info("Using Podigee username/password for authentication")
+    logger.info("Fallback: Using Podigee username/password for authentication. Set API token to use it instead.")
     podigee = PodigeeConnector.from_credentials(
         base_url=BASE_URL,
         username=PODIGEE_USERNAME,
