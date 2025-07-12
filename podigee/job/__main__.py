@@ -142,8 +142,18 @@ def get_request_lambda(f, *args, **kwargs):
 
 
 endpoints = [
+    # Podcast metadata - get basic podcast information
     FetchParams(
-        openpodcast_endpoint="podcastAnalytics",
+        openpodcast_endpoint="metadata",
+        podigee_call=lambda: {
+            "name": next((p for p in podigee.podcasts() if p["id"] == PODIGEE_PODCAST_ID), {}).get("title", "")
+        },
+        start_date=date_range.start,
+        end_date=date_range.end,
+    ),
+    # Podcast metrics - analytics data for the podcast
+    FetchParams(
+        openpodcast_endpoint="metrics", 
         podigee_call=lambda: podigee.podcast_analytics(PODIGEE_PODCAST_ID, start=date_range.start, end=date_range.end),
         start_date=date_range.start,
         end_date=date_range.end,
@@ -155,12 +165,26 @@ episodes = podigee.episodes(PODIGEE_PODCAST_ID)
 for episode in episodes:
     print(episode)
     endpoints += [
+        # Episode metadata - basic episode information
         FetchParams(
-            openpodcast_endpoint="episodeAnalytics",
+            openpodcast_endpoint="metadata",
+            podigee_call=get_request_lambda(lambda ep: {
+                "ep_name": ep.get("title", ""),
+                "ep_url": ep.get("url", ""),
+                "ep_release_date": ep.get("published_at", "")
+            }, episode),
+            start_date=date_range.start,
+            end_date=date_range.end,
+            meta={"episode": str(episode["id"])},
+        ),
+        # Episode metrics - analytics data for the episode
+        FetchParams(
+            openpodcast_endpoint="metrics",
             podigee_call=get_request_lambda(
                 podigee.episode_analytics, str(episode["id"]), granularity=None, start=date_range.start, end=date_range.end),
             start_date=date_range.start,
             end_date=date_range.end,
+            meta={"episode": str(episode["id"])},
         ),
     ]
 
