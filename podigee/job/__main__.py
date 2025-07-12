@@ -23,7 +23,6 @@ OPENPODCAST_API_ENDPOINT = os.environ.get(
     "OPENPODCAST_API_ENDPOINT", "https://api.openpodcast.dev"
 )
 OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
-OPENPODCAST_PODCAST_ID = load_file_or_env("OPENPODCAST_PODCAST_ID")
 
 BASE_URL = load_file_or_env(
     "PODIGEE_BASE_URL", "https://app.podigee.com/api/v1"
@@ -32,7 +31,7 @@ BASE_URL = load_file_or_env(
 # Podigee podcast IDs are integers and different from Open Podcast IDs
 # One Podigee account can have multiple podcasts, so we need to specify the podcast ID
 # of the podcast we want to fetch data for
-PODIGEE_PODCAST_ID = load_file_or_env("PODIGEE_PODCAST_ID")
+PODCAST_ID = load_file_or_env("PODCAST_ID")
 
 # Podigee authentication
 PODIGEE_ACCESS_TOKEN = load_file_or_env("PODIGEE_ACCESS_TOKEN")
@@ -55,7 +54,7 @@ END_DATE = load_env(
 date_range = get_date_range(START_DATE, END_DATE)
 
 # check if all required environment variables are set
-always_required = ["OPENPODCAST_API_TOKEN", "PODIGEE_PODCAST_ID", "OPENPODCAST_PODCAST_ID"]
+always_required = ["OPENPODCAST_API_TOKEN", "PODCAST_ID"]
 missing_always_required = list(
     filter(
         lambda x: globals()[x] is None,
@@ -79,12 +78,12 @@ if not has_api_token and not has_credentials:
     )
     exit(1)
 
-# We know that PODIGEE_PODCAST_ID is set and is an integer
+# The Podigee podcast ID is expected to be an integer
 # Try to convert it to an integer, if it fails, this throws exception 
 try:
-    PODIGEE_PODCAST_ID = int(PODIGEE_PODCAST_ID)
+    PODCAST_ID = int(PODCAST_ID)
 except ValueError:
-    logger.error(f"PODIGEE_PODCAST_ID must be an integer, got: {PODIGEE_PODCAST_ID}")
+    logger.error(f"PODCAST_ID must be an integer, got: {PODCAST_ID}")
     exit(1)
 
 print("Done initializing environment")
@@ -114,26 +113,26 @@ if not podcasts:
 # Find the podcast we want to work with
 podcast = None
 for p in podcasts:
-    if p["id"] == PODIGEE_PODCAST_ID:
+    if p["id"] == PODCAST_ID:
         podcast = p
         break
 
 if not podcast:
     logger.error(
-        f"Podcast with ID {PODIGEE_PODCAST_ID} not found. Available podcasts: {[p['id'] for p in podcasts]}"
+        f"Podcast with ID {PODCAST_ID} not found. Available podcasts: {[p['id'] for p in podcasts]}"
     )
     exit(1)
 
 # Extract and validate podcast title
 podcast_title = podcast.get("title")
 if not podcast_title:
-    logger.error(f"Podcast with ID {PODIGEE_PODCAST_ID} has no title")
+    logger.error(f"Podcast with ID {PODCAST_ID} has no title")
     exit(1)
 
 open_podcast = OpenPodcastConnector(
     OPENPODCAST_API_ENDPOINT,
     OPENPODCAST_API_TOKEN,
-    OPENPODCAST_PODCAST_ID, # The podcast ID is used to identify the podcast (this is the Open Podcast API ID, not the Podigee ID)
+    PODCAST_ID
 )
 
 # Check that the Open Podcast API is healthy
@@ -236,14 +235,14 @@ endpoints = [
     FetchParams(
         openpodcast_endpoint="metrics", 
         podigee_call=lambda: transform_podigee_analytics_to_metrics(
-            podigee.podcast_analytics(PODIGEE_PODCAST_ID, start=date_range.start, end=date_range.end)
+            podigee.podcast_analytics(PODCAST_ID, start=date_range.start, end=date_range.end)
         ),
         start_date=date_range.start,
         end_date=date_range.end,
     ),
 ]
 
-episodes = podigee.episodes(PODIGEE_PODCAST_ID)
+episodes = podigee.episodes(PODCAST_ID)
 
 for episode in episodes:
     print(episode)
