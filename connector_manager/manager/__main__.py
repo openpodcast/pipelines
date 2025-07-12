@@ -7,9 +7,14 @@ import subprocess
 from pathlib import Path
 from loguru import logger
 import sys
+import json
+
+# Import the Podigee connector functionality
+from manager.podigee_connector import handle_podigee_refresh
 
 print("Initializing worker environment")
 
+# Common environment variables
 CONNECTORS_PATH = load_env("CONNECTORS_PATH", ".")
 MYSQL_HOST = load_env("MYSQL_HOST", "localhost")
 MYSQL_PORT = load_env("MYSQL_PORT", 3306)
@@ -17,6 +22,12 @@ MYSQL_USER = load_env("MYSQL_USER", "root")
 MYSQL_PASSWORD = load_file_or_env("MYSQL_PASSWORD")
 MYSQL_DATABASE = load_env("MYSQL_DATABASE", "openpodcast_auth")
 OPENPODCAST_ENCRYPTION_KEY = load_file_or_env("OPENPODCAST_ENCRYPTION_KEY")
+
+# Podigee-specific environment variables
+PODIGEE_CLIENT_ID = load_env("PODIGEE_CLIENT_ID")
+PODIGEE_CLIENT_SECRET = load_env("PODIGEE_CLIENT_SECRET")
+PODIGEE_REDIRECT_URI = load_env("PODIGEE_REDIRECT_URI", 
+                               "https://connect.openpodcast.app/auth/v1/podigee/callback")
 
 if not OPENPODCAST_ENCRYPTION_KEY:
     logger.error("No OPENPODCAST_ENCRYPTION_KEY found")
@@ -73,6 +84,32 @@ for (
     source_access_keys = decrypt_json(
         source_access_keys_encrypted, OPENPODCAST_ENCRYPTION_KEY
     )
+    
+    # Handle Podigee token refresh if this is a Podigee source
+    if source_name == "podigee":
+        # check if all relevant variables are set, otherwise skip this source
+        if not PODIGEE_CLIENT_ID or not PODIGEE_CLIENT_SECRET:
+            logger.error(
+                f"Missing Podigee credentials for {pod_name} {account_id}. Skipping this source."
+            )
+            continue
+            
+        # Handle the token refresh and database update
+        source_access_keys = handle_podigee_refresh(
+            db_connection=db, 
+            account_id=account_id, 
+            source_name=source_name, 
+            source_access_keys=source_access_keys, 
+            pod_name=pod_name, 
+            encryption_key=OPENPODCAST_ENCRYPTION_KEY,
+            client_id=PODIGEE_CLIENT_ID,
+            client_secret=PODIGEE_CLIENT_SECRET,
+            redirect_uri=PODIGEE_REDIRECT_URI
+        )
+
+        if (not source_access_keys) or ("access_token" not in source_access_keys):
+            logger.error(f"Failed to refresh Podigee token for {pod_name} {account_id}. Skipping this source.")
+            continue
 
     logger.info(
         f"Starting fetcher for {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}"
