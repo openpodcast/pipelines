@@ -32,6 +32,7 @@ BASE_URL = load_file_or_env(
 PODCAST_ID = int(load_file_or_env("PODCAST_ID"))
 
 # Podigee authentication
+PODIGEE_ACCESS_TOKEN = load_file_or_env("PODIGEE_ACCESS_TOKEN")
 PODIGEE_USERNAME = load_file_or_env("PODIGEE_USERNAME")
 PODIGEE_PASSWORD = load_file_or_env("PODIGEE_PASSWORD")
 
@@ -51,26 +52,46 @@ END_DATE = load_env(
 date_range = get_date_range(START_DATE, END_DATE)
 
 # check if all required environment variables are set
-missing_vars = list(
+always_required = ["OPENPODCAST_API_TOKEN", "PODCAST_ID"]
+missing_always_required = list(
     filter(
         lambda x: globals()[x] is None,
-        ["OPENPODCAST_API_TOKEN", "PODCAST_ID", "PODIGEE_USERNAME", "PODIGEE_PASSWORD"],
+        always_required,
     )
 )
 
-if len(missing_vars):
+if len(missing_always_required):
     logger.error(
-        f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting..."
+        f"Missing required environment variables: {', '.join(missing_always_required)}. Exiting..."
+    )
+    exit(1)
+
+# Check authentication methods - require either API token OR username+password
+has_api_token = PODIGEE_ACCESS_TOKEN is not None
+has_credentials = PODIGEE_USERNAME is not None and PODIGEE_PASSWORD is not None
+
+if not has_api_token and not has_credentials:
+    logger.error(
+        "Missing Podigee authentication. Please provide either PODIGEE_ACCESS_TOKEN or both PODIGEE_USERNAME and PODIGEE_PASSWORD. Exiting..."
     )
     exit(1)
 
 print("Done initializing environment")
 
-podigee = PodigeeConnector.from_credentials(
-    base_url=BASE_URL,
-    username=PODIGEE_USERNAME,
-    password=PODIGEE_PASSWORD,
-)
+# Try API token first (preferred method), fallback to username/password
+if has_api_token:
+    logger.info("Using Podigee API token for authentication")
+    podigee = PodigeeConnector(
+        base_url=BASE_URL,
+        podigee_access_token=PODIGEE_ACCESS_TOKEN,
+    )
+else:
+    logger.info("Using Podigee username/password for authentication")
+    podigee = PodigeeConnector.from_credentials(
+        base_url=BASE_URL,
+        username=PODIGEE_USERNAME,
+        password=PODIGEE_PASSWORD,
+    )
 
 podcasts = podigee.podcasts()
 logger.debug("Podcasts = {}", json.dumps(podcasts, indent=4))
