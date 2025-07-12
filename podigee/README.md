@@ -1,7 +1,6 @@
 # Podigee Data
 
-This uses our Podigee connector to fetch data for our podcasts from the Podigee
-API. 
+This uses the Podigee connector to fetch data for podcasts from the Podigee API. 
 
 The connector is available on [GitHub](https://github.com/openpodcast/podigee-connector).
 
