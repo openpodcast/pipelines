@@ -76,18 +76,18 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
     Returns:
         dict: Updated source_access_keys with the new access token, or None if failed
     """
-    if source_name != "podigee" or "refreshToken" not in source_access_keys:
+    if source_name != "podigee" or "PODIGEE_REFRESH_TOKEN" not in source_access_keys:
         return source_access_keys
         
     logger.info(f"Refreshing Podigee access token for {pod_name}")
     
     # Get refresh token from source_access_keys
-    refresh_token = source_access_keys.get("refreshToken")
-    
+    refresh_token = source_access_keys.get("PODIGEE_REFRESH_TOKEN")
+    logger.debug(f"Using refresh token: {refresh_token}")    
     if not client_id or not client_secret or not refresh_token:
         logger.error(f"Missing required OAuth credentials for Podigee: {pod_name}")
         return None
-        
+
     # Refresh the token
     token_data = refresh_podigee_token(client_id, client_secret, refresh_token, redirect_uri)
     
@@ -95,21 +95,22 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
         logger.error(f"Failed to refresh Podigee token for {pod_name}")
         return None
 
-    source_access_keys = token_data.copy()
+    # Update source_access_keys in-place; keep the remaining keys
+    source_access_keys.update({
+        "PODIGEE_ACCESS_TOKEN": token_data["access_token"],
+        "PODIGEE_REFRESH_TOKEN": token_data["refresh_token"],
+    })
     
     # Update the refresh token in the database
     try:
         with db_connection.cursor() as cursor:
             # We only need to store the refresh token. Throw away the rest of the JSON
-            if not "refresh_token" in source_access_keys:
-                raise ValueError("No refresh token found in the response from Podigee, got " + str(source_access_keys))
-
-            refresh_token = source_access_keys["refresh_token"]
-            if len(refresh_token) < 20:
-                raise ValueError("Refresh token is too short, got " + str(refresh_token)) 
+            refresh_token = source_access_keys.get("PODIGEE_REFRESH_TOKEN")
+            if not refresh_token or len(refresh_token) < 20:
+                raise ValueError(f"Invalid refresh token: {refresh_token}")
 
             # Encrypt the access keys before storing them
-            refresh_token_json = encrypt_json({ "refreshToken": refresh_token }, encryption_key)
+            source_access_keys_json = encrypt_json(source_access_keys, encryption_key)
 
             # Update the database with the new encrypted keys
             sql = """
@@ -117,7 +118,7 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
                 SET source_access_keys_encrypted = %s
                 WHERE account_id = %s AND source_name = "podigee"
             """
-            cursor.execute(sql, (refresh_token_json, account_id))
+            cursor.execute(sql, (source_access_keys_json, account_id))
             db_connection.commit()
             logger.info(f"Updated Podigee refresh token for {pod_name}")
     except mysql.connector.Error as e:

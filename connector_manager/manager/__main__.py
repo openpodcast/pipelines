@@ -107,7 +107,7 @@ for (
             redirect_uri=PODIGEE_REDIRECT_URI
         )
 
-        if (not source_access_keys) or ("access_token" not in source_access_keys):
+        if (not source_access_keys) or ("PODIGEE_ACCESS_TOKEN" not in source_access_keys):
             logger.error(f"Failed to refresh Podigee token for {pod_name} {account_id}. Skipping this source.")
             continue
 
@@ -118,6 +118,9 @@ for (
     # parent path of fetcher/connector
     cwd = Path(CONNECTORS_PATH) / source_name
     try:
+        # Ensure that environment variables are proper strings
+        source_access_keys = {k: str(v) for k, v in source_access_keys.items()}
+
         # run an external process, switch to right fetcher depending on
         # source_name, and set env variables from source_access_keys
         result = subprocess.run(
@@ -135,7 +138,7 @@ for (
             successful += 1
         else:
             failed += 1
-            logger.error(f"Failed to fetch {pod_name}: {result.stderr}")
+            logger.error(f"Fetching of {pod_name} not successful. Subprocess error output: {result.stderr}")
     except Exception as e:
         failed += 1
         logger.error(f"Exception while fetching {pod_name}: {e}")
