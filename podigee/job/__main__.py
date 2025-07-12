@@ -162,6 +162,68 @@ def get_podcast_metadata():
     }
 
 
+def transform_podigee_analytics_to_metrics(analytics_data):
+    """
+    Transform Podigee analytics data to OpenPodcast metrics format.
+    Expected format: {"metrics": [{"start": "date", "end": "date", "dimension": "string", "subdimension": "string", "value": number}]}
+    """
+    if not analytics_data or "objects" not in analytics_data:
+        return {"metrics": []}
+    
+    metrics = []
+    
+    for day_data in analytics_data["objects"]:
+        date = day_data.get("downloaded_on", "").split("T")[0]  # Extract YYYY-MM-DD
+        if not date:
+            continue
+            
+        # Process downloads
+        if "downloads" in day_data:
+            for download_type, value in day_data["downloads"].items():
+                metrics.append({
+                    "start": date,
+                    "end": date,
+                    "dimension": "downloads",
+                    "subdimension": download_type,
+                    "value": value
+                })
+        
+        # Process platforms
+        if "platforms" in day_data:
+            for platform, value in day_data["platforms"].items():
+                metrics.append({
+                    "start": date,
+                    "end": date,
+                    "dimension": "platforms",
+                    "subdimension": platform,
+                    "value": value
+                })
+        
+        # Process clients
+        if "clients" in day_data:
+            for client, value in day_data["clients"].items():
+                metrics.append({
+                    "start": date,
+                    "end": date,
+                    "dimension": "clients",
+                    "subdimension": client,
+                    "value": value
+                })
+        
+        # Process sources
+        if "sources" in day_data:
+            for source, value in day_data["sources"].items():
+                metrics.append({
+                    "start": date,
+                    "end": date,
+                    "dimension": "sources",
+                    "subdimension": source,
+                    "value": value
+                })
+    
+    return {"metrics": metrics}
+
+
 endpoints = [
     # Podcast metadata - get basic podcast information
     FetchParams(
@@ -173,7 +235,9 @@ endpoints = [
     # Podcast metrics - analytics data for the podcast
     FetchParams(
         openpodcast_endpoint="metrics", 
-        podigee_call=lambda: podigee.podcast_analytics(PODIGEE_PODCAST_ID, start=date_range.start, end=date_range.end),
+        podigee_call=lambda: transform_podigee_analytics_to_metrics(
+            podigee.podcast_analytics(PODIGEE_PODCAST_ID, start=date_range.start, end=date_range.end)
+        ),
         start_date=date_range.start,
         end_date=date_range.end,
     ),
@@ -200,7 +264,11 @@ for episode in episodes:
         FetchParams(
             openpodcast_endpoint="metrics",
             podigee_call=get_request_lambda(
-                podigee.episode_analytics, str(episode["id"]), granularity=None, start=date_range.start, end=date_range.end),
+                lambda ep_id: transform_podigee_analytics_to_metrics(
+                    podigee.episode_analytics(ep_id, granularity=None, start=date_range.start, end=date_range.end)
+                ), 
+                str(episode["id"])
+            ),
             start_date=date_range.start,
             end_date=date_range.end,
             meta={"episode": str(episode["id"])},

@@ -62,6 +62,8 @@ class OpenPodcastConnector:
             "data": data,
         }
 
+        logger.debug(f"Payload: {payload}")
+
         response = requests.post(
             f"{self.url}/connector", headers=self.headers, json=payload, timeout=60
         )
