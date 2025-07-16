@@ -1,5 +1,5 @@
 import unittest
-from manager.cryptography import decrypt_json
+from manager.cryptography import decrypt_json, encrypt_json
 import json
 
 # "testvalue" encrypted using key "supersecret" abd base64 encoded is
@@ -32,6 +32,39 @@ class TestDecrypt(unittest.TestCase):
         json = '{"APPLE_AUTOMATION_ENDPOINT": "https://apple-automation.somedomain.com/endpoint"}'
         self.assertEqual(decrypt_json(json, passphrase)
                          ["APPLE_AUTOMATION_ENDPOINT"], "https://apple-automation.somedomain.com/endpoint")
+
+
+class TestEncrypt(unittest.TestCase):
+    def test_encrypt_decrypt_roundtrip(self):
+        # Test that encrypting and then decrypting returns the original value
+        test_data = {"key1": "value1", "key2": "value2"}
+        encrypted_json = encrypt_json(test_data, passphrase)
+        decrypted_data = decrypt_json(encrypted_json, passphrase)
+        self.assertEqual(decrypted_data, test_data)
+
+    def test_encrypt_with_different_keys(self):
+        # Test that encrypting the same data with different keys produces different results
+        test_data = {"key1": "value1"}
+        encrypted1 = encrypt_json(test_data, "key1")
+        encrypted2 = encrypt_json(test_data, "key2")
+        self.assertNotEqual(encrypted1, encrypted2)
+
+    def test_encrypt_non_string_values(self):
+        # Test that non-string values are properly handled
+        test_data = {"int": 123, "float": 3.14, "bool": True, "none": None}
+        encrypted_json = encrypt_json(test_data, passphrase)
+        decrypted_data = decrypt_json(encrypted_json, passphrase)
+
+        # Convert expected values to strings since encrypt_json converts non-string values to strings
+        expected = {k: str(v) if v is not None else "None" for k, v in test_data.items()}
+        self.assertEqual(decrypted_data, expected)
+
+    def test_wrong_passphrase_decrypt(self):
+        # Test that decrypting with wrong passphrase fails
+        test_data = {"secret": "confidential"}
+        encrypted_json = encrypt_json(test_data, passphrase)
+        decrypted_data = decrypt_json(encrypted_json, "wrongpassphrase")
+        self.assertNotEqual(decrypted_data["secret"], test_data["secret"])
 
 
 if __name__ == "__main__":
