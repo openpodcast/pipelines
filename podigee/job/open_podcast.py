@@ -81,5 +81,5 @@ class OpenPodcastConnector:
         Send GET request to the Open Podcast healthcheck endpoint `/health`.
         """
         logger.info(f"Checking health of {self.url}/health")
-        logger.info(f"Headers: {self.headers}")
+        logger.debug(f"Headers: {self.headers}")
         return requests.get(f"{self.url}/health", headers=self.headers, timeout=60)
