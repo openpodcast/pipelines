@@ -104,7 +104,12 @@ else:
     )
 
 podcasts = podigee.podcasts()
-logger.debug("Podcasts = {}", json.dumps(podcasts, indent=4))
+
+# for testing, just output the podcast names and ids and then exit the whole program
+for p in podcasts:
+    logger.info(f"Found podcast: {p['title']} (ID: {p['id']})")
+# exit
+exit(0)
 
 if not podcasts:
     logger.error("No podcasts found")
