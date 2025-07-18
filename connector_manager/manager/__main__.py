@@ -25,7 +25,7 @@ OPENPODCAST_ENCRYPTION_KEY = load_file_or_env("OPENPODCAST_ENCRYPTION_KEY")
 
 # Podigee-specific environment variables
 PODIGEE_CLIENT_ID = load_env("PODIGEE_CLIENT_ID")
-PODIGEE_CLIENT_SECRET = load_env("PODIGEE_CLIENT_SECRET")
+PODIGEE_CLIENT_SECRET = load_load_file_or_env("PODIGEE_CLIENT_SECRET")
 PODIGEE_REDIRECT_URI = load_env("PODIGEE_REDIRECT_URI", 
                                "https://connect.openpodcast.app/auth/v1/podigee/callback")
 
