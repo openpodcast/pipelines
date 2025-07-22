@@ -19,8 +19,6 @@ services:
             - db
     db:
         image: mysql:8.0
-        ports:
-            - "3306:3306"  # Bind port 3306 on the host to port 3306 on the container
         volumes:
             - mysqldata:/var/lib/mysql
             - ./db_local_dev/schema.sql:/docker-entrypoint-initdb.d/00_schema.sql
