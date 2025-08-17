@@ -1,12 +1,12 @@
 """
-Tests for Podigee OAuth connector functionality.
-Tests the refresh token logic and database update scenarios.
+Complete tests for Podigee OAuth connector functionality.
+Tests the refresh token logic, database update scenarios, and token reuse issues.
 """
 import pytest
 import json
 import requests
 import mysql.connector
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, call
 from manager.podigee_connector import refresh_podigee_token, handle_podigee_refresh
 
 
@@ -23,7 +23,7 @@ class TestRefreshPodigeeToken:
         }
         mock_response.raise_for_status.return_value = None
         
-        with patch('requests.post', return_value=mock_response) as mock_post:
+        with patch('manager.podigee_connector.requests.post', return_value=mock_response) as mock_post:
             result = refresh_podigee_token(
                 client_id="test_client_id",
                 client_secret="test_client_secret", 
@@ -57,13 +57,80 @@ class TestRefreshPodigeeToken:
         mock_response = Mock()
         mock_response.raise_for_status.side_effect = requests.RequestException("API Error")
         
-        with patch('requests.post', return_value=mock_response):
+        with patch('manager.podigee_connector.requests.post', return_value=mock_response):
             result = refresh_podigee_token(
                 client_id="test_client_id",
                 client_secret="test_client_secret",
                 refresh_token="test_refresh_token"
             )
             assert result is None
+    
+    def test_refresh_token_already_used(self):
+        """Test scenario where refresh token was already consumed by previous call."""
+        mock_response = Mock()
+        mock_response.raise_for_status.side_effect = requests.HTTPError("400 Client Error: invalid_grant")
+        mock_response.status_code = 400
+        mock_response.text = '{"error":"invalid_grant","error_description":"The provided authorization grant is invalid, expired, revoked, does not match the redirection URI used in the authorization request, or was issued to another client."}'
+        
+        with patch('manager.podigee_connector.requests.post', return_value=mock_response) as mock_post:
+            result = refresh_podigee_token(
+                client_id="test_client_id",
+                client_secret="test_client_secret",
+                refresh_token="already_used_refresh_token"
+            )
+            
+            # Should return None when refresh token is already used
+            assert result is None
+            
+            # Verify the request was made
+            mock_post.assert_called_once()
+            args, kwargs = mock_post.call_args
+            assert args[0] == "https://app.podigee.com/oauth/token"
+            assert kwargs["data"]["refresh_token"] == "already_used_refresh_token"
+    
+    def test_successful_refresh_then_reuse_failure(self):
+        """
+        Test scenario where first call succeeds but second call with same token fails.
+        This demonstrates the issue where the token is consumed but may not be saved properly.
+        """
+        # First call: successful refresh
+        mock_success_response = Mock()
+        mock_success_response.json.return_value = {
+            "access_token": "new_access_token_123",
+            "refresh_token": "new_refresh_token_456", 
+            "expires_in": 3600
+        }
+        mock_success_response.raise_for_status.return_value = None
+        
+        # Second call: failure due to reused token
+        mock_failure_response = Mock()
+        mock_failure_response.raise_for_status.side_effect = requests.HTTPError("400 Client Error: invalid_grant")
+        mock_failure_response.status_code = 400
+        mock_failure_response.text = '{"error":"invalid_grant"}'
+        
+        with patch('manager.podigee_connector.requests.post', side_effect=[mock_success_response, mock_failure_response]) as mock_post:
+            # First call should succeed
+            result1 = refresh_podigee_token(
+                client_id="test_client_id",
+                client_secret="test_client_secret",
+                refresh_token="original_refresh_token"
+            )
+            
+            assert result1 is not None
+            assert result1["access_token"] == "new_access_token_123"
+            assert result1["refresh_token"] == "new_refresh_token_456"
+            
+            # Second call with the same original token should fail
+            result2 = refresh_podigee_token(
+                client_id="test_client_id",
+                client_secret="test_client_secret",
+                refresh_token="original_refresh_token"  # Same token reused!
+            )
+            
+            assert result2 is None
+            
+            # Verify both calls were made
+            assert mock_post.call_count == 2
     
     def test_custom_redirect_uri(self):
         """Test with custom redirect URI."""
@@ -73,7 +140,7 @@ class TestRefreshPodigeeToken:
         
         custom_uri = "https://custom.example.com/callback"
         
-        with patch('requests.post', return_value=mock_response) as mock_post:
+        with patch('manager.podigee_connector.requests.post', return_value=mock_response) as mock_post:
             refresh_podigee_token(
                 client_id="test_client_id",
                 client_secret="test_client_secret",
@@ -83,6 +150,31 @@ class TestRefreshPodigeeToken:
             
             args, kwargs = mock_post.call_args
             assert kwargs["data"]["redirect_uri"] == custom_uri
+
+    def test_logging_token_values_in_debug_mode(self):
+        """Test that tokens are properly logged for debugging."""
+        mock_response = Mock()
+        mock_response.json.return_value = {
+            "access_token": "debug_access_token",
+            "refresh_token": "debug_new_refresh_token",
+            "expires_in": 3600
+        }
+        mock_response.raise_for_status.return_value = None
+        
+        with patch('manager.podigee_connector.requests.post', return_value=mock_response):
+            with patch('manager.podigee_connector.logger') as mock_logger:
+                result = refresh_podigee_token(
+                    client_id="test_client_id",
+                    client_secret="test_client_secret", 
+                    refresh_token="debug_input_refresh_token"
+                )
+                
+                assert result is not None
+                
+                # Check that success was logged with expires_in info
+                mock_logger.info.assert_called_with(
+                    "Successfully refreshed Podigee access token, expires in 3600 seconds"
+                )
 
 
 class TestHandlePodigeeRefresh:
@@ -186,7 +278,7 @@ class TestHandlePodigeeRefresh:
         assert result["PODIGEE_REFRESH_TOKEN"] == "new_refresh_token_with_sufficient_length_for_validation"
         assert result["OTHER_KEY"] == "other_value"  # Preserved
         
-        # Verify database operations (simplified - no transaction management)
+        # Verify database operations
         self.mock_cursor.execute.assert_called_once()
         
         # Verify the SQL query
@@ -294,6 +386,193 @@ class TestHandlePodigeeRefresh:
             assert result is not None
             assert result["PODIGEE_REFRESH_TOKEN"] == "old_refresh_token_with_sufficient_length_for_validation"
 
+    @patch('manager.podigee_connector.refresh_podigee_token')
+    @patch('manager.podigee_connector.encrypt_json')
+    def test_token_comparison_logic(self, mock_encrypt, mock_refresh):
+        """Test the logic that compares old vs new refresh tokens."""
+        # Test case 1: New token is different (normal case)
+        new_token_data = {
+            "access_token": "new_access_token_1",
+            "refresh_token": "completely_new_refresh_token",
+            "expires_in": 3600
+        }
+        mock_refresh.return_value = new_token_data
+        mock_encrypt.return_value = "encrypted_keys"
+        
+        mock_cursor = Mock()
+        cursor_context = Mock()
+        cursor_context.__enter__ = Mock(return_value=mock_cursor)
+        cursor_context.__exit__ = Mock(return_value=None)
+        mock_db = Mock()
+        mock_db.cursor.return_value = cursor_context
+        mock_cursor.rowcount = 1
+        
+        test_keys = {
+            "PODIGEE_REFRESH_TOKEN": "original_refresh_token_123",
+            "PODIGEE_ACCESS_TOKEN": "old_access_token"
+        }
+        
+        with patch('manager.podigee_connector.logger') as mock_logger:
+            result = handle_podigee_refresh(
+                db_connection=mock_db,
+                account_id="test_account",
+                source_name="podigee",
+                source_access_keys=test_keys.copy(),
+                pod_name="Test Podcast",
+                encryption_key="test_key",
+                client_id="client_id",
+                client_secret="client_secret"
+            )
+            
+            assert result is not None
+            assert result["PODIGEE_REFRESH_TOKEN"] == "completely_new_refresh_token"
+            
+            # Check that the success message was logged
+            mock_logger.info.assert_any_call("Successfully obtained new refresh token for Test Podcast")
+
+
+class TestTokenReuseIssues:
+    """Test scenarios related to token reuse and persistence issues."""
+    
+    @patch('manager.podigee_connector.refresh_podigee_token')
+    @patch('manager.podigee_connector.encrypt_json')
+    def test_database_transaction_failure_leaves_consumed_token(self, mock_encrypt, mock_refresh):
+        """
+        Test the critical scenario where token refresh succeeds but database update fails.
+        This leaves the refresh token consumed but not saved, causing the next run to fail.
+        """
+        # Mock successful token refresh
+        new_token_data = {
+            "access_token": "new_access_token_after_refresh",
+            "refresh_token": "new_refresh_token_after_refresh",
+            "expires_in": 3600
+        }
+        mock_refresh.return_value = new_token_data
+        mock_encrypt.return_value = "encrypted_keys"
+        
+        # Mock database connection
+        mock_db = Mock()
+        mock_cursor = Mock()
+        
+        # Mock cursor context manager
+        cursor_context = Mock()
+        cursor_context.__enter__ = Mock(return_value=mock_cursor)
+        cursor_context.__exit__ = Mock(return_value=None)
+        mock_db.cursor.return_value = cursor_context
+        
+        # Mock database failure after cursor.execute
+        mock_cursor.execute.side_effect = mysql.connector.Error("Database connection lost")
+        
+        test_keys = {
+            "PODIGEE_REFRESH_TOKEN": "valid_but_will_be_consumed_token",
+            "PODIGEE_ACCESS_TOKEN": "old_access_token"
+        }
+        
+        result = handle_podigee_refresh(
+            db_connection=mock_db,
+            account_id="test_account",
+            source_name="podigee",
+            source_access_keys=test_keys.copy(),
+            pod_name="Test Podcast",
+            encryption_key="test_key",
+            client_id="client_id",
+            client_secret="client_secret"
+        )
+        
+        # Should return None due to database failure
+        assert result is None
+        
+        # Verify that token refresh was called (consuming the token)
+        mock_refresh.assert_called_once_with("client_id", "client_secret", "valid_but_will_be_consumed_token", None)
+        
+        # Verify database update was attempted but failed
+        mock_cursor.execute.assert_called_once()
+        
+        # At this point, the refresh token "valid_but_will_be_consumed_token" is consumed
+        # but the new token "new_refresh_token_after_refresh" was not saved to the database
+        # This is the root cause of the issue!
+
+    @patch('manager.podigee_connector.refresh_podigee_token')
+    @patch('manager.podigee_connector.encrypt_json')
+    def test_simulated_second_program_run_with_consumed_token(self, mock_encrypt, mock_refresh):
+        """
+        Simulate the exact scenario described by the user:
+        1. First run: token refresh succeeds but database save fails
+        2. Second run: same old token is used (because save failed) and refresh fails
+        """
+        # First run simulation: token refresh succeeds but database fails
+        first_run_token_data = {
+            "access_token": "first_run_access_token",
+            "refresh_token": "first_run_new_refresh_token",
+            "expires_in": 3600
+        }
+        
+        # Second run simulation: token refresh fails because original token was consumed
+        mock_refresh.side_effect = [
+            first_run_token_data,  # First call succeeds
+            None  # Second call fails (token already used)
+        ]
+        
+        mock_encrypt.return_value = "encrypted_keys"
+        
+        # Mock database that fails on first run
+        mock_db = Mock()
+        mock_cursor = Mock()
+        cursor_context = Mock()
+        cursor_context.__enter__ = Mock(return_value=mock_cursor)
+        cursor_context.__exit__ = Mock(return_value=None)
+        mock_db.cursor.return_value = cursor_context
+        
+        # First run: database fails
+        mock_cursor.execute.side_effect = mysql.connector.Error("Connection lost")
+        
+        original_test_keys = {
+            "PODIGEE_REFRESH_TOKEN": "original_token_that_will_be_consumed",
+            "PODIGEE_ACCESS_TOKEN": "old_access_token"
+        }
+        
+        # First run - should fail due to database error
+        result1 = handle_podigee_refresh(
+            db_connection=mock_db,
+            account_id="test_account",
+            source_name="podigee",
+            source_access_keys=original_test_keys.copy(),
+            pod_name="Test Podcast",
+            encryption_key="test_key",
+            client_id="client_id",
+            client_secret="client_secret"
+        )
+        
+        assert result1 is None  # Failed due to database error
+        
+        # Reset database mock for second run
+        mock_cursor.execute.side_effect = None
+        mock_cursor.rowcount = 1
+        
+        # Second run - uses the same original keys because first run failed to save
+        # This simulates what happens when the user runs the program again
+        result2 = handle_podigee_refresh(
+            db_connection=mock_db,
+            account_id="test_account", 
+            source_name="podigee",
+            source_access_keys=original_test_keys.copy(),  # Same keys as before!
+            pod_name="Test Podcast",
+            encryption_key="test_key",
+            client_id="client_id",
+            client_secret="client_secret"
+        )
+        
+        assert result2 is None  # Failed due to token already consumed
+        
+        # Verify that refresh_podigee_token was called twice with the same token
+        assert mock_refresh.call_count == 2
+        call_args_list = mock_refresh.call_args_list
+        assert call_args_list[0][0][2] == "original_token_that_will_be_consumed"  # First call
+        assert call_args_list[1][0][2] == "original_token_that_will_be_consumed"  # Second call (same token!)
+        
+        # This demonstrates the issue: the same token is being used in both calls
+        # because the first call consumed it but failed to save the new one
+
 
 class TestIntegrationScenarios:
     """Integration tests for real-world scenarios."""
@@ -333,8 +612,8 @@ class TestIntegrationScenarios:
         # Should return None indicating manual intervention needed
         assert result is None
         
-        # Database should not be modified
-        mock_db.start_transaction.assert_not_called()
+        # Database should not be modified when token refresh fails
+        mock_cursor.execute.assert_not_called()
     
     @patch('manager.podigee_connector.refresh_podigee_token')
     @patch('manager.podigee_connector.encrypt_json')
