@@ -118,9 +118,6 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
     # This is critical - if this fails, the refresh token is consumed but not saved,
     # which will cause the next execution to fail
     try:
-        # Start explicit transaction
-        db_connection.start_transaction()
-        
         with db_connection.cursor() as cursor:
             # We only need to store the refresh token. Throw away the rest of the JSON
             refresh_token = source_access_keys.get("PODIGEE_REFRESH_TOKEN")
@@ -140,25 +137,16 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
             
             # Verify the update worked
             if cursor.rowcount == 0:
-                raise mysql.connector.Error("No rows were updated - account_id or source_name not found")
+                logger.error(f"No rows were updated - account_id '{account_id}' or source_name 'podigee' not found")
+                logger.error(f"New refresh token that could not be saved: {token_data['refresh_token']}")
+                return None
                 
-            db_connection.commit()
             logger.info(f"Successfully updated Podigee refresh token for {pod_name}")
             
     except (mysql.connector.Error, ValueError) as e:
         logger.error(f"Failed to update Podigee refresh token in database: {e}")
-        # Critical: If we can't update the database with the new refresh token,
-        # the next run will fail because the old token was already consumed.
-        try:
-            db_connection.rollback()
-            logger.info("Database transaction rolled back")
-        except Exception as rollback_error:
-            logger.error(f"Failed to rollback transaction: {rollback_error}")
-            
-        logger.error(f"Database update failed after successful token refresh for {pod_name}. "
-                    f"This will cause issues on next execution as the old refresh token is now invalid.")
+        logger.error(f"New refresh token that could not be saved: {token_data['refresh_token']} Account ID: {account_id}, Pod name: {pod_name}")
         logger.error(f"Manual intervention required: update the refresh token in the database manually.")
-        logger.error(f"New refresh token: {token_data['refresh_token']}")
         return None
         
     return source_access_keys

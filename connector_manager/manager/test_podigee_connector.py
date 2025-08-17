@@ -186,10 +186,8 @@ class TestHandlePodigeeRefresh:
         assert result["PODIGEE_REFRESH_TOKEN"] == "new_refresh_token_with_sufficient_length_for_validation"
         assert result["OTHER_KEY"] == "other_value"  # Preserved
         
-        # Verify database operations
-        self.mock_db.start_transaction.assert_called_once()
+        # Verify database operations (simplified - no transaction management)
         self.mock_cursor.execute.assert_called_once()
-        self.mock_db.commit.assert_called_once()
         
         # Verify the SQL query
         sql_call = self.mock_cursor.execute.call_args[0]
@@ -214,7 +212,7 @@ class TestHandlePodigeeRefresh:
         
         assert result is None
         # Database should not be touched if token refresh fails
-        self.mock_db.start_transaction.assert_not_called()
+        self.mock_cursor.execute.assert_not_called()
     
     @patch('manager.podigee_connector.refresh_podigee_token')
     @patch('manager.podigee_connector.encrypt_json')
@@ -241,9 +239,8 @@ class TestHandlePodigeeRefresh:
         # Should return None due to database failure
         assert result is None
         
-        # Verify rollback was attempted
-        self.mock_db.rollback.assert_called_once()
-        self.mock_db.commit.assert_not_called()
+        # Database execute should have been called but failed
+        self.mock_cursor.execute.assert_called_once()
     
     @patch('manager.podigee_connector.refresh_podigee_token')
     @patch('manager.podigee_connector.encrypt_json')
@@ -267,7 +264,6 @@ class TestHandlePodigeeRefresh:
         )
         
         assert result is None
-        self.mock_db.rollback.assert_called_once()
     
     @patch('manager.podigee_connector.refresh_podigee_token')
     def test_same_refresh_token_warning(self, mock_refresh):
@@ -384,8 +380,8 @@ class TestIntegrationScenarios:
         # Should return None indicating failure and need for manual intervention
         assert result is None
         
-        # Verify rollback was attempted
-        mock_db.rollback.assert_called_once()
+        # Database execute should have been called but failed
+        mock_cursor.execute.assert_called_once()
 
 
 if __name__ == "__main__":
