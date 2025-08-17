@@ -88,12 +88,25 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
         logger.error(f"Missing required OAuth credentials for Podigee: {pod_name}")
         return None
 
+    # Store original refresh token for debugging
+    original_refresh_token = refresh_token
+
     # Refresh the token
     token_data = refresh_podigee_token(client_id, client_secret, refresh_token, redirect_uri)
     
     if not token_data or "access_token" not in token_data or "refresh_token" not in token_data:
         logger.error(f"Failed to refresh Podigee token for {pod_name}")
+        logger.error(f"This likely means the refresh token was already used or is invalid.")
+        logger.error(f"Original refresh token was: {original_refresh_token[:10]}...")
+        logger.error(f"Manual intervention may be required to re-authenticate the Podigee connection.")
         return None
+
+    # Check if we got a new refresh token (it should be different from the original)
+    new_refresh_token = token_data["refresh_token"]
+    if new_refresh_token == original_refresh_token:
+        logger.warning(f"Podigee returned the same refresh token for {pod_name}. This is unusual.")
+    else:
+        logger.info(f"Successfully obtained new refresh token for {pod_name}")
 
     # Update source_access_keys in-place; keep the remaining keys
     source_access_keys.update({
@@ -102,7 +115,12 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
     })
     
     # Update the refresh token in the database
+    # This is critical - if this fails, the refresh token is consumed but not saved,
+    # which will cause the next execution to fail
     try:
+        # Start explicit transaction
+        db_connection.start_transaction()
+        
         with db_connection.cursor() as cursor:
             # We only need to store the refresh token. Throw away the rest of the JSON
             refresh_token = source_access_keys.get("PODIGEE_REFRESH_TOKEN")
@@ -119,9 +137,28 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
                 WHERE account_id = %s AND source_name = "podigee"
             """
             cursor.execute(sql, (source_access_keys_json, account_id))
+            
+            # Verify the update worked
+            if cursor.rowcount == 0:
+                raise mysql.connector.Error("No rows were updated - account_id or source_name not found")
+                
             db_connection.commit()
-            logger.info(f"Updated Podigee refresh token for {pod_name}")
-    except mysql.connector.Error as e:
-        logger.error(f"Failed to update Podigee refresh token: {e}")
+            logger.info(f"Successfully updated Podigee refresh token for {pod_name}")
+            
+    except (mysql.connector.Error, ValueError) as e:
+        logger.error(f"Failed to update Podigee refresh token in database: {e}")
+        # Critical: If we can't update the database with the new refresh token,
+        # the next run will fail because the old token was already consumed.
+        try:
+            db_connection.rollback()
+            logger.info("Database transaction rolled back")
+        except Exception as rollback_error:
+            logger.error(f"Failed to rollback transaction: {rollback_error}")
+            
+        logger.error(f"Database update failed after successful token refresh for {pod_name}. "
+                    f"This will cause issues on next execution as the old refresh token is now invalid.")
+        logger.error(f"Manual intervention required: update the refresh token in the database manually.")
+        logger.error(f"New refresh token: {token_data['refresh_token']}")
+        return None
         
     return source_access_keys
