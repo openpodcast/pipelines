@@ -41,6 +41,7 @@ try:
         user=MYSQL_USER,
         passwd=MYSQL_PASSWORD,
         database=MYSQL_DATABASE,
+        autocommit=True,
     )
 except mysql.connector.Error as e:
     logger.error("Error connecting to mysql: ", e)
