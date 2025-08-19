@@ -17,6 +17,10 @@ docker-run:
 run up dev: docker-build ## run the dev stack using a mysql instance and the manager
 	docker compose up
 
+.PHONY: up-%
+up-%: docker-build ## start a single service in the dev stack 
+	docker compose up $*
+
 .PHONY: shell-%
 shell-%: ## run a shell in the container
 	docker compose exec $* bash
