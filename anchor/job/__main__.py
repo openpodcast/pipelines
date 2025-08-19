@@ -29,6 +29,8 @@ BASE_URL = load_file_or_env(
     "ANCHOR_BASE_URL", "https://podcasters.spotify.com/pod/api/proxy/v3"
 )
 
+BASE_GRAPHQL_URL = os.environ.get("ANCHOR_BASE_GRAPHQL_URL", "https://creators.spotify.com/pod/graphql")
+
 # Anchor webstation ID which represents the podcast, which we fetch data for
 ANCHOR_WEBSTATION_ID = load_file_or_env("ANCHOR_WEBSTATION_ID")
 
@@ -172,6 +174,18 @@ endpoints = [
         openpodcast_endpoint="audienceSize",
         anchor_call=anchor.audience_size,
         start_date=date_range.start,
+        end_date=date_range.end,
+    ),
+    FetchParams(
+        openpodcast_endpoint="impressions",
+        anchor_call=get_request_lambda(
+            anchor.impressions,
+            date_range.end
+        ),
+        # Anchor always returns a fixed range of 30 days
+        # To store the correct date range in the DB, we use a fixed date range
+        # for the API.
+        start_date=(datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
         end_date=date_range.end,
     ),
     FetchParams(
