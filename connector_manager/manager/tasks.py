@@ -4,6 +4,7 @@ import datetime as dt
 from pathlib import Path
 from loguru import logger
 import mysql.connector
+from huey import crontab
 from manager.huey_config import huey
 from manager.load_env import load_env, load_file_or_env
 from manager.cryptography import decrypt_json
@@ -1043,3 +1044,18 @@ def queue_all_podcast_tasks():
     
     logger.info(f"Successfully queued {queued_count} podcast tasks")
     return {"queued_count": queued_count}
+
+@huey.periodic_task(crontab(minute='0', hour='*'))
+def schedule_podcast_tasks():
+    """
+    Periodic task that runs every hour to queue all podcast tasks.
+    """
+    logger.info("Starting periodic podcast task scheduling")
+    
+    try:
+        result = queue_all_podcast_tasks()
+        logger.info(f"Periodic scheduler completed successfully: {result}")
+        
+    except Exception as e:
+        logger.error(f"Periodic scheduler failed: {e}")
+        # Don't raise - let the task complete and retry next hour

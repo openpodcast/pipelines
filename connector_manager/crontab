@@ -1,2 +1,0 @@
-# Run podcast task scheduler every hour
-0 * * * * cd /app && python run_scheduler.py >> /var/log/scheduler.log 2>&1

@@ -28,11 +28,13 @@ def test_tasks_import():
             process_spotify_podcast,
             process_podigee_podcast,
             process_apple_podcast,
-            process_anchor_podcast
+            process_anchor_podcast,
+            schedule_podcast_tasks
         )
         print("✓ All tasks imported successfully")
         print("  - Main dispatcher: process_podcast_task")
-        print("  - Scheduler: queue_all_podcast_tasks") 
+        print("  - Manual scheduler: queue_all_podcast_tasks") 
+        print("  - Periodic scheduler: schedule_podcast_tasks")
         print("  - Connectors: spotify, podigee, apple, anchor")
         return True
     except Exception as e:
@@ -91,6 +93,27 @@ def test_connector_dispatch():
         except:
             pass
 
+def test_periodic_task():
+    """Test periodic task configuration."""
+    try:
+        from manager.tasks import schedule_podcast_tasks
+        from huey import crontab
+        
+        # Check if the task is configured as periodic
+        if hasattr(schedule_podcast_tasks, 'cron'):
+            cron_config = schedule_podcast_tasks.cron
+            print("✓ Periodic task configured successfully")
+            print(f"  - Schedule: minute='{cron_config.minute}', hour='{cron_config.hour}'")
+            print("  - Runs every hour at minute 0 (hourly)")
+            return True
+        else:
+            print("✗ Task is not configured as periodic")
+            return False
+            
+    except Exception as e:
+        print(f"✗ Periodic task test failed: {e}")
+        return False
+
 def main():
     """Run all tests."""
     print("Testing Huey migration...")
@@ -100,6 +123,7 @@ def main():
         test_tasks_import,  
         test_scheduler_import,
         test_connector_dispatch,
+        test_periodic_task,
     ]
     
     results = [test() for test in tests]

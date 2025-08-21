@@ -1,28 +1,4 @@
 services:
-    # Huey scheduler - runs periodically to queue tasks via cron
-    scheduler:
-        image: openpodcast/connector-manager
-        build:
-            context: .
-            dockerfile: Dockerfile
-        command: ["/app/run_cron_scheduler.sh"]
-        environment:
-            - MYSQL_HOST=db
-            - MYSQL_PORT=3306
-            - MYSQL_USER=openpodcast
-            - MYSQL_PASSWORD=openpodcast
-            - MYSQL_DATABASE=openpodcast_auth
-            - HUEY_DB_PATH=/app/data/huey.db
-            # Reads from .env file if available
-            - OPENPODCAST_ENCRYPTION_KEY=${OPENPODCAST_ENCRYPTION_KEY:-supersecret}
-        env_file:
-            - connector_manager/.env
-        depends_on:
-            - db
-        volumes:
-            - huey_data:/app/data
-
-    # Huey worker - processes queued tasks
     worker:
         image: openpodcast/connector-manager
         build:

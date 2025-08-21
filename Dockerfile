@@ -14,9 +14,6 @@ RUN pip3 install -r requirements.txt
 
 COPY connector_manager/manager manager
 COPY connector_manager/run_huey_consumer.py run_huey_consumer.py
-COPY connector_manager/run_scheduler.py run_scheduler.py
-COPY connector_manager/crontab crontab
-COPY connector_manager/run_cron_scheduler.sh run_cron_scheduler.sh
 COPY spotify spotify
 COPY apple apple
 COPY anchor anchor
@@ -24,6 +21,6 @@ COPY podigee podigee
 
 COPY entrypoint.sh entrypoint.sh
 
-RUN chmod +x ./entrypoint.sh ./run_huey_consumer.py ./run_scheduler.py ./run_cron_scheduler.sh
+RUN chmod +x ./entrypoint.sh ./run_huey_consumer.py
 
 CMD ["/app/entrypoint.sh"]
