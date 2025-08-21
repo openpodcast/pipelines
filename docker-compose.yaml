@@ -4,7 +4,7 @@ services:
         build:
             context: .
             dockerfile: Dockerfile
-        command: ["python", "/app/run_huey_consumer.py"]
+        command: ["python", "/app/entrypoint.py"]
         environment:
             - MYSQL_HOST=db
             - MYSQL_PORT=3306

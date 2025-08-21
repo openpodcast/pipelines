@@ -13,14 +13,12 @@ COPY connector_manager/requirements.txt requirements.txt
 RUN pip3 install -r requirements.txt
 
 COPY connector_manager/manager manager
-COPY connector_manager/run_huey_consumer.py run_huey_consumer.py
+COPY connector_manager/entrypoint.py entrypoint.py
 COPY spotify spotify
 COPY apple apple
 COPY anchor anchor
 COPY podigee podigee
 
-COPY entrypoint.sh entrypoint.sh
+RUN chmod +x ./entrypoint.py
 
-RUN chmod +x ./entrypoint.sh ./run_huey_consumer.py
-
-CMD ["/app/entrypoint.sh"]
+CMD ["python", "/app/entrypoint.py"]
