@@ -17,8 +17,7 @@ if __name__ == "__main__":
     # Import tasks to register them with huey
     import manager.tasks
     
-    print(f"Starting Huey consumer for {huey.name}")
-    print(f"Redis connection: {huey.storage}")
+    print(f"Starting Huey consumer for {huey.name}. Storage location: `{huey.storage}`")
     
     # Start the consumer - this will block and process tasks
     from huey.consumer import Consumer
