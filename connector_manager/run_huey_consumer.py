@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # Import tasks to register them with huey
     import manager.tasks
     
-    print(f"Starting Huey consumer for {huey.name}. Storage location: `{huey.storage}`")
+    print(f"Starting Huey consumer for {huey.name}")
     
     # Start the consumer - this will block and process tasks
     from huey.consumer import Consumer

@@ -25,7 +25,7 @@ PODIGEE_CLIENT_SECRET = load_file_or_env("PODIGEE_CLIENT_SECRET")
 PODIGEE_REDIRECT_URI = load_env("PODIGEE_REDIRECT_URI", 
                                "https://connect.openpodcast.app/auth/v1/podigee/callback")
 
-@huey.task()
+@huey.task(expires=dt.timedelta(hours=24))
 def process_spotify_podcast(account_id, source_podcast_id, source_access_keys, pod_name):
     """
     Process Spotify podcast fetching task.
@@ -241,7 +241,7 @@ def process_spotify_podcast(account_id, source_podcast_id, source_access_keys, p
         if str(spotify_path) in sys.path:
             sys.path.remove(str(spotify_path))
 
-@huey.task() 
+@huey.task(expires=dt.timedelta(hours=24)) 
 def process_podigee_podcast(account_id, source_podcast_id, source_access_keys, pod_name):
     """
     Process Podigee podcast fetching task.
@@ -453,7 +453,7 @@ def process_podigee_podcast(account_id, source_podcast_id, source_access_keys, p
         if str(podigee_path) in sys.path:
             sys.path.remove(str(podigee_path))
 
-@huey.task()
+@huey.task(expires=dt.timedelta(hours=24))
 def process_apple_podcast(account_id, source_podcast_id, source_access_keys, pod_name):
     """
     Process Apple podcast fetching task.
@@ -642,7 +642,7 @@ def process_apple_podcast(account_id, source_podcast_id, source_access_keys, pod
         if str(apple_path) in sys.path:
             sys.path.remove(str(apple_path))
 
-@huey.task()
+@huey.task(expires=dt.timedelta(hours=24))
 def process_anchor_podcast(account_id, source_podcast_id, source_access_keys, pod_name):
     """
     Process Anchor podcast fetching task.
@@ -992,7 +992,7 @@ def process_podcast_task(account_id, source_name, source_podcast_id, source_acce
         # No subprocess fallback - all connectors must be implemented as direct tasks
         raise ValueError(f"Unsupported connector type: {source_name}. Supported types: spotify, podigee, apple, anchor")
 
-@huey.task()
+@huey.task(expires=dt.timedelta(hours=24))
 def queue_all_podcast_tasks():
     """
     Discover all podcast tasks from database and queue them for processing.

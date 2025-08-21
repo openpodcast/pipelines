@@ -4,7 +4,7 @@ import logging
 from pathlib import Path
 
 # Configure Huey with SQLite
-HUEY_DB_PATH = load_env("HUEY_DB_PATH", "/app/data/huey.db")
+HUEY_DB_PATH = load_env("HUEY_DB_PATH", "/app/data/connector_manager.db")
 
 # Ensure the directory exists
 Path(HUEY_DB_PATH).parent.mkdir(parents=True, exist_ok=True)
