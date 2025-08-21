@@ -26,6 +26,7 @@ PODIGEE_REDIRECT_URI = load_env("PODIGEE_REDIRECT_URI",
                                "https://connect.openpodcast.app/auth/v1/podigee/callback")
 
 @huey.task(expires=dt.timedelta(hours=24))
+@huey.lock_task('process-spotify-podcast-lock')
 def process_spotify_podcast(account_id, source_podcast_id, source_access_keys, pod_name):
     """
     Process Spotify podcast fetching task.
@@ -242,6 +243,7 @@ def process_spotify_podcast(account_id, source_podcast_id, source_access_keys, p
             sys.path.remove(str(spotify_path))
 
 @huey.task(expires=dt.timedelta(hours=24)) 
+@huey.lock_task('process-podigee-podcast-lock')
 def process_podigee_podcast(account_id, source_podcast_id, source_access_keys, pod_name):
     """
     Process Podigee podcast fetching task.
@@ -454,6 +456,7 @@ def process_podigee_podcast(account_id, source_podcast_id, source_access_keys, p
             sys.path.remove(str(podigee_path))
 
 @huey.task(expires=dt.timedelta(hours=24))
+@huey.lock_task('process-apple-podcast-lock')
 def process_apple_podcast(account_id, source_podcast_id, source_access_keys, pod_name):
     """
     Process Apple podcast fetching task.
@@ -643,6 +646,7 @@ def process_apple_podcast(account_id, source_podcast_id, source_access_keys, pod
             sys.path.remove(str(apple_path))
 
 @huey.task(expires=dt.timedelta(hours=24))
+@huey.lock_task('process-anchor-podcast-lock')
 def process_anchor_podcast(account_id, source_podcast_id, source_access_keys, pod_name):
     """
     Process Anchor podcast fetching task.
@@ -928,6 +932,7 @@ def process_anchor_podcast(account_id, source_podcast_id, source_access_keys, po
             sys.path.remove(str(anchor_path))
 
 @huey.task(retries=3, retry_delay=60)
+@huey.lock_task('process-podcast-task-lock')
 def process_podcast_task(account_id, source_name, source_podcast_id, source_access_keys_encrypted, pod_name):
     """
     Main task dispatcher that routes to specific connector tasks based on source_name.
@@ -993,10 +998,10 @@ def process_podcast_task(account_id, source_name, source_podcast_id, source_acce
         raise ValueError(f"Unsupported connector type: {source_name}. Supported types: spotify, podigee, apple, anchor")
 
 @huey.task(expires=dt.timedelta(hours=24))
+@huey.lock_task('queue-all-podcast-tasks-lock')
 def queue_all_podcast_tasks():
     """
     Discover all podcast tasks from database and queue them for processing.
-    This replaces the main loop in __main__.py
     """
     logger.info("Queuing all podcast tasks from database")
     
@@ -1046,6 +1051,7 @@ def queue_all_podcast_tasks():
     return {"queued_count": queued_count}
 
 @huey.periodic_task(crontab(minute='0', hour='*'))
+@huey.lock_task('schedule-podcast-tasks-lock')
 def schedule_podcast_tasks():
     """
     Periodic task that runs every hour to queue all podcast tasks.
