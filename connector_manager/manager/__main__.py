@@ -33,16 +33,36 @@ if not OPENPODCAST_ENCRYPTION_KEY:
     logger.error("No OPENPODCAST_ENCRYPTION_KEY found")
     exit(1)
 
+def ensure_db_connection():
+    """
+    Ensure database connection is valid, reconnect if necessary.
+    Returns the database connection.
+    """
+    global db
+    try:
+        if db is None or not db.is_connected():
+            logger.info("Database connection lost, reconnecting...")
+            if db is not None:
+                db.close()
+            
+            db = mysql.connector.connect(
+                host=MYSQL_HOST,
+                port=MYSQL_PORT,
+                user=MYSQL_USER,
+                passwd=MYSQL_PASSWORD,
+                database=MYSQL_DATABASE,
+                autocommit=True,
+            )
+            logger.info("Database connection re-established")
+        return db
+    except mysql.connector.Error as e:
+        logger.error(f"Error connecting to mysql: {e}")
+        raise
+
 # try to connect to mysql or exit otherwise
 try:
-    db = mysql.connector.connect(
-        host=MYSQL_HOST,
-        port=MYSQL_PORT,
-        user=MYSQL_USER,
-        passwd=MYSQL_PASSWORD,
-        database=MYSQL_DATABASE,
-        autocommit=True,
-    )
+    db = None  # Initialize as None so ensure_db_connection can handle it
+    db = ensure_db_connection()
 except mysql.connector.Error as e:
     logger.error("Error connecting to mysql: ", e)
     exit(1)
@@ -93,6 +113,13 @@ for (
             logger.error(
                 f"Missing Podigee credentials for {pod_name} {account_id}. Skipping this source."
             )
+            continue
+        
+        # Ensure database connection is valid before token refresh
+        try:
+            db = ensure_db_connection()
+        except mysql.connector.Error:
+            logger.error(f"Cannot establish database connection for Podigee token refresh of {pod_name} {account_id}. Skipping this source.")
             continue
             
         # Handle the token refresh and database update
