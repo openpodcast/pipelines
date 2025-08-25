@@ -161,7 +161,7 @@ for (
                 "PODCAST_NAME": pod_name,
             },
             text=True,
-            timeout=3600,  # 60 minute timeout to prevent hanging of subprocesses
+            timeout=7200,  # 120 minute timeout to prevent hanging of subprocesses
         )
         if result.returncode == 0:
             successful += 1
@@ -170,7 +170,7 @@ for (
             logger.error(f"Fetching of {pod_name} not successful. Subprocess error output: {result.stderr}")
     except subprocess.TimeoutExpired:
         failed += 1
-        logger.error(f"Error: Timeout while fetching {pod_name} (exceeded 60 minutes)")
+        logger.error(f"Error: Timeout while fetching {pod_name} (exceeded 120 minutes)")
     except Exception as e:
         failed += 1
         logger.error(f"Exception while fetching {pod_name}: {e}")
