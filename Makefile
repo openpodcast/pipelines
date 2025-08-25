@@ -11,10 +11,10 @@ docker-build:
 
 .PHONY: docker-run
 docker-run: 
-	docker run --init -it --env-file .env -e 'CRON_SCHEDULE=* * * * *' openpodcast/connector-manager
+	docker run --init -it --env-file .env openpodcast/connector-manager
 
 .PHONY: run up dev
-run up dev: docker-build ## run the dev stack using a mysql instance and the manager
+run up dev: docker-build ## run the dev stack with mysql and huey worker
 	docker compose up
 
 .PHONY: up-%
@@ -28,6 +28,11 @@ shell-%: ## run a shell in the container
 .PHONY: db-shell
 db-shell: ## Opens the mysql shell inside the db container
 	docker compose exec db bash -c 'mysql -uopenpodcast -popenpodcast openpodcast'
+
+
+.PHONY: logs
+logs: ## view worker logs
+	docker compose logs -f worker
 
 .PHONY: down
 down: ## stop the dev stack and remove volumes
