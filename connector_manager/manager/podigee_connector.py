@@ -83,7 +83,7 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
     
     # Get refresh token from source_access_keys
     refresh_token = source_access_keys.get("PODIGEE_REFRESH_TOKEN")
-    logger.debug(f"Using refresh token: {refresh_token}")    
+    logger.debug(f"Using refresh token: {refresh_token[:10]}... for {pod_name}")
     if not client_id or not client_secret or not refresh_token:
         logger.error(f"Missing required OAuth credentials for Podigee: {pod_name}")
         return None
