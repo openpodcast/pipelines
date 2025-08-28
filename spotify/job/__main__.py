@@ -186,6 +186,14 @@ try:
             start_date=date_range.start,
             end_date=date_range.end,
         ),
+        FetchParams(
+            openpodcast_endpoint="impressions_funnel",
+            spotify_call=get_request_lambda(
+                spotify.impressions, "funnel", todayDate - dt.timedelta(days=14), todayDate
+            ),
+            start_date=date_range.start,
+            end_date=date_range.end,
+        ),
     ] + [
         # Fetch aggregate data for the podcast for each individual day
         # Otherwise we get all data merged into one
