@@ -16,6 +16,10 @@ from loguru import logger
 from spotifyconnector import SpotifyConnector
 from spotifyconnector.connector import CredentialsExpired
 
+# The Spotify API imposes exactly 30 days of data for "total" and "faceted" impressions
+# (The diff is 29 because both start and end dates are inclusive)
+IMPRESSIONS_DAYS_DIFF = 29
+
 try:
     print("Initializing environment")
 
@@ -116,7 +120,13 @@ try:
         return lambda: f(*args, **kwargs)
 
 
-    todayDate = dt.datetime.now()
+    # Use a clean date for "today" at midnight. This avoids issues with the
+    # impresions endpoint which requires exact date ranges.
+    # (For "total" and "faceted" impressions, start and end must be exactly IMPRESSIONS_DAYS_DIFF 
+    # days apart.
+    # See: https://github.com/openpodcast/spotify-connector/blob/2d3f9722662c06e8f9ddf7816c1ee81906d45655/spotifyconnector/connector.py#L460-L479)
+    # It does not affect any other endpoints
+    todayDate = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
     yesterdayDate = todayDate - dt.timedelta(days=1)
     oldestDate = dt.datetime(2015, 5, 1)
 
@@ -148,6 +158,38 @@ try:
             openpodcast_endpoint="followers",
             spotify_call=get_request_lambda(
                 spotify.followers, date_range.start, date_range.end
+            ),
+            start_date=date_range.start,
+            end_date=date_range.end,
+        ),
+        FetchParams(
+            openpodcast_endpoint="impressions_total",
+            # Total impressions are only available for the last 30 days
+            spotify_call=get_request_lambda(spotify.impressions, "total", todayDate - dt.timedelta(days=IMPRESSIONS_DAYS_DIFF), todayDate),
+            start_date=date_range.start,
+            end_date=date_range.end,
+        ),
+        FetchParams(
+            openpodcast_endpoint="impressions_faceted",
+            spotify_call=get_request_lambda(
+                # Faceted impressions are only available for the last 30 days
+                spotify.impressions, "faceted", todayDate - dt.timedelta(days=IMPRESSIONS_DAYS_DIFF), todayDate 
+            ),
+            start_date=date_range.start,
+            end_date=date_range.end,
+        ),
+        FetchParams(
+            openpodcast_endpoint="impressions_daily",
+            spotify_call=get_request_lambda(
+                spotify.impressions, "daily", todayDate - dt.timedelta(days=14), todayDate
+            ),
+            start_date=date_range.start,
+            end_date=date_range.end,
+        ),
+        FetchParams(
+            openpodcast_endpoint="impressions_funnel",
+            spotify_call=get_request_lambda(
+                spotify.impressions, "funnel", todayDate - dt.timedelta(days=14), todayDate
             ),
             start_date=date_range.start,
             end_date=date_range.end,
