@@ -1,22 +1,28 @@
 services:
-    manager:
+    worker:
         image: openpodcast/connector-manager
         build:
             context: .
             dockerfile: Dockerfile
+        command: ["python", "/app/entrypoint.py"]
         environment:
             - MYSQL_HOST=db
             - MYSQL_PORT=3306
             - MYSQL_USER=openpodcast
             - MYSQL_PASSWORD=openpodcast
             - MYSQL_DATABASE=openpodcast_auth
-            - CRON_SCHEDULE=* * * * *
+            - HUEY_DB_PATH=/app/data/huey.db
+            - HUEY_WORKERS=4  # Number of worker processes
             # Reads from .env file if available
             - OPENPODCAST_ENCRYPTION_KEY=${OPENPODCAST_ENCRYPTION_KEY:-supersecret}
         env_file:
             - connector_manager/.env
-        links:
+        depends_on:
             - db
+        volumes:
+            - huey_data:/app/data
+        # Can scale workers: docker-compose up --scale worker=3
+
     db:
         image: mysql:8.0
         volumes:
@@ -31,3 +37,4 @@ services:
 
 volumes:
     mysqldata:
+    huey_data:
