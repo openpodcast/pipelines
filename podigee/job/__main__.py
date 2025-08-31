@@ -169,6 +169,22 @@ def get_date_string(date_obj):
         return str(date_obj)
 
 
+def extract_date_str_from_iso(iso_string):
+    """
+    Extract date string (YYYY-MM-DD) from ISO datetime string.
+    Since Podigee always sends UTC timestamps with 'Z', this preserves the UTC date.
+    """
+    if not iso_string:
+        return ""
+    try:
+        # Python 3.11+ handles 'Z' suffix directly
+        dt = datetime.fromisoformat(iso_string)
+        return dt.strftime("%Y-%m-%d")
+    except (ValueError, AttributeError):
+        # Fallback to split method if parsing fails
+        return iso_string.split("T")[0] if "T" in iso_string else iso_string
+
+
 def get_request_lambda(f, *args, **kwargs):
     """
     Capture arguments in the closure so we can use them later in the call
@@ -226,24 +242,24 @@ def transform_podigee_podcast_overview(overview_data):
 
     if "unique_listeners_number" in overview_data:
         metrics.append({
-            "start": overview_data["meta"]["from"].split("T")[0],
-            "end": overview_data["meta"]["to"].split("T")[0],
+            "start": extract_date_str_from_iso(overview_data["meta"]["from"]),
+            "end": extract_date_str_from_iso(overview_data["meta"]["to"]),
             "dimension": "listeners",
             "subdimension": "unique",
             "value": overview_data["unique_listeners_number"]
         })
     if "unique_subscribers_number" in overview_data:
         metrics.append({
-            "start": overview_data["meta"]["from"].split("T")[0],
-            "end": overview_data["meta"]["to"].split("T")[0],
+            "start": extract_date_str_from_iso(overview_data["meta"]["from"]),
+            "end": extract_date_str_from_iso(overview_data["meta"]["to"]),
             "dimension": "subscribers",
             "subdimension": "unique",
             "value": overview_data["unique_subscribers_number"]
         })
     if "total_downloads" in overview_data:
         metrics.append({
-            "start": overview_data["meta"]["from"].split("T")[0],
-            "end": overview_data["meta"]["to"].split("T")[0],
+            "start": extract_date_str_from_iso(overview_data["meta"]["from"]),
+            "end": extract_date_str_from_iso(overview_data["meta"]["to"]),
             "dimension": "downloads",
             "subdimension": "downloads",
             "value": overview_data["total_downloads"]
@@ -267,7 +283,7 @@ def transform_podigee_analytics_to_metrics(analytics_data, store_downloads_only=
     metrics = []
     
     for day_data in analytics_data["objects"]:
-        date = day_data.get("downloaded_on", "").split("T")[0]  # Extract YYYY-MM-DD
+        date = extract_date_str_from_iso(day_data.get("downloaded_on", ""))
         if not date:
             continue
             
@@ -364,7 +380,7 @@ episodes = podigee.episodes(PODCAST_ID)
 
 for episode in episodes:
     print(episode)
-    episode_published_at_str = episode.get("published_at", "").split("T")[0]
+    episode_published_at_str = extract_date_str_from_iso(episode.get("published_at", ""))
     # Convert to datetime object for API calls
     episode_published_at = datetime.strptime(episode_published_at_str, "%Y-%m-%d") if episode_published_at_str else date_range.start
     endpoints += [
