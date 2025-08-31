@@ -6,6 +6,7 @@ import json
 
 from queue import Queue
 from datetime import datetime, timedelta
+import calendar
 
 from job.fetch_params import FetchParams
 from job.worker import worker
@@ -133,7 +134,7 @@ if not podcast:
 # Extract and validate podcast title
 podcast_title = podcast.get("title")
 # published at format is "2022-01-25T22:19:42Z"
-podcast_published_at_date = podcast.get("published_at").split("T")[0]
+podcast_published_at = datetime.fromisoformat(podcast.get("published_at").replace("Z", "+00:00"))
 
 if not podcast_title:
     logger.error(f"Podcast with ID {PODCAST_ID} has no title")
@@ -152,6 +153,20 @@ if response.status_code != 200:
         f"Open Podcast API healthcheck failed with status code {response.status_code}"
     )
     exit(1)
+
+
+def get_date_string(date_obj):
+    """
+    Convert date object to string if needed, or return string as-is.
+    """
+    if isinstance(date_obj, str):
+        return date_obj
+    elif isinstance(date_obj, datetime):
+        return date_obj.strftime("%Y-%m-%d")
+    elif hasattr(date_obj, 'strftime'):  # handles date objects too
+        return date_obj.strftime("%Y-%m-%d")
+    else:
+        return str(date_obj)
 
 
 def get_request_lambda(f, *args, **kwargs):
@@ -173,18 +188,27 @@ def get_podcast_metadata():
 def get_end_date_on_granularity(granularity, start_date):
     """
     Get end date based on granularity and start date.
+    Returns a string in YYYY-MM-DD format.
     """
     if granularity == "day":
-        return start_date
+        return get_date_string(start_date)
     elif granularity == "month":
-        # last day of same month
-        return start_date + relativedelta(months=1) - timedelta(days=1)
-    return start_date
+        # Convert to datetime object if needed
+        if isinstance(start_date, str):
+            date_obj = datetime.strptime(start_date, "%Y-%m-%d")
+        else:
+            date_obj = start_date
+        
+        # Get last day of the month
+        last_day = calendar.monthrange(date_obj.year, date_obj.month)[1]
+        end_date = date_obj.replace(day=last_day)
+        return get_date_string(end_date)
+    return get_date_string(start_date)
 
 def transform_podigee_podcast_overview(overview_data):
     """
     Transform Podigee podcast overview data to OpenPodcast format.
-    {"published_episodes_count":0,
+    Format is {"published_episodes_count":0,
     "audio_published_minutes":0.0,
     "unique_listeners_number":305,
     "unique_subscribers_number":283,
@@ -229,7 +253,6 @@ def transform_podigee_analytics_to_metrics(analytics_data, downloads_only=False)
         return {"metrics": []}
 
     aggregation_granularity = analytics_data.get("meta", {}).get("aggregation_granularity", "day")
-
     metrics = []
     
     for day_data in analytics_data["objects"]:
@@ -249,7 +272,6 @@ def transform_podigee_analytics_to_metrics(analytics_data, downloads_only=False)
                 })
 
         if not downloads_only:
-
             # Process platforms
             if "platforms" in day_data:
                 for platform, value in day_data["platforms"].items():
@@ -310,10 +332,10 @@ endpoints = [
     FetchParams(
         openpodcast_endpoint="metrics",
         podigee_call=lambda: transform_podigee_analytics_to_metrics(
-            podigee.podcast_analytics(PODCAST_ID, start=podcast_published_at_date, end=date_range.end),
+            podigee.podcast_analytics(PODCAST_ID, start=podcast_published_at, end=date_range.end),
             downloads_only=True
         ),
-        start_date=podcast_published_at_date,
+        start_date=podcast_published_at,
         end_date=date_range.end,
     ),
     # Fetch overview metrics for the podcast, endpoint "overview"
@@ -322,7 +344,7 @@ endpoints = [
         podigee_call=lambda: transform_podigee_podcast_overview(
             podigee.podcast_overview(PODCAST_ID, start=date_range.start, end=date_range.end),
         ),
-        start_date=data_range.start,
+        start_date=date_range.start,
         end_date=date_range.end,
     ),
 ]
@@ -331,7 +353,9 @@ episodes = podigee.episodes(PODCAST_ID)
 
 for episode in episodes:
     print(episode)
-    episode_published_at = episode.get("published_at", "").split("T")[0]
+    episode_published_at_str = episode.get("published_at", "").split("T")[0]
+    # Convert to datetime object for API calls
+    episode_published_at = datetime.strptime(episode_published_at_str, "%Y-%m-%d") if episode_published_at_str else date_range.start
     endpoints += [
         # Episode metadata - basic episode information
         FetchParams(
