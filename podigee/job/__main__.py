@@ -43,8 +43,10 @@ NUM_WORKERS = int(os.environ.get("NUM_WORKERS", 1))
 
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
+# Podigee default is last 30 days
+TODAY_DATE = dt.datetime.now()
 START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=30)
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=31)
                    ).strftime("%Y-%m-%d")
 )
 END_DATE = load_env(
@@ -130,6 +132,9 @@ if not podcast:
 
 # Extract and validate podcast title
 podcast_title = podcast.get("title")
+# published at format is "2022-01-25T22:19:42Z"
+podcast_published_at_date = podcast.get("published_at").split("T")[0]
+
 if not podcast_title:
     logger.error(f"Podcast with ID {PODCAST_ID} has no title")
     exit(1)
@@ -165,15 +170,66 @@ def get_podcast_metadata():
         "name": podcast_title
     }
 
+def get_end_date_on_granularity(granularity, start_date):
+    """
+    Get end date based on granularity and start date.
+    """
+    if granularity == "day":
+        return start_date
+    elif granularity == "month":
+        # last day of same month
+        return start_date + relativedelta(months=1) - timedelta(days=1)
+    return start_date
 
-def transform_podigee_analytics_to_metrics(analytics_data):
+def transform_podigee_podcast_overview(overview_data):
+    """
+    Transform Podigee podcast overview data to OpenPodcast format.
+    {"published_episodes_count":0,
+    "audio_published_minutes":0.0,
+    "unique_listeners_number":305,
+    "unique_subscribers_number":283,
+    "mean_audio_published_minutes":0,
+    "mean_episode_download":8.897435897435898,
+    "total_downloads":694.0,
+    "meta":{"from":"2025-08-01T00:00:00.000Z","to":"2025-08-31T23:59:59.999Z"}
+    """
+
+    metrics = [{
+        "start": overview_data["meta"]["from"].split("T")[0],
+        "end": overview_data["meta"]["to"].split("T")[0],
+        "dimension": "listeners",
+        "subdimension": "unique",
+        "value": overview_data["unique_listeners_number"]
+    },
+    {
+        "start": overview_data["meta"]["from"].split("T")[0],
+        "end": overview_data["meta"]["to"].split("T")[0],
+        "dimension": "subscribers",
+        "subdimension": "unique",
+        "value": overview_data["unique_subscribers_number"]
+    },
+    {
+        "start": overview_data["meta"]["from"].split("T")[0],
+        "end": overview_data["meta"]["to"].split("T")[0],
+        "dimension": "downloads",
+        "subdimension": "downloads",
+        "value": overview_data["total_downloads"]
+    }
+    ]
+
+    return {"metrics": metrics}
+
+
+def transform_podigee_analytics_to_metrics(analytics_data, downloads_only=False):
     """
     Transform Podigee analytics data to OpenPodcast metrics format.
     Expected format: {"metrics": [{"start": "date", "end": "date", "dimension": "string", "subdimension": "string", "value": number}]}
     """
     if not analytics_data or "objects" not in analytics_data:
         return {"metrics": []}
-    
+
+    aggregation_granularity = analytics_data.get("meta", {}).get("aggregation_granularity", "day")
+
     metrics = []
     
     for day_data in analytics_data["objects"]:
@@ -186,44 +242,46 @@ def transform_podigee_analytics_to_metrics(analytics_data):
             for download_type, value in day_data["downloads"].items():
                 metrics.append({
                     "start": date,
-                    "end": date,
+                    "end": get_end_date_on_granularity(aggregation_granularity, date),
                     "dimension": "downloads",
                     "subdimension": download_type,
                     "value": value
                 })
-        
-        # Process platforms
-        if "platforms" in day_data:
-            for platform, value in day_data["platforms"].items():
-                metrics.append({
-                    "start": date,
-                    "end": date,
-                    "dimension": "platforms",
-                    "subdimension": platform,
-                    "value": value
-                })
-        
-        # Process clients
-        if "clients" in day_data:
-            for client, value in day_data["clients"].items():
-                metrics.append({
-                    "start": date,
-                    "end": date,
-                    "dimension": "clients",
-                    "subdimension": client,
-                    "value": value
-                })
-        
-        # Process sources
-        if "sources" in day_data:
-            for source, value in day_data["sources"].items():
-                metrics.append({
-                    "start": date,
-                    "end": date,
-                    "dimension": "sources",
-                    "subdimension": source,
-                    "value": value
-                })
+
+        if not downloads_only:
+
+            # Process platforms
+            if "platforms" in day_data:
+                for platform, value in day_data["platforms"].items():
+                    metrics.append({
+                        "start": date,
+                        "end": get_end_date_on_granularity(aggregation_granularity, date),
+                        "dimension": "platforms",
+                        "subdimension": platform,
+                        "value": value
+                    })
+
+            # Process clients
+            if "clients" in day_data:
+                for client, value in day_data["clients"].items():
+                    metrics.append({
+                        "start": date,
+                        "end": get_end_date_on_granularity(aggregation_granularity, date),
+                        "dimension": "clients",
+                        "subdimension": client,
+                        "value": value
+                    })
+            
+            # Process sources
+            if "sources" in day_data:
+                for source, value in day_data["sources"].items():
+                    metrics.append({
+                        "start": date,
+                        "end": get_end_date_on_granularity(aggregation_granularity, date),
+                        "dimension": "sources",
+                        "subdimension": source,
+                        "value": value
+                    })
     
     return {"metrics": metrics}
 
@@ -236,13 +294,35 @@ endpoints = [
         start_date=date_range.start,
         end_date=date_range.end,
     ),
-    # Podcast metrics - analytics data for the podcast
+    # Podcast metrics like apps and platforms and downloads per day of last 30 days
     FetchParams(
-        openpodcast_endpoint="metrics", 
+        openpodcast_endpoint="metrics",
         podigee_call=lambda: transform_podigee_analytics_to_metrics(
-            podigee.podcast_analytics(PODCAST_ID, start=date_range.start, end=date_range.end)
+            podigee.podcast_analytics(PODCAST_ID, start=date_range.start, end=date_range.end),
+            # we fetch this just every week on Monday and the first day of the month
+            # daily downloads are stored every day
+            not (TODAY_DATE.weekday() == 0 or TODAY_DATE.day == 1)
+            ),
+            start_date=date_range.start,
+            end_date=date_range.end,
         ),
-        start_date=date_range.start,
+    # Fetch total downloads since beginning which is returned in months
+    FetchParams(
+        openpodcast_endpoint="metrics",
+        podigee_call=lambda: transform_podigee_analytics_to_metrics(
+            podigee.podcast_analytics(PODCAST_ID, start=podcast_published_at_date, end=date_range.end),
+            downloads_only=True
+        ),
+        start_date=podcast_published_at_date,
+        end_date=date_range.end,
+    ),
+    # Fetch overview metrics for the podcast, endpoint "overview"
+    FetchParams(
+        openpodcast_endpoint="metrics",
+        podigee_call=lambda: transform_podigee_podcast_overview(
+            podigee.podcast_overview(PODCAST_ID, start=date_range.start, end=date_range.end),
+        ),
+        start_date=data_range.start,
         end_date=date_range.end,
     ),
 ]
@@ -251,6 +331,7 @@ episodes = podigee.episodes(PODCAST_ID)
 
 for episode in episodes:
     print(episode)
+    episode_published_at = episode.get("published_at", "").split("T")[0]
     endpoints += [
         # Episode metadata - basic episode information
         FetchParams(
@@ -269,14 +350,30 @@ for episode in episodes:
             openpodcast_endpoint="metrics",
             podigee_call=get_request_lambda(
                 lambda ep_id: transform_podigee_analytics_to_metrics(
-                    podigee.episode_analytics(ep_id, granularity=None, start=date_range.start, end=date_range.end)
-                ), 
+                    podigee.episode_analytics(ep_id, granularity=None, start=date_range.start, end=date_range.end),
+                    # for now we just store the downloads and do not store platforms etc. per episode
+                    downloads_only=True
+                ),
                 str(episode["id"])
             ),
             start_date=date_range.start,
             end_date=date_range.end,
             meta={"episode": str(episode["id"])},
         ),
+        # we store the downloads since published which we get in months
+        FetchParams(
+            openpodcast_endpoint="metrics",
+            podigee_call=get_request_lambda(
+                lambda ep_id: transform_podigee_analytics_to_metrics(
+                    podigee.episode_analytics(ep_id, granularity="monthly", start=episode_published_at, end=date_range.end),
+                    downloads_only=True
+                ),
+                str(episode["id"])
+            ),
+            start_date=episode_published_at,
+            end_date=date_range.end,
+            meta={"episode": str(episode["id"])},
+        )
     ]
 
 # Create a queue to hold the FetchParams objects
