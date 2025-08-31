@@ -218,33 +218,44 @@ def transform_podigee_podcast_overview(overview_data):
     "meta":{"from":"2025-08-01T00:00:00.000Z","to":"2025-08-31T23:59:59.999Z"}
     """
 
-    metrics = [{
-        "start": overview_data["meta"]["from"].split("T")[0],
-        "end": overview_data["meta"]["to"].split("T")[0],
-        "dimension": "listeners",
-        "subdimension": "unique",
-        "value": overview_data["unique_listeners_number"]
-    },
-    {
-        "start": overview_data["meta"]["from"].split("T")[0],
-        "end": overview_data["meta"]["to"].split("T")[0],
-        "dimension": "subscribers",
-        "subdimension": "unique",
-        "value": overview_data["unique_subscribers_number"]
-    },
-    {
-        "start": overview_data["meta"]["from"].split("T")[0],
-        "end": overview_data["meta"]["to"].split("T")[0],
-        "dimension": "downloads",
-        "subdimension": "downloads",
-        "value": overview_data["total_downloads"]
-    }
-    ]
+    if not overview_data or "meta" not in overview_data:
+        logger.error(f"Invalid overview data structure: {overview_data}")
+        return {"metrics": []}
+
+    metrics = []
+
+    if "unique_listeners_number" in overview_data:
+        metrics.append({
+            "start": overview_data["meta"]["from"].split("T")[0],
+            "end": overview_data["meta"]["to"].split("T")[0],
+            "dimension": "listeners",
+            "subdimension": "unique",
+            "value": overview_data["unique_listeners_number"]
+        })
+    if "unique_subscribers_number" in overview_data:
+        metrics.append({
+            "start": overview_data["meta"]["from"].split("T")[0],
+            "end": overview_data["meta"]["to"].split("T")[0],
+            "dimension": "subscribers",
+            "subdimension": "unique",
+            "value": overview_data["unique_subscribers_number"]
+        })
+    if "total_downloads" in overview_data:
+        metrics.append({
+            "start": overview_data["meta"]["from"].split("T")[0],
+            "end": overview_data["meta"]["to"].split("T")[0],
+            "dimension": "downloads",
+            "subdimension": "downloads",
+            "value": overview_data["total_downloads"]
+        })
+
+    if not metrics:
+        logger.warning(f"No valid metrics found in overview data: {overview_data}")
 
     return {"metrics": metrics}
 
 
-def transform_podigee_analytics_to_metrics(analytics_data, downloads_only=False):
+def transform_podigee_analytics_to_metrics(analytics_data, store_downloads_only=False):
     """
     Transform Podigee analytics data to OpenPodcast metrics format.
     Expected format: {"metrics": [{"start": "date", "end": "date", "dimension": "string", "subdimension": "string", "value": number}]}
@@ -271,7 +282,7 @@ def transform_podigee_analytics_to_metrics(analytics_data, downloads_only=False)
                     "value": value
                 })
 
-        if not downloads_only:
+        if not store_downloads_only:
             # Process platforms
             if "platforms" in day_data:
                 for platform, value in day_data["platforms"].items():
@@ -333,7 +344,7 @@ endpoints = [
         openpodcast_endpoint="metrics",
         podigee_call=lambda: transform_podigee_analytics_to_metrics(
             podigee.podcast_analytics(PODCAST_ID, start=podcast_published_at, end=date_range.end),
-            downloads_only=True
+            store_downloads_only=True
         ),
         start_date=podcast_published_at,
         end_date=date_range.end,
@@ -376,7 +387,7 @@ for episode in episodes:
                 lambda ep_id: transform_podigee_analytics_to_metrics(
                     podigee.episode_analytics(ep_id, granularity=None, start=date_range.start, end=date_range.end),
                     # for now we just store the downloads and do not store platforms etc. per episode
-                    downloads_only=True
+                    store_downloads_only=True
                 ),
                 str(episode["id"])
             ),
@@ -384,13 +395,13 @@ for episode in episodes:
             end_date=date_range.end,
             meta={"episode": str(episode["id"])},
         ),
-        # we store the downloads since published which we get in months
+         # We store the downloads since publication. The Podigee API returns one data point per month.
         FetchParams(
             openpodcast_endpoint="metrics",
             podigee_call=get_request_lambda(
                 lambda ep_id: transform_podigee_analytics_to_metrics(
                     podigee.episode_analytics(ep_id, granularity="monthly", start=episode_published_at, end=date_range.end),
-                    downloads_only=True
+                    store_downloads_only=True
                 ),
                 str(episode["id"])
             ),
