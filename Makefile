@@ -32,3 +32,16 @@ db-shell: ## Opens the mysql shell inside the db container
 .PHONY: down
 down: ## stop the dev stack and remove volumes
 	docker compose down -v
+
+.PHONY: test
+test: ## run tests for all modules
+	@echo "Running tests for all modules..."
+	@cd podigee && make test
+	@cd spotify && make test
+	@cd anchor && make test
+	@cd apple && make test
+	@cd connector_manager && make test
+
+.PHONY: test-%
+test-%: ## run tests for a specific module (e.g., make test-podigee)
+	@cd $* && make test
