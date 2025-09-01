@@ -331,6 +331,17 @@ def transform_podigee_analytics_to_metrics(analytics_data, store_downloads_only=
                         "subdimension": source,
                         "value": value
                     })
+            
+            # Process countries
+            if "countries" in day_data:
+                for country, value in day_data["countries"].items():
+                    metrics.append({
+                        "start": date,
+                        "end": get_end_date_on_granularity(aggregation_granularity, date),
+                        "dimension": "countries",
+                        "subdimension": country,
+                        "value": value
+                    })
     
     return {"metrics": metrics}
 
