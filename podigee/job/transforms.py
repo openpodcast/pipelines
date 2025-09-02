@@ -34,7 +34,7 @@ def transform_podigee_podcast_overview(overview_data):
             "start": extract_date_str_from_iso(overview_data["meta"]["from"]),
             "end": extract_date_str_from_iso(overview_data["meta"]["to"]),
             "dimension": "downloads",
-            "subdimension": "downloads",
+            "subdimension": "total",
             "value": overview_data["total_downloads"]
         })
 
