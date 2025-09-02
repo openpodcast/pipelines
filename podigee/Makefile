@@ -4,7 +4,7 @@ run dev:
 
 .PHONY: test
 test:
-	set -a && source ./.env && python3 -m pytest
+	python3 -m pytest
 
 .PHONY: install
 install:
