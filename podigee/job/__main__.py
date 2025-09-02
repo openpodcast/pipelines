@@ -14,6 +14,15 @@ from job.open_podcast import OpenPodcastConnector
 from job.load_env import load_file_or_env
 from job.load_env import load_env
 from job.dates import get_date_range
+from job.transforms import (
+    transform_podigee_analytics_to_metrics,
+    transform_podigee_podcast_overview
+)
+from job.date_utils import (
+    extract_date_str_from_iso,
+    get_date_string,
+    get_end_date_on_granularity
+)
 
 from loguru import logger
 from podigeeconnector import PodigeeConnector
@@ -155,34 +164,22 @@ if response.status_code != 200:
     exit(1)
 
 
-def get_date_string(date_obj):
+def get_request_lambda(f, *args, **kwargs):
     """
-    Convert date object to string if needed, or return string as-is.
+    Capture arguments in the closure so we can use them later in the call
+    to ensure call by value and not call by reference.
     """
-    if isinstance(date_obj, str):
-        return date_obj
-    elif isinstance(date_obj, datetime):
-        return date_obj.strftime("%Y-%m-%d")
-    elif hasattr(date_obj, 'strftime'):  # handles date objects too
-        return date_obj.strftime("%Y-%m-%d")
-    else:
-        return str(date_obj)
+    return lambda: f(*args, **kwargs)
 
 
-def extract_date_str_from_iso(iso_string):
+def get_podcast_metadata():
     """
-    Extract date string (YYYY-MM-DD) from ISO datetime string.
-    Since Podigee always sends UTC timestamps with 'Z', this preserves the UTC date.
+    Get podcast metadata formatted for OpenPodcast API.
     """
-    if not iso_string:
-        return ""
-    try:
-        # Python 3.11+ handles 'Z' suffix directly
-        dt = datetime.fromisoformat(iso_string)
-        return dt.strftime("%Y-%m-%d")
-    except (ValueError, AttributeError):
-        # Fallback to split method if parsing fails
-        return iso_string.split("T")[0] if "T" in iso_string else iso_string
+    return {
+        "name": podcast_title
+    }
+
 
 
 def get_request_lambda(f, *args, **kwargs):
@@ -200,140 +197,6 @@ def get_podcast_metadata():
     return {
         "name": podcast_title
     }
-
-def get_end_date_on_granularity(granularity, start_date):
-    """
-    Get end date based on granularity and start date.
-    Returns a string in YYYY-MM-DD format.
-    """
-    if granularity == "day":
-        return get_date_string(start_date)
-    elif granularity == "month":
-        # Convert to datetime object if needed
-        if isinstance(start_date, str):
-            date_obj = datetime.strptime(start_date, "%Y-%m-%d")
-        else:
-            date_obj = start_date
-        
-        # Get last day of the month
-        last_day = calendar.monthrange(date_obj.year, date_obj.month)[1]
-        end_date = date_obj.replace(day=last_day)
-        return get_date_string(end_date)
-    return get_date_string(start_date)
-
-def transform_podigee_podcast_overview(overview_data):
-    """
-    Transform Podigee podcast overview data to OpenPodcast format.
-    Format is {"published_episodes_count":0,
-    "audio_published_minutes":0.0,
-    "unique_listeners_number":305,
-    "unique_subscribers_number":283,
-    "mean_audio_published_minutes":0,
-    "mean_episode_download":8.897435897435898,
-    "total_downloads":694.0,
-    "meta":{"from":"2025-08-01T00:00:00.000Z","to":"2025-08-31T23:59:59.999Z"}
-    """
-
-    if not overview_data or "meta" not in overview_data:
-        logger.error(f"Invalid overview data structure: {overview_data}")
-        return {"metrics": []}
-
-    metrics = []
-
-    if "unique_listeners_number" in overview_data:
-        metrics.append({
-            "start": extract_date_str_from_iso(overview_data["meta"]["from"]),
-            "end": extract_date_str_from_iso(overview_data["meta"]["to"]),
-            "dimension": "listeners",
-            "subdimension": "unique",
-            "value": overview_data["unique_listeners_number"]
-        })
-    if "unique_subscribers_number" in overview_data:
-        metrics.append({
-            "start": extract_date_str_from_iso(overview_data["meta"]["from"]),
-            "end": extract_date_str_from_iso(overview_data["meta"]["to"]),
-            "dimension": "subscribers",
-            "subdimension": "unique",
-            "value": overview_data["unique_subscribers_number"]
-        })
-    if "total_downloads" in overview_data:
-        metrics.append({
-            "start": extract_date_str_from_iso(overview_data["meta"]["from"]),
-            "end": extract_date_str_from_iso(overview_data["meta"]["to"]),
-            "dimension": "downloads",
-            "subdimension": "total",
-            "value": overview_data["total_downloads"]
-        })
-
-    if not metrics:
-        logger.warning(f"No valid metrics found in overview data: {overview_data}")
-
-    return {"metrics": metrics}
-
-
-def transform_podigee_analytics_to_metrics(analytics_data, store_downloads_only=False):
-    """
-    Transform Podigee analytics data to OpenPodcast metrics format.
-    Expected format: {"metrics": [{"start": "date", "end": "date", "dimension": "string", "subdimension": "string", "value": number}]}
-    """
-    if not analytics_data or "objects" not in analytics_data:
-        return {"metrics": []}
-
-    aggregation_granularity = analytics_data.get("meta", {}).get("aggregation_granularity", "day")
-    metrics = []
-    
-    for day_data in analytics_data["objects"]:
-        date = extract_date_str_from_iso(day_data.get("downloaded_on", ""))
-        if not date:
-            continue
-            
-        # Process downloads
-        if "downloads" in day_data:
-            for download_type, value in day_data["downloads"].items():
-                metrics.append({
-                    "start": date,
-                    "end": get_end_date_on_granularity(aggregation_granularity, date),
-                    "dimension": "downloads",
-                    "subdimension": download_type,
-                    "value": value
-                })
-
-        if not store_downloads_only:
-            # Process platforms
-            if "platforms" in day_data:
-                for platform, value in day_data["platforms"].items():
-                    metrics.append({
-                        "start": date,
-                        "end": get_end_date_on_granularity(aggregation_granularity, date),
-                        "dimension": "platforms",
-                        "subdimension": platform,
-                        "value": value
-                    })
-
-            # Process clients
-            if "clients" in day_data:
-                for client, value in day_data["clients"].items():
-                    metrics.append({
-                        "start": date,
-                        "end": get_end_date_on_granularity(aggregation_granularity, date),
-                        "dimension": "clients",
-                        "subdimension": client,
-                        "value": value
-                    })
-            
-            # Process sources
-            if "sources" in day_data:
-                for source, value in day_data["sources"].items():
-                    metrics.append({
-                        "start": date,
-                        "end": get_end_date_on_granularity(aggregation_granularity, date),
-                        "dimension": "sources",
-                        "subdimension": source,
-                        "value": value
-                    })
-    
-    return {"metrics": metrics}
-
 
 endpoints = [
     # Podcast metadata - get basic podcast information
