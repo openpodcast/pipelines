@@ -57,7 +57,7 @@ END_DATE = load_env(
 date_range = get_date_range(START_DATE, END_DATE)
 
 # check if all required environment variables are set
-always_required = ["OPENPODCAST_API_TOKEN", "PODCAST_ID"]
+always_required = ["OPENPODCAST_API_TOKEN"]
 missing_always_required = list(
     filter(
         lambda x: globals()[x] is None,
@@ -81,14 +81,6 @@ if not has_api_token and not has_credentials:
     )
     exit(1)
 
-# The Podigee podcast ID is expected to be an integer
-# Try to convert it to an integer, if it fails, this throws exception 
-try:
-    PODCAST_ID = int(PODCAST_ID)
-except ValueError:
-    logger.error(f"PODCAST_ID must be an integer, got: {PODCAST_ID}")
-    exit(1)
-
 print("Done initializing environment")
 
 # Try API token first (preferred method), fallback to username/password
@@ -108,14 +100,23 @@ else:
 
 podcasts = podigee.podcasts()
 
-# for testing, just output the podcast names and ids and then exit the whole program
-# for p in podcasts:
-#     logger.info(f"Found podcast: {p['title']} (ID: {p['id']})")
-# # exit
-# exit(0)
-
 if not podcasts:
     logger.error("No podcasts found")
+    exit(1)
+
+# if no podcast id is set, just list the available podcasts and exit
+if not PODCAST_ID or PODCAST_ID.strip() == "":
+    logger.info("No PODCAST_ID set, listing available podcasts:")
+    for p in podcasts:
+        logger.info(f"Found podcast: {p['title']} (ID: {p['id']})")
+    exit(0)
+
+# The Podigee podcast ID is expected to be an integer
+# Try to convert it to an integer, if it fails, this throws exception 
+try:
+    PODCAST_ID = int(PODCAST_ID)
+except ValueError:
+    logger.error(f"PODCAST_ID must be an integer, got: {PODCAST_ID}")
     exit(1)
 
 # Find the podcast we want to work with
