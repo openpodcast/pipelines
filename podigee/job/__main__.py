@@ -357,6 +357,8 @@ endpoints = [
             end_date=date_range.end,
         ),
     # Fetch total downloads since beginning which is returned in months
+    # the current month is not complete and is updated every day
+    # important: end date is in the future for the current month, as it is always the last day of the month
     FetchParams(
         openpodcast_endpoint="metrics",
         podigee_call=lambda: transform_podigee_analytics_to_metrics(
