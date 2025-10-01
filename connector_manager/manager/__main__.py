@@ -7,7 +7,8 @@ import subprocess
 from pathlib import Path
 from loguru import logger
 import sys
-import json
+import multiprocessing
+from collections import defaultdict
 
 # Import the Podigee connector functionality
 from manager.podigee_connector import handle_podigee_refresh
@@ -73,106 +74,65 @@ if "--interactive" in sys.argv:
     logger.info("Interactive mode enabled")
     interactiveMode = True
 
-print("Fetching all podcast tasks from database...")
-sql = """
-  SELECT account_id, source_name, source_podcast_id, source_access_keys_encrypted, pod_name
-  FROM podcastSources JOIN openpodcast.podcasts USING (account_id)
-"""
+# Import worker functions and types from separate module for multiprocessing
+from manager.worker import process_source_jobs, PodcastJob
 
-successful = 0
-failed = 0
 
-with db.cursor() as cursor:
-    cursor.execute(sql)
-    results = cursor.fetchall()
+if __name__ == '__main__':
 
-for (
-    account_id,
-    source_name,
-    source_podcast_id,
-    source_access_keys_encrypted,
-    pod_name,
-) in results:
-    if interactiveMode:
-        print(
-            f"Fetch podcast {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}? [y/n]"
+    print("Fetching all podcast tasks from database...")
+    sql = """
+      SELECT account_id, source_name, source_podcast_id, source_access_keys_encrypted, pod_name
+      FROM podcastSources JOIN openpodcast.podcasts USING (account_id)
+    """
+
+    with db.cursor() as cursor:
+        cursor.execute(sql)
+        results = cursor.fetchall()
+
+    # Handle interactive mode by filtering jobs upfront
+    jobs_to_process = []
+    for row in results:
+        job = PodcastJob(
+            account_id=row[0],
+            source_name=row[1],
+            source_podcast_id=row[2],
+            source_access_keys_encrypted=row[3],
+            pod_name=row[4]
         )
-        if input() != "y":
-            continue
 
-    # all keys that are needed to access the source
-    print(f"Decrypting keys for {pod_name} {account_id} for {source_name}")
-    source_access_keys = decrypt_json(
-        source_access_keys_encrypted, OPENPODCAST_ENCRYPTION_KEY
-    )
-    
-    # Handle Podigee token refresh if this is a Podigee source
-    if source_name == "podigee":
-        # check if all relevant variables are set, otherwise skip this source
-        if not PODIGEE_CLIENT_ID or not PODIGEE_CLIENT_SECRET:
-            logger.error(
-                f"Missing Podigee credentials for {pod_name} {account_id}. Skipping this source."
+        if interactiveMode:
+            print(
+                f"Fetch podcast {job.pod_name} {job.account_id} for {job.source_name} using podcast_id {job.source_podcast_id}? [y/n]"
             )
-            continue
-        
-        # Ensure database connection is valid before token refresh
-        try:
-            db = ensure_db_connection()
-        except mysql.connector.Error:
-            logger.error(f"Cannot establish database connection for Podigee token refresh of {pod_name} {account_id}. Skipping this source.")
-            continue
-            
-        # Handle the token refresh and database update
-        source_access_keys = handle_podigee_refresh(
-            db_connection=db, 
-            account_id=account_id, 
-            source_name=source_name, 
-            source_access_keys=source_access_keys, 
-            pod_name=pod_name, 
-            encryption_key=OPENPODCAST_ENCRYPTION_KEY,
-            client_id=PODIGEE_CLIENT_ID,
-            client_secret=PODIGEE_CLIENT_SECRET,
-            redirect_uri=PODIGEE_REDIRECT_URI
-        )
+            if input() != "y":
+                continue
 
-        if (not source_access_keys) or ("PODIGEE_ACCESS_TOKEN" not in source_access_keys):
-            logger.error(f"Failed to refresh Podigee token for {pod_name} {account_id}. Skipping this source.")
-            continue
+        jobs_to_process.append(job)
 
-    logger.info(
-        f"Starting fetcher for {pod_name} {account_id} for {source_name} using podcast_id {source_podcast_id}"
-    )
+    # Group jobs by source to avoid running multiple jobs for the same source in parallel
+    # This prevents rate limiting and credential issues with Apple, Spotify, etc.
+    jobs_by_source = defaultdict(list)
+    for job in jobs_to_process:
+        jobs_by_source[job.source_name].append(job)
 
-    # parent path of fetcher/connector
-    cwd = Path(CONNECTORS_PATH) / source_name
-    try:
-        # Ensure that environment variables are proper strings
-        source_access_keys = {k: str(v) for k, v in source_access_keys.items()}
+    # Process jobs: run different sources in parallel, but same-source jobs sequentially
+    if jobs_to_process:
+        logger.info(f"Processing {len(jobs_to_process)} jobs across {len(jobs_by_source)} sources...")
 
-        # run an external process, switch to right fetcher depending on
-        # source_name, and set env variables from source_access_keys
-        result = subprocess.run(
-            ["python", "-m", "job"],
-            cwd=cwd,
-            env={
-                **os.environ,
-                **source_access_keys,
-                "PODCAST_ID": source_podcast_id,
-                "PODCAST_NAME": pod_name,
-            },
-            text=True,
-            timeout=7200,  # 120 minute timeout to prevent hanging of subprocesses
-        )
-        if result.returncode == 0:
-            successful += 1
-        else:
-            failed += 1
-            logger.error(f"Fetching of {pod_name} not successful. Subprocess error output: {result.stderr}")
-    except subprocess.TimeoutExpired:
-        failed += 1
-        logger.error(f"Error: Timeout while fetching {pod_name} (exceeded 120 minutes)")
-    except Exception as e:
-        failed += 1
-        logger.error(f"Exception while fetching {pod_name}: {e}")
+        all_results = []
 
-logger.info(f"Completed. Successful: {successful}, Failed: {failed}")
+        # Use multiprocessing to process different sources in parallel
+        with multiprocessing.Pool() as pool:
+            results_by_source = pool.map(process_source_jobs, jobs_by_source.values())
+
+        # Flatten results
+        for source_results in results_by_source:
+            all_results.extend(source_results)
+
+        successful = sum(1 for r in all_results if r)
+        failed = sum(1 for r in all_results if not r)
+
+        logger.info(f"Completed. Successful: {successful}, Failed: {failed}")
+    else:
+        logger.info("No jobs to process")
