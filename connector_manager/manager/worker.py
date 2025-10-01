@@ -45,11 +45,20 @@ def ensure_db_connection():
     """
     global db
     try:
-        if db is None or not db.is_connected():
+        if db is None:
+            logger.info("Establishing database connection...")
+            db = mysql.connector.connect(
+                host=MYSQL_HOST,
+                port=MYSQL_PORT,
+                user=MYSQL_USER,
+                passwd=MYSQL_PASSWORD,
+                database=MYSQL_DATABASE,
+                autocommit=True,
+            )
+            logger.info("Database connection established")
+        elif not db.is_connected():
             logger.info("Database connection lost, reconnecting...")
-            if db is not None:
-                db.close()
-
+            db.close()
             db = mysql.connector.connect(
                 host=MYSQL_HOST,
                 port=MYSQL_PORT,
