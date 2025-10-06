@@ -41,12 +41,12 @@ class TestDateUtils(unittest.TestCase):
     def test_extract_date_str_from_iso_empty_string(self):
         """Test extracting date from empty string."""
         result = extract_date_str_from_iso("")
-        self.assertEqual(result, "")
+        self.assertIsNone(result)
 
     def test_extract_date_str_from_iso_none(self):
         """Test extracting date from None."""
         result = extract_date_str_from_iso(None)
-        self.assertEqual(result, "")
+        self.assertIsNone(result)
 
     def test_extract_date_str_from_iso_invalid_format(self):
         """Test extracting date from invalid format falls back to split."""

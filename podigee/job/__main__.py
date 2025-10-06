@@ -180,24 +180,6 @@ def get_podcast_metadata():
         "name": podcast_title
     }
 
-
-
-def get_request_lambda(f, *args, **kwargs):
-    """
-    Capture arguments in the closure so we can use them later in the call
-    to ensure call by value and not call by reference.
-    """
-    return lambda: f(*args, **kwargs)
-
-
-def get_podcast_metadata():
-    """
-    Get podcast metadata formatted for OpenPodcast API.
-    """
-    return {
-        "name": podcast_title
-    }
-
 endpoints = [
     # Podcast metadata - get basic podcast information
     FetchParams(

@@ -9,9 +9,11 @@ def extract_date_str_from_iso(iso_string):
     """
     Extract date string (YYYY-MM-DD) from ISO datetime string.
     Since Podigee always sends UTC timestamps with 'Z', this preserves the UTC date.
+    
+    Returns None if iso_string is None or empty, allowing callers to handle missing dates explicitly.
     """
     if not iso_string:
-        return ""
+        return None
     try:
         # Python 3.11+ handles 'Z' suffix directly
         dt = datetime.fromisoformat(iso_string)

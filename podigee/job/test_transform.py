@@ -144,13 +144,13 @@ class TestTransformPodigeeAnalyticsToMetrics(unittest.TestCase):
         result = extract_date_str_from_iso("2025-07-31T02:00:00+02:00")
         self.assertEqual(result, "2025-07-31")
         
-        # Test empty string
+        # Test empty string returns None
         result = extract_date_str_from_iso("")
-        self.assertEqual(result, "")
+        self.assertIsNone(result)
         
-        # Test None
+        # Test None returns None
         result = extract_date_str_from_iso(None)
-        self.assertEqual(result, "")
+        self.assertIsNone(result)
         
         # Test malformed string (should fallback to split)
         result = extract_date_str_from_iso("2025-07-31T00:00:00")
