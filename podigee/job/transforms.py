@@ -11,28 +11,32 @@ def transform_podigee_podcast_overview(overview_data):
     if not overview_data or "meta" not in overview_data:
         return {"metrics": []}
 
+    # Extract common metadata
+    start_date = extract_date_str_from_iso(overview_data["meta"]["from"])
+    end_date = extract_date_str_from_iso(overview_data["meta"]["to"])
+
     metrics = []
 
     if "unique_listeners_number" in overview_data:
         metrics.append({
-            "start": extract_date_str_from_iso(overview_data["meta"]["from"]),
-            "end": extract_date_str_from_iso(overview_data["meta"]["to"]),
+            "start": start_date,
+            "end": end_date,
             "dimension": "listeners",
             "subdimension": "unique",
             "value": overview_data["unique_listeners_number"]
         })
     if "unique_subscribers_number" in overview_data:
         metrics.append({
-            "start": extract_date_str_from_iso(overview_data["meta"]["from"]),
-            "end": extract_date_str_from_iso(overview_data["meta"]["to"]),
+            "start": start_date,
+            "end": end_date,
             "dimension": "subscribers",
             "subdimension": "unique",
             "value": overview_data["unique_subscribers_number"]
         })
     if "total_downloads" in overview_data:
         metrics.append({
-            "start": extract_date_str_from_iso(overview_data["meta"]["from"]),
-            "end": extract_date_str_from_iso(overview_data["meta"]["to"]),
+            "start": start_date,
+            "end": end_date,
             "dimension": "downloads",
             "subdimension": "total",
             "value": overview_data["total_downloads"]
@@ -57,7 +61,8 @@ def transform_podigee_analytics_to_metrics(analytics_data, store_downloads_only=
         if not date:
             continue
             
-        start_date = get_date_string(date)
+        # Calculate start and end dates consistently
+        start_date = date
         end_date = get_end_date_on_granularity(aggregation_granularity, date)
             
         # Process downloads
@@ -71,49 +76,52 @@ def transform_podigee_analytics_to_metrics(analytics_data, store_downloads_only=
                     "value": value
                 })
 
-        if not store_downloads_only:
-            # Process platforms
-            if "platforms" in day_data:
-                for platform, value in day_data["platforms"].items():
-                    metrics.append({
-                        "start": start_date,
-                        "end": end_date,
-                        "dimension": "platforms",
-                        "subdimension": platform,
-                        "value": value
-                    })
+        # Skip additional metrics if only downloads are requested
+        if store_downloads_only:
+            continue
 
-            # Process clients
-            if "clients" in day_data:
-                for client, value in day_data["clients"].items():
-                    metrics.append({
-                        "start": start_date,
-                        "end": end_date,
-                        "dimension": "clients",
-                        "subdimension": client,
-                        "value": value
-                    })
-            
-            # Process sources
-            if "sources" in day_data:
-                for source, value in day_data["sources"].items():
-                    metrics.append({
-                        "start": start_date,
-                        "end": end_date,
-                        "dimension": "sources",
-                        "subdimension": source,
-                        "value": value
-                    })
-                    
-            # Process countries
-            if "countries" in day_data:
-                for country, value in day_data["countries"].items():
-                    metrics.append({
-                        "start": start_date,
-                        "end": end_date,
-                        "dimension": "countries",
-                        "subdimension": country,
-                        "value": value
-                    })
+        # Process platforms
+        if "platforms" in day_data:
+            for platform, value in day_data["platforms"].items():
+                metrics.append({
+                    "start": start_date,
+                    "end": end_date,
+                    "dimension": "platforms",
+                    "subdimension": platform,
+                    "value": value
+                })
+
+        # Process clients
+        if "clients" in day_data:
+            for client, value in day_data["clients"].items():
+                metrics.append({
+                    "start": start_date,
+                    "end": end_date,
+                    "dimension": "clients",
+                    "subdimension": client,
+                    "value": value
+                })
+        
+        # Process sources
+        if "sources" in day_data:
+            for source, value in day_data["sources"].items():
+                metrics.append({
+                    "start": start_date,
+                    "end": end_date,
+                    "dimension": "sources",
+                    "subdimension": source,
+                    "value": value
+                })
+                
+        # Process countries
+        if "countries" in day_data:
+            for country, value in day_data["countries"].items():
+                metrics.append({
+                    "start": start_date,
+                    "end": end_date,
+                    "dimension": "countries",
+                    "subdimension": country,
+                    "value": value
+                })
     
     return {"metrics": metrics}
