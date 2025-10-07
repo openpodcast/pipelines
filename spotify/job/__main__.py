@@ -69,7 +69,7 @@ try:
     # Start- and end-date for the data we want to fetch
     # Load from environment variable if set, otherwise set to defaults
     START_DATE = load_env(
-        "START_DATE", (dt.datetime.now() - dt.timedelta(days=4)
+        "START_DATE", (dt.datetime.now() - dt.timedelta(days=3)
                     ).strftime("%Y-%m-%d")
     )
     END_DATE = load_env(
