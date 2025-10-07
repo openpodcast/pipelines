@@ -2,15 +2,30 @@ import queue
 from time import sleep
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from loguru import logger
 
 from job.fetch_params import FetchParams
 from job.open_podcast import OpenPodcastConnector
 
-# Retry configuration
-MAX_RETRIES = 5
-INITIAL_BACKOFF = 1  # seconds
-MAX_BACKOFF = 60  # seconds
+
+# Configure retry strategy for HTTP requests
+# This will retry on rate limit (429) and server errors (5xx)
+retry_strategy = Retry(
+    total=5,  # Maximum number of retry attempts
+    backoff_factor=1,  # Exponential backoff: 1s, 2s, 4s, 8s, 16s
+    status_forcelist=[429, 500, 502, 503, 504],  # Retry on these HTTP status codes
+    allowed_methods=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"],
+)
+
+# Create HTTP adapter with retry strategy
+adapter = HTTPAdapter(max_retries=retry_strategy)
+
+# Create a global session with the retry adapter configured
+http_session = requests.Session()
+http_session.mount("http://", adapter)
+http_session.mount("https://", adapter)
 
 
 def worker(q: queue.Queue, openpodcast: OpenPodcastConnector, delay) -> None:
@@ -26,62 +41,35 @@ def worker(q: queue.Queue, openpodcast: OpenPodcastConnector, delay) -> None:
 
 def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
     """
-    Fetches data from the Spotify API and sends it to the Open Podcast API
+    Fetches data from the Spotify API and sends it to the Open Podcast API.
+    Uses HTTPAdapter with retry strategy for automatic retries on rate limits and server errors.
     """
-    retry_count = 0
-    backoff = INITIAL_BACKOFF
+    # Temporarily replace requests module functions with our session
+    original_get = requests.get
+    original_post = requests.post
+    original_request = requests.request
     
-    while retry_count <= MAX_RETRIES:
-        try:
-            data = params.spotify_call()
-            if data:
-                openpodcast.post(
-                    params.openpodcast_endpoint,
-                    params.meta,
-                    data,
-                    params.start_date,
-                    params.end_date,
-                )
-            # Success - exit retry loop
-            return
-        except requests.exceptions.HTTPError as e:
-            # Check if it's a rate limit error (429) or server error (5xx)
-            if e.response is not None and (e.response.status_code == 429 or e.response.status_code >= 500):
-                if retry_count < MAX_RETRIES:
-                    retry_count += 1
-                    logger.warning(
-                        f"HTTP {e.response.status_code} error for {params.openpodcast_endpoint}. "
-                        f"Retry {retry_count}/{MAX_RETRIES} after {backoff}s backoff. Error: {e}"
-                    )
-                    sleep(backoff)
-                    backoff = min(backoff * 2, MAX_BACKOFF)
-                else:
-                    logger.error(
-                        f"Max retries ({MAX_RETRIES}) reached for {params.openpodcast_endpoint}. "
-                        f"Final error: {e}"
-                    )
-                    return
-            else:
-                # For other HTTP errors (4xx except 429), don't retry
-                logger.error(f"HTTP error for {params.openpodcast_endpoint}: {e}")
-                return
-        except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
-            # Network errors - retry with backoff
-            if retry_count < MAX_RETRIES:
-                retry_count += 1
-                logger.warning(
-                    f"Network error for {params.openpodcast_endpoint}. "
-                    f"Retry {retry_count}/{MAX_RETRIES} after {backoff}s backoff. Error: {e}"
-                )
-                sleep(backoff)
-                backoff = min(backoff * 2, MAX_BACKOFF)
-            else:
-                logger.error(
-                    f"Max retries ({MAX_RETRIES}) reached for {params.openpodcast_endpoint}. "
-                    f"Final network error: {e}"
-                )
-                return
-        except Exception as e:
-            # Unexpected errors - log and don't retry
-            logger.error(f"Unexpected error for {params.openpodcast_endpoint}: {e}")
-            return
+    try:
+        # Monkey-patch requests to use our retry session
+        requests.get = http_session.get
+        requests.post = http_session.post  
+        requests.request = http_session.request
+        
+        # Make the API call
+        data = params.spotify_call()
+        if data:
+            openpodcast.post(
+                params.openpodcast_endpoint,
+                params.meta,
+                data,
+                params.start_date,
+                params.end_date,
+            )
+    except requests.exceptions.HTTPError as e:
+        logger.error(e)
+        return
+    finally:
+        # Restore original requests functions
+        requests.get = original_get
+        requests.post = original_post
+        requests.request = original_request
