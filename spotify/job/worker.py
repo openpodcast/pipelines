@@ -2,42 +2,17 @@ import queue
 from time import sleep
 
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from loguru import logger
+from tenacity import (
+    retry,
+    stop_after_attempt,
+    wait_exponential,
+    retry_if_exception_type,
+    before_sleep_log,
+)
 
 from job.fetch_params import FetchParams
 from job.open_podcast import OpenPodcastConnector
-
-
-# Configure retry strategy for HTTP requests
-# This will retry on rate limit (429) and server errors (5xx)
-retry_strategy = Retry(
-    total=5,  # Maximum number of retry attempts
-    backoff_factor=1,  # Exponential backoff: 1s, 2s, 4s, 8s, 16s
-    status_forcelist=[429, 500, 502, 503, 504],  # Retry on these HTTP status codes
-    allowed_methods=["HEAD", "GET", "POST", "PUT", "DELETE", "OPTIONS", "TRACE"],
-)
-
-# Create HTTP adapter with retry strategy
-adapter = HTTPAdapter(max_retries=retry_strategy)
-
-# Create a global session with the retry adapter configured
-# This session will be used for all HTTP requests in this module
-http_session = requests.Session()
-http_session.mount("http://", adapter)
-http_session.mount("https://", adapter)
-
-# Replace requests module functions with our session methods
-# This makes all requests in this module use the retry logic
-requests.get = http_session.get
-requests.post = http_session.post
-requests.put = http_session.put
-requests.delete = http_session.delete
-requests.patch = http_session.patch
-requests.head = http_session.head
-requests.options = http_session.options
-requests.request = http_session.request
 
 
 def worker(q: queue.Queue, openpodcast: OpenPodcastConnector, delay) -> None:
@@ -51,10 +26,21 @@ def worker(q: queue.Queue, openpodcast: OpenPodcastConnector, delay) -> None:
         sleep(delay)
 
 
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=1, min=1, max=60),
+    retry=(
+        retry_if_exception_type(requests.exceptions.HTTPError)
+        | retry_if_exception_type(requests.exceptions.ConnectionError)
+        | retry_if_exception_type(requests.exceptions.Timeout)
+    ),
+    before_sleep=before_sleep_log(logger, "WARNING"),
+    reraise=True,
+)
 def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
     """
     Fetches data from the Spotify API and sends it to the Open Podcast API.
-    Uses HTTPAdapter with retry strategy for automatic retries on rate limits and server errors.
+    Uses tenacity retry decorator for automatic retries on rate limits and network errors.
     """
     try:
         data = params.spotify_call()
@@ -67,5 +53,11 @@ def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
                 params.end_date,
             )
     except requests.exceptions.HTTPError as e:
-        logger.error(e)
-        return
+        # Check if it's a retryable error (429, 5xx)
+        if e.response is not None and (e.response.status_code == 429 or e.response.status_code >= 500):
+            logger.warning(f"Retryable HTTP error {e.response.status_code} for {params.openpodcast_endpoint}")
+            raise  # Re-raise to trigger retry
+        else:
+            # Non-retryable client error (4xx except 429)
+            logger.error(f"Non-retryable HTTP error for {params.openpodcast_endpoint}: {e}")
+            return
