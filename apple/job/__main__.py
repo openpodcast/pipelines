@@ -50,7 +50,7 @@ STORE_DATA = os.environ.get(
 NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
 
 # Apple seems to be ok without a delay between requests
-TASK_DELAY = os.environ.get("TASK_DELAY", 0)
+TASK_DELAY = float(os.environ.get("TASK_DELAY", 0))
 
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
