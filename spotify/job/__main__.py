@@ -62,9 +62,9 @@ try:
     # Number of worker threads to fetch data from the Spotify API by default
     NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
 
-    # api has a rate limit of around 20req/30sec.
-    # using 1.5 seems to lead to almost no rate limit errors
-    TASK_DELAY = os.environ.get("TASK_DELAY", 1.5)
+    # API has a rate limit of around 20req/30sec.
+    # using 1.5 seems to provide faster processing while staying within rate limits
+    TASK_DELAY = float(os.environ.get("TASK_DELAY", 1.0))
 
     # Start- and end-date for the data we want to fetch
     # Load from environment variable if set, otherwise set to defaults
