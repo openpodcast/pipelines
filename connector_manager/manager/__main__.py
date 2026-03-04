@@ -82,8 +82,15 @@ if __name__ == '__main__':
 
     print("Fetching all podcast tasks from database...")
     sql = """
-      SELECT account_id, source_name, source_podcast_id, source_access_keys_encrypted, pod_name
-      FROM podcastSources JOIN openpodcast.podcasts USING (account_id)
+        SELECT
+            account_id,
+            source_name,
+            source_podcast_id,
+            source_access_keys_encrypted,
+            pod_name
+        FROM
+            podcastSources
+            JOIN openpodcast.podcasts USING (account_id)
     """
 
     with db.cursor() as cursor:

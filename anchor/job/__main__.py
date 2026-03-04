@@ -1,20 +1,18 @@
-import threading
-import os
 import datetime as dt
-import requests
-
-from queue import Queue
+import os
+import threading
 from datetime import datetime, timedelta
+from queue import Queue
 
-from job.fetch_params import FetchParams
-from job.worker import worker
-from job.open_podcast import OpenPodcastConnector
-from job.load_env import load_file_or_env
-from job.load_env import load_env
-from job.dates import get_date_range
-
-from loguru import logger
+import requests
 from anchorconnector import AnchorConnector
+from loguru import logger
+
+from job.dates import get_date_range
+from job.fetch_params import FetchParams
+from job.load_env import load_env, load_file_or_env
+from job.open_podcast import OpenPodcastConnector
+from job.worker import worker
 
 print("Initializing environment")
 
@@ -72,7 +70,6 @@ print("Done initializing environment")
 
 anchor = AnchorConnector(
     base_url=BASE_URL,
-    base_graphql_url="http://example.com",
     webstation_id=ANCHOR_WEBSTATION_ID,
     anchorpw_s=ANCHOR_PW_S,
 )
@@ -275,18 +272,17 @@ def wrap_episode_metadata(data):
 
 
 for episode in all_episodes:
-    # Note: Anchor has two IDs for each episode, the `episodeId` and the
-    # `webEpisodeId` We use the `webEpisodeId` to identify the episode because
-    # it gets used in the URL of the API endpoints.
-    # The `episodeId` is just returned in `totalPlaysByEpisode` and
-    # `episodesPage` endpoints.
+    # Note: Anchor has two IDs for each episode, the `episodeId` (numeric) and
+    # the `webEpisodeId` (string). The numeric `episodeId` is required by all
+    # analytics and metadata endpoints in the current API.
     web_episode_id = episode["webEpisodeId"]
+    episode_id = episode["episodeId"]
 
     # To ensure backwards compatibility,
     # we include the raw ids in the meta data.
     meta = {
         "episode": web_episode_id,
-        "episodeIdNum": episode["episodeId"],
+        "episodeIdNum": episode_id,
         "webEpisodeId": web_episode_id,
     }
 
@@ -295,7 +291,7 @@ for episode in all_episodes:
             openpodcast_endpoint="episodePlays",
             anchor_call=get_request_lambda(
                 anchor.episode_plays,
-                web_episode_id,
+                episode_id,
                 date_range.start,
                 date_range.end,
                 "daily",
@@ -306,7 +302,7 @@ for episode in all_episodes:
         ),
         FetchParams(
             openpodcast_endpoint="episodePerformance",
-            anchor_call=get_request_lambda(anchor.episode_performance, web_episode_id),
+            anchor_call=get_request_lambda(anchor.episode_performance, episode_id),
             start_date=date_range.start,
             end_date=date_range.end,
             meta=meta,
@@ -314,7 +310,7 @@ for episode in all_episodes:
         FetchParams(
             openpodcast_endpoint="aggregatedPerformance",
             anchor_call=get_request_lambda(
-                anchor.episode_aggregated_performance, web_episode_id
+                anchor.episode_aggregated_performance, episode_id
             ),
             start_date=date_range.start,
             end_date=date_range.end,
@@ -322,13 +318,13 @@ for episode in all_episodes:
         ),
         FetchParams(
             openpodcast_endpoint="podcastEpisode",
-            # Note: We pass the `web_episode_id` as a default argument to the
+            # Note: We pass the `episode_id` as a default argument to the
             # lambda function. This creates a new binding for each iteration of
             # the loop, effectively capturing the correct value of
-            # web_episode_id for each episode.
+            # episode_id for each episode.
             anchor_call=(
-                lambda episode_id=web_episode_id: wrap_episode_metadata(
-                    get_request_lambda(anchor.episode_metadata, episode_id)()
+                lambda ep_id=episode_id: wrap_episode_metadata(
+                    get_request_lambda(anchor.episode_metadata, ep_id)()
                 )
             ),
             start_date=date_range.start,

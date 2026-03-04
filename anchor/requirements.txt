@@ -1,4 +1,4 @@
-anchorconnector==0.6.2
+anchorconnector @ https://codeload.github.com/openpodcast/anchor-connector/zip/refs/heads/main?token=AABK5QL5QF6CGXI5IBBZZU3JVB6C2
 certifi==2022.12.7
 charset-normalizer==3.1.0
 idna==3.4
