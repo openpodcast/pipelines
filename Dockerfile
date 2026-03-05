@@ -4,7 +4,7 @@ FROM --platform=linux/amd64 python:3.11-slim-bullseye
 
 # Install cron and gpg for decrypting data fetched from db
 RUN apt-get update \
-    && apt-get install -y cron gpg git \
+    && apt-get install -y cron gpg \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
