@@ -5,14 +5,16 @@ These functions must be in a separate module (not __main__.py)
 to be picklable for multiprocessing.Pool.
 """
 
-from dataclasses import dataclass
-from manager.load_env import load_env, load_file_or_env
-import mysql.connector
-from manager.cryptography import decrypt_json
 import os
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
+
+import mysql.connector
 from loguru import logger
+
+from manager.cryptography import decrypt_json
+from manager.load_env import load_env, load_file_or_env
 
 
 @dataclass
@@ -22,6 +24,7 @@ class PodcastJob:
     source_podcast_id: str
     source_access_keys_encrypted: str
     pod_name: str
+
 
 # Load environment variables
 CONNECTORS_PATH = load_env("CONNECTORS_PATH", ".")
@@ -34,8 +37,9 @@ OPENPODCAST_ENCRYPTION_KEY = load_file_or_env("OPENPODCAST_ENCRYPTION_KEY")
 
 PODIGEE_CLIENT_ID = load_env("PODIGEE_CLIENT_ID")
 PODIGEE_CLIENT_SECRET = load_file_or_env("PODIGEE_CLIENT_SECRET")
-PODIGEE_REDIRECT_URI = load_env("PODIGEE_REDIRECT_URI",
-                               "https://connect.openpodcast.app/auth/v1/podigee/callback")
+PODIGEE_REDIRECT_URI = load_env(
+    "PODIGEE_REDIRECT_URI", "https://connect.openpodcast.app/auth/v1/podigee/callback"
+)
 
 
 def ensure_db_connection():
@@ -91,7 +95,9 @@ def process_podcast_job(job):
 
     try:
         # all keys that are needed to access the source
-        print(f"Decrypting keys for {job.pod_name} {job.account_id} for {job.source_name}")
+        print(
+            f"Decrypting keys for {job.pod_name} {job.account_id} for {job.source_name}"
+        )
         source_access_keys = decrypt_json(
             job.source_access_keys_encrypted, OPENPODCAST_ENCRYPTION_KEY
         )
@@ -109,7 +115,9 @@ def process_podcast_job(job):
             try:
                 db = ensure_db_connection()
             except mysql.connector.Error:
-                logger.error(f"Cannot establish database connection for Podigee token refresh of {job.pod_name} {job.account_id}. Skipping this source.")
+                logger.error(
+                    f"Cannot establish database connection for Podigee token refresh of {job.pod_name} {job.account_id}. Skipping this source."
+                )
                 return False
 
             # Handle the token refresh and database update
@@ -122,11 +130,15 @@ def process_podcast_job(job):
                 encryption_key=OPENPODCAST_ENCRYPTION_KEY,
                 client_id=PODIGEE_CLIENT_ID,
                 client_secret=PODIGEE_CLIENT_SECRET,
-                redirect_uri=PODIGEE_REDIRECT_URI
+                redirect_uri=PODIGEE_REDIRECT_URI,
             )
 
-            if (not source_access_keys) or ("PODIGEE_ACCESS_TOKEN" not in source_access_keys):
-                logger.error(f"Failed to refresh Podigee token for {job.pod_name} {job.account_id}. Skipping this source.")
+            if (not source_access_keys) or (
+                "PODIGEE_ACCESS_TOKEN" not in source_access_keys
+            ):
+                logger.error(
+                    f"Failed to refresh Podigee token for {job.pod_name} {job.account_id}. Skipping this source."
+                )
                 return False
 
         logger.info(
@@ -157,11 +169,15 @@ def process_podcast_job(job):
         if result.returncode == 0:
             return True
         else:
-            logger.error(f"Fetching of {job.pod_name} not successful. Subprocess error output: {result.stderr}")
+            logger.error(
+                f"Fetching of {job.pod_name} not successful. Subprocess error output: {result.stderr}"
+            )
             return False
 
     except subprocess.TimeoutExpired:
-        logger.error(f"Error: Timeout while fetching {job.pod_name} (exceeded 120 minutes)")
+        logger.error(
+            f"Error: Timeout while fetching {job.pod_name} (exceeded 120 minutes)"
+        )
         return False
     except Exception as e:
         logger.error(f"Exception while fetching {job.pod_name}: {e}")
