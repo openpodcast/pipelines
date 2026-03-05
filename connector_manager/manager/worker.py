@@ -93,13 +93,6 @@ def process_podcast_job(job):
     global db
     db = None
 
-    if job.source_name != "anchor":
-        # Early return (for debugging)
-        logger.info(
-            f"Skipping job for {job.pod_name} {job.account_id} for {job.source_name} (only Anchor is currently supported)"
-        )
-        return False
-
     try:
         # all keys that are needed to access the source
         print(
