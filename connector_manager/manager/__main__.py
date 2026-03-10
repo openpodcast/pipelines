@@ -93,12 +93,28 @@ if __name__ == "__main__":
         FROM
             podcastSources
             JOIN openpodcast.podcasts USING (account_id)
-        WHERE NOT EXISTS (
-            SELECT 1 FROM openpodcast.updates
-            WHERE openpodcast.updates.account_id = podcastSources.account_id
-            AND openpodcast.updates.provider = podcastSources.source_name
-            AND DATE(openpodcast.updates.created) = CURDATE()
-        )
+        WHERE
+            -- Fetch if no updates exist for today (new podcast or first run of the day)
+            NOT EXISTS (
+                SELECT 1 FROM openpodcast.updates
+                WHERE openpodcast.updates.account_id = podcastSources.account_id
+                AND openpodcast.updates.provider = podcastSources.source_name
+                AND DATE(openpodcast.updates.created) = CURDATE()
+            )
+            OR
+            -- Re-fetch if today's endpoint count is less than yesterday's, which
+            -- indicates the previous fetch was aborted before all endpoints were fetched
+            (
+                SELECT COUNT(*) FROM openpodcast.updates
+                WHERE openpodcast.updates.account_id = podcastSources.account_id
+                AND openpodcast.updates.provider = podcastSources.source_name
+                AND DATE(openpodcast.updates.created) = CURDATE()
+            ) < (
+                SELECT COUNT(*) FROM openpodcast.updates
+                WHERE openpodcast.updates.account_id = podcastSources.account_id
+                AND openpodcast.updates.provider = podcastSources.source_name
+                AND DATE(openpodcast.updates.created) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+            )
     """
 
     with db.cursor() as cursor:
