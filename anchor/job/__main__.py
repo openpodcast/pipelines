@@ -24,7 +24,7 @@ OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 # Note: Anchor API uses Spotify as base URL because it was acquired by Spotify.
 # This is not a typo.
 BASE_URL = load_file_or_env(
-    "ANCHOR_BASE_URL", "https://podcasters.spotify.com/pod/api/proxy/v3"
+    "ANCHOR_BASE_URL", "https://creators.spotify.com/pod/api/proxy/v3"
 )
 
 # Anchor webstation ID which represents the podcast, which we fetch data for

@@ -1,14 +1,15 @@
-from manager.load_env import load_env
-from manager.load_env import load_file_or_env
-import mysql.connector
-from manager.cryptography import decrypt_json
+import multiprocessing
 import os
 import subprocess
-from pathlib import Path
-from loguru import logger
 import sys
-import multiprocessing
 from collections import defaultdict
+from pathlib import Path
+
+import mysql.connector
+from loguru import logger
+
+from manager.cryptography import decrypt_json
+from manager.load_env import load_env, load_file_or_env
 
 # Import the Podigee connector functionality
 from manager.podigee_connector import handle_podigee_refresh
@@ -27,12 +28,14 @@ OPENPODCAST_ENCRYPTION_KEY = load_file_or_env("OPENPODCAST_ENCRYPTION_KEY")
 # Podigee-specific environment variables
 PODIGEE_CLIENT_ID = load_env("PODIGEE_CLIENT_ID")
 PODIGEE_CLIENT_SECRET = load_file_or_env("PODIGEE_CLIENT_SECRET")
-PODIGEE_REDIRECT_URI = load_env("PODIGEE_REDIRECT_URI", 
-                               "https://connect.openpodcast.app/auth/v1/podigee/callback")
+PODIGEE_REDIRECT_URI = load_env(
+    "PODIGEE_REDIRECT_URI", "https://connect.openpodcast.app/auth/v1/podigee/callback"
+)
 
 if not OPENPODCAST_ENCRYPTION_KEY:
     logger.error("No OPENPODCAST_ENCRYPTION_KEY found")
     exit(1)
+
 
 def ensure_db_connection():
     """
@@ -45,7 +48,7 @@ def ensure_db_connection():
             logger.info("Database connection lost, reconnecting...")
             if db is not None:
                 db.close()
-            
+
             db = mysql.connector.connect(
                 host=MYSQL_HOST,
                 port=MYSQL_PORT,
@@ -59,6 +62,7 @@ def ensure_db_connection():
     except mysql.connector.Error as e:
         logger.error(f"Error connecting to mysql: {e}")
         raise
+
 
 # try to connect to mysql or exit otherwise
 try:
@@ -75,11 +79,9 @@ if "--interactive" in sys.argv:
     interactiveMode = True
 
 # Import worker functions and types from separate module for multiprocessing
-from manager.worker import process_source_jobs, PodcastJob
+from manager.worker import PodcastJob, process_source_jobs
 
-
-if __name__ == '__main__':
-
+if __name__ == "__main__":
     print("Fetching all podcast tasks from database...")
     sql = """
         SELECT
@@ -91,6 +93,28 @@ if __name__ == '__main__':
         FROM
             podcastSources
             JOIN openpodcast.podcasts USING (account_id)
+        WHERE
+            -- Fetch if no updates exist for today (new podcast or first run of the day)
+            NOT EXISTS (
+                SELECT 1 FROM openpodcast.updates
+                WHERE openpodcast.updates.account_id = podcastSources.account_id
+                AND openpodcast.updates.provider = podcastSources.source_name
+                AND DATE(openpodcast.updates.created) = CURDATE()
+            )
+            OR
+            -- Re-fetch if today's endpoint count is less than yesterday's, which
+            -- indicates the previous fetch was aborted before all endpoints were fetched
+            (
+                SELECT COUNT(*) FROM openpodcast.updates
+                WHERE openpodcast.updates.account_id = podcastSources.account_id
+                AND openpodcast.updates.provider = podcastSources.source_name
+                AND DATE(openpodcast.updates.created) = CURDATE()
+            ) < (
+                SELECT COUNT(*) FROM openpodcast.updates
+                WHERE openpodcast.updates.account_id = podcastSources.account_id
+                AND openpodcast.updates.provider = podcastSources.source_name
+                AND DATE(openpodcast.updates.created) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+            )
     """
 
     with db.cursor() as cursor:
@@ -105,7 +129,7 @@ if __name__ == '__main__':
             source_name=row[1],
             source_podcast_id=row[2],
             source_access_keys_encrypted=row[3],
-            pod_name=row[4]
+            pod_name=row[4],
         )
 
         if interactiveMode:
@@ -125,7 +149,9 @@ if __name__ == '__main__':
 
     # Process jobs: run different sources in parallel, but same-source jobs sequentially
     if jobs_to_process:
-        logger.info(f"Processing {len(jobs_to_process)} jobs across {len(jobs_by_source)} sources...")
+        logger.info(
+            f"Processing {len(jobs_to_process)} jobs across {len(jobs_by_source)} sources..."
+        )
 
         all_results = []
 
