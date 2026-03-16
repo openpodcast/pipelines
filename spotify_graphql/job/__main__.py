@@ -138,12 +138,39 @@ def _run() -> None:
             logger.warning("Skipping show with no URI: {}", show)
             continue
         show_name = show.get("name", show_uri)
-        logger.info("--- Processing: {} ({}) ---", show_name, show_uri)
-        _process_show(connector, show_uri)
+        hosting_provider = show.get("hostingProvider", "UNKNOWN")
+        is_s4p = hosting_provider == "S4P"
+        logger.info(
+            "--- Processing: {} ({}) [hostingProvider={}] ---",
+            show_name,
+            show_uri,
+            hosting_provider,
+        )
+        _process_show(connector, show_uri, is_s4p=is_s4p)
 
 
-def _process_show(connector: SpotifyGraphQLConnector, show_uri: str) -> None:
-    """Build and dispatch the full endpoint list for one show."""
+def _process_show(
+    connector: SpotifyGraphQLConnector,
+    show_uri: str,
+    *,
+    is_s4p: bool = False,
+) -> None:
+    """Build and dispatch the full endpoint list for one show.
+
+    Parameters
+    ----------
+    connector:
+        Shared connector instance; show_uri and station_id are reset per call.
+    show_uri:
+        Spotify show URI for this show.
+    is_s4p:
+        True when the show is hosted on Spotify for Podcasters (S4P).
+        Non-S4P shows have no stationId, so episode-level endpoints are
+        unavailable, and several show-level endpoints (geo, platform,
+        impressions, top episodes) will return DataFetchingException from
+        Spotify.  We skip those endpoints entirely for non-S4P shows to
+        avoid sending known-empty payloads to the Open Podcast API.
+    """
 
     open_podcast = OpenPodcastConnector(
         OPENPODCAST_API_ENDPOINT,
@@ -169,23 +196,15 @@ def _process_show(connector: SpotifyGraphQLConnector, show_uri: str) -> None:
 
     endpoints: list[FetchParams] = []
 
-    # -- Show-level endpoints -------------------------------------------------
+    # -- Show-level endpoints: available for all shows ------------------------
+    # showSpotifyStats, showDemographicsStats, and showAudienceDiscovery work
+    # regardless of hosting provider.
 
     endpoints += [
         FetchParams(
             openpodcast_endpoint="showSpotifyStats",
             call=_lam(
                 connector.get_show_spotify_stats,
-                show_uri=show_uri,
-                date_range_window=DATE_RANGE_WINDOW,
-            ),
-            start_date=_now(),
-            end_date=_now(),
-        ),
-        FetchParams(
-            openpodcast_endpoint="showGeoStats",
-            call=_lam(
-                connector.get_show_geo_stats,
                 show_uri=show_uri,
                 date_range_window=DATE_RANGE_WINDOW,
             ),
@@ -203,26 +222,6 @@ def _process_show(connector: SpotifyGraphQLConnector, show_uri: str) -> None:
             end_date=_now(),
         ),
         FetchParams(
-            openpodcast_endpoint="showPlatformStats",
-            call=_lam(
-                connector.get_show_platform_stats,
-                show_uri=show_uri,
-                date_range_window=DATE_RANGE_WINDOW,
-            ),
-            start_date=_now(),
-            end_date=_now(),
-        ),
-        FetchParams(
-            openpodcast_endpoint="showImpressionsTrend",
-            call=_lam(
-                connector.get_show_impressions_trend,
-                show_uri=show_uri,
-                date_range_window=DATE_RANGE_WINDOW,
-            ),
-            start_date=_now(),
-            end_date=_now(),
-        ),
-        FetchParams(
             openpodcast_endpoint="showAudienceDiscovery",
             call=_lam(
                 connector.get_show_audience_discovery,
@@ -232,37 +231,83 @@ def _process_show(connector: SpotifyGraphQLConnector, show_uri: str) -> None:
             start_date=_now(),
             end_date=_now(),
         ),
-        FetchParams(
-            openpodcast_endpoint="showImpressionsSources",
-            call=_lam(
-                connector.get_show_impressions_sources,
-                show_uri=show_uri,
-                date_range_window=DATE_RANGE_WINDOW,
-            ),
-            start_date=_now(),
-            end_date=_now(),
-        ),
-        FetchParams(
-            openpodcast_endpoint="showTopEpisodes",
-            call=_lam(connector.get_show_top_episodes, show_uri=show_uri),
-            start_date=_now(),
-            end_date=_now(),
-        ),
     ]
 
-    # -- Episode-level endpoints ----------------------------------------------
+    # -- Show-level endpoints: S4P-hosted shows only --------------------------
+    # geo, platform, impressions trend/sources, and top episodes all require
+    # Spotify distribution (S4P) and return DataFetchingException otherwise.
 
-    logger.info("Fetching all episodes for {}", show_uri)
-    try:
-        episodes = connector.get_all_episodes()
-    except Exception as exc:
-        logger.warning(
-            "Could not fetch episodes for {} ({}). "
-            "This is expected for non-hosted (third-party RSS) shows which have no station ID.",
+    if is_s4p:
+        endpoints += [
+            FetchParams(
+                openpodcast_endpoint="showGeoStats",
+                call=_lam(
+                    connector.get_show_geo_stats,
+                    show_uri=show_uri,
+                    date_range_window=DATE_RANGE_WINDOW,
+                ),
+                start_date=_now(),
+                end_date=_now(),
+            ),
+            FetchParams(
+                openpodcast_endpoint="showPlatformStats",
+                call=_lam(
+                    connector.get_show_platform_stats,
+                    show_uri=show_uri,
+                    date_range_window=DATE_RANGE_WINDOW,
+                ),
+                start_date=_now(),
+                end_date=_now(),
+            ),
+            FetchParams(
+                openpodcast_endpoint="showImpressionsTrend",
+                call=_lam(
+                    connector.get_show_impressions_trend,
+                    show_uri=show_uri,
+                    date_range_window=DATE_RANGE_WINDOW,
+                ),
+                start_date=_now(),
+                end_date=_now(),
+            ),
+            FetchParams(
+                openpodcast_endpoint="showImpressionsSources",
+                call=_lam(
+                    connector.get_show_impressions_sources,
+                    show_uri=show_uri,
+                    date_range_window=DATE_RANGE_WINDOW,
+                ),
+                start_date=_now(),
+                end_date=_now(),
+            ),
+            FetchParams(
+                openpodcast_endpoint="showTopEpisodes",
+                call=_lam(connector.get_show_top_episodes, show_uri=show_uri),
+                start_date=_now(),
+                end_date=_now(),
+            ),
+        ]
+    else:
+        logger.info(
+            "Skipping S4P-only show-level endpoints for {} (not S4P-hosted).",
             show_uri,
-            exc,
         )
-        episodes = []
+
+    # -- Episode-level endpoints: S4P-hosted shows only -----------------------
+    # Non-hosted shows have no stationId so WebGetIndexedEpisodeList cannot be
+    # called.  Skip the episode fetch entirely rather than trying and catching.
+
+    episodes: list = []
+    if not is_s4p:
+        logger.info(
+            "Skipping episode fetch for {} (not S4P-hosted, no stationId).",
+            show_uri,
+        )
+    else:
+        logger.info("Fetching all episodes for {}", show_uri)
+        try:
+            episodes = connector.get_all_episodes()
+        except Exception as exc:
+            logger.error("Failed to fetch episodes for {}: {}", show_uri, exc)
 
     logger.info("{} episode(s) found for {}", len(episodes), show_uri)
 
