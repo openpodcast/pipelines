@@ -2,9 +2,9 @@
 # Pin to linux/amd64 as we deploy to x86_64 servers
 FROM --platform=linux/amd64 python:3.11-slim-bullseye
 
-# Install cron
+# Install cron and git (git is required by pip to install packages from GitHub URLs)
 RUN apt-get update \
-    && apt-get install -y cron \
+    && apt-get install -y cron git \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
