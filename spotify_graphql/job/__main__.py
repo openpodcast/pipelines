@@ -52,6 +52,8 @@ OPENPODCAST_API_ENDPOINT = os.environ.get(
 OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 
 DATE_RANGE_WINDOW = os.environ.get("DATE_RANGE_WINDOW", "WINDOW_LAST_SEVEN_DAYS")
+# Optional: restrict processing to a single show URI (useful for debugging / data dumps)
+SPOTIFY_SHOW_URI_FILTER = os.environ.get("SPOTIFY_SHOW_URI") or None
 NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
 TASK_DELAY = float(os.environ.get("TASK_DELAY", "1.0"))
 STORE_DATA = os.environ.get("STORE_DATA", "false").lower() in ("true", "1", "t")
@@ -129,6 +131,20 @@ def _run() -> None:
         sys.exit(1)
 
     logger.info("Found {} show(s) on this account.", len(shows))
+
+    if SPOTIFY_SHOW_URI_FILTER:
+        shows = [
+            s
+            for s in shows
+            if isinstance(s, dict) and s.get("uri") == SPOTIFY_SHOW_URI_FILTER
+        ]
+        if not shows:
+            logger.error(
+                "SPOTIFY_SHOW_URI={} not found on this account.",
+                SPOTIFY_SHOW_URI_FILTER,
+            )
+            sys.exit(1)
+        logger.info("Filtered to 1 show: {}", SPOTIFY_SHOW_URI_FILTER)
 
     for show in shows:
         if not isinstance(show, dict):
