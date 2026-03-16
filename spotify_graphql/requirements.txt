@@ -1,0 +1,7 @@
+# Local development: install the connector from the sibling directory on disk.
+# In production (Docker / CI), swap this line for the GitHub URL:
+#   spotifygraphqlconnector @ git+https://github.com/openpodcast/spotify-graphql-connector.git
+-e ../../spotify-graphql-connector
+
+loguru>=0.7.3
+requests>=2.32.5
