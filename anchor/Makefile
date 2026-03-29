@@ -20,4 +20,5 @@ docker-run:
 
 .env.sample:
 	@envsync -e OPENPODCAST_API_ENDPOINT=https://api.openpodcast.dev \
-	        -e ANCHOR_BASE_URL=https://creators.spotify.com/pod/api/proxy/v3
+	        -e SPOTIFY_SP_DC= \
+	        -e SPOTIFY_SP_KEY=
