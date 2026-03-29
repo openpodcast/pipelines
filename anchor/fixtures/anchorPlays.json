@@ -1,0 +1,55 @@
+{
+  "provider": "anchor",
+  "version": 1,
+  "retrieved": "2023-05-05T16:18:19.546182",
+  "meta": {
+    "show": "123abcde",
+    "endpoint": "plays"
+  },
+  "range": {
+    "start": "2023-05-01",
+    "end": "2023-05-04"
+  },
+  "data": {
+    "stationId": 98765432,
+    "kind": "plays",
+    "parameters": {
+      "timeRange": [
+        1682899200,
+        1683158400
+      ],
+      "timeInterval": 86400
+    },
+    "data": {
+      "rows": [
+        [
+          1682899200,
+          9
+        ],
+        [
+          1682985600,
+          10
+        ],
+        [
+          1683072000,
+          13
+        ],
+        [
+          1683158400,
+          11
+        ]
+      ],
+      "columnHeaders": [
+        {
+          "name": "Time (UTC)",
+          "type": "integer",
+          "isDateTime": true
+        },
+        {
+          "name": "Plays",
+          "type": "integer"
+        }
+      ]
+    }
+  }
+}

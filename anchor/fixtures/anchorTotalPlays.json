@@ -1,0 +1,28 @@
+{
+  "provider": "anchor",
+  "version": 1,
+  "retrieved": "2023-05-05T16:20:58.279733",
+  "meta": {
+    "show": "123abcde",
+    "endpoint": "totalPlays"
+  },
+  "range": {
+    "start": "2023-05-01",
+    "end": "2023-05-04"
+  },
+  "data": {
+    "stationId": 98765432,
+    "kind": "totalPlays",
+    "data": {
+      "rows": [
+        1234
+      ],
+      "columnHeaders": [
+        {
+          "name": "Plays",
+          "type": "integer"
+        }
+      ]
+    }
+  }
+}

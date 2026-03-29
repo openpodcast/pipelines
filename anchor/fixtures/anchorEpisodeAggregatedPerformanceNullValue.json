@@ -1,0 +1,54 @@
+{
+  "provider": "anchor",
+  "version": 1,
+  "retrieved": "2025-08-20T22:06:52.758367",
+  "meta": {
+    "show": "anonymized_show_id",
+    "endpoint": "aggregatedPerformance",
+    "episode": "anonymized_episode_id",
+    "episodeIdNum": 12345678,
+    "webEpisodeId": "anonymized_episode_id"
+  },
+  "range": {
+    "start": "2025-07-21",
+    "end": "2025-08-19"
+  },
+  "data": {
+    "episodeId": 12345678,
+    "kind": "aggregatedPerformance",
+    "data": {
+      "rows": [
+        [
+          "percentile25",
+          0
+        ],
+        [
+          "percentile50",
+          0
+        ],
+        [
+          "percentile75",
+          0
+        ],
+        [
+          "percentile100",
+          0
+        ],
+        [
+          "averageListenSeconds",
+          null
+        ]
+      ],
+      "columnHeaders": [
+        {
+          "name": "Metric",
+          "type": "string"
+        },
+        {
+          "name": "Value",
+          "type": "integer"
+        }
+      ]
+    }
+  }
+}

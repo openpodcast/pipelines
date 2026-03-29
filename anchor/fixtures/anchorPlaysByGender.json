@@ -1,0 +1,65 @@
+{
+  "provider": "anchor",
+  "version": 1,
+  "retrieved": "2023-05-05T16:20:56.696026",
+  "meta": {
+    "show": "123abcde",
+    "endpoint": "playsByGender"
+  },
+  "range": {
+    "start": "2023-05-01",
+    "end": "2023-05-04"
+  },
+  "data": {
+    "stationId": 98765432,
+    "kind": "playsByGender",
+    "parameters": {
+      "timeRange": [
+        1682892000,
+        1683151200
+      ]
+    },
+    "data": {
+      "rows": [
+        [
+          "Male",
+          0.6296296296296297
+        ],
+        [
+          "Female",
+          0.3333333333333333
+        ],
+        [
+          "Not specified",
+          0.037037037037037035
+        ],
+        [
+          "Non-binary",
+          0
+        ]
+      ],
+      "translationMapping": {
+        "Female": "Female",
+        "Male": "Male",
+        "Non-binary": "Non-binary",
+        "Not specified": "Not specified"
+      },
+      "columnHeaders": [
+        {
+          "name": "Gender",
+          "type": "string"
+        },
+        {
+          "name": "Percent of Plays",
+          "type": "number"
+        }
+      ],
+      "colors": {
+        "Male": "#26008D",
+        "Female": "#5925FF",
+        "Not specified": "#9691FF",
+        "Non-binary": "#D7DBFF"
+      }
+    }
+  }
+}

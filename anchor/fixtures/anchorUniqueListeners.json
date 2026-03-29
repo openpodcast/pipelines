@@ -1,0 +1,28 @@
+{
+  "provider": "anchor",
+  "version": 1,
+  "retrieved": "2023-05-05T16:20:57.307540",
+  "meta": {
+    "show": "123abcde",
+    "endpoint": "uniqueListeners"
+  },
+  "range": {
+    "start": "2023-05-01",
+    "end": "2023-05-04"
+  },
+  "data": {
+    "stationId": 98765432,
+    "kind": "uniqueListeners",
+    "data": {
+      "rows": [
+        65
+      ],
+      "columnHeaders": [
+        {
+          "name": "Unique Listeners",
+          "type": "integer"
+        }
+      ]
+    }
+  }
+}

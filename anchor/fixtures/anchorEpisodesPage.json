@@ -1,0 +1,54 @@
+{
+  "provider": "anchor",
+  "version": 1,
+  "retrieved": "2023-08-10T19:39:06.669275",
+  "meta": {
+    "show": "81d85ec4",
+    "endpoint": "episodesPage"
+  },
+  "range": {
+    "start": "2023-07-11",
+    "end": "2023-08-09"
+  },
+  "data": [
+    {
+      "episodeId": 68984665,
+      "webEpisodeId": "e22nocn",
+      "title": "A nice long title for this episode",
+      "publishOnUnixTimestamp": 1682051448,
+      "createdUnixTimestamp": 1682003412,
+      "shareLinkPath": "/john-doe/episodes/something-e22nocn",
+      "shareLinkEmbedPath": "/john-doe/embed/episodes/something-e22nocn",
+      "downloadUrl": "/pod/api/audio/a9mulu1/download?url=https%3A%2F%2Fd3ctxlq1ktw2nl.cloudfront.net%2Fstaging%xxxx-3-20%2F325064065-44100-2-a7431192eb7f5.m4a",
+      "totalPlays": 123,
+      "duration": 2539933,
+      "adCount": 0,
+      "containsMusicSegments": false,
+      "isPublishedToSpotifyExclusively": false,
+      "wordpressPostMetadataId": null,
+      "isTrailer": false,
+      "isVideoEpisode": true,
+      "audioCount": 1
+    },
+    {
+      "episodeId": 67347583,
+      "webEpisodeId": "e215pm4",
+      "$comment": "episodes that are not ready might not have a title. we encountered it already in the wild.",
+      "title": null,
+      "publishOnUnixTimestamp": 1680238808,
+      "createdUnixTimestamp": 1679848799,
+      "shareLinkPath": "/john-doe/episodes/something-e215pm4",
+      "shareLinkEmbedPath": "/john-doe/embed/episodes/something-e215pm4",
+      "downloadUrl": "/pod/api/audio/a9ifueq/download?url=https%3A%2F%2Fd3ctxlq1ktw2nl.cloudfront.net%2Fstaging%XXXXXX-2-26%2F320386970-44100-2-5325b64168e6d.m4a",
+      "totalPlays": 240,
+      "duration": 3211018,
+      "adCount": 0,
+      "containsMusicSegments": false,
+      "isPublishedToSpotifyExclusively": false,
+      "wordpressPostMetadataId": null,
+      "isTrailer": false,
+      "isVideoEpisode": true,
+      "audioCount": 1
+    }
+  ]
+}

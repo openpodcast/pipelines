@@ -1,0 +1,43 @@
+{
+  "provider": "anchor",
+  "version": 1,
+  "retrieved": "2023-05-05T16:18:19.190133",
+  "meta": {
+    "show": "123abcde",
+    "endpoint": "podcastEpisode"
+  },
+  "range": {
+    "start": "2023-05-01",
+    "end": "2023-05-04"
+  },
+  "data": {
+    "allEpisodeWebIds": [
+      "e215pm4"
+    ],
+    "podcastId": "123abcde",
+    "podcastEpisodes": [
+      {
+        "adCount": 0,
+        "created": "2023-04-20T15:10:12.000Z",
+        "createdUnixTimestamp": 1682003412,
+        "description": "<p>Test</p>",
+        "duration": 2539885,
+        "hourOffset": -2,
+        "isDeleted": false,
+        "isPublished": true,
+        "podcastEpisodeId": "e215pm4",
+        "publishOn": "2023-04-21T04:30:48.000Z",
+        "publishOnUnixTimestamp": 1682051448000,
+        "title": "Title 0",
+        "url": "https://s3-us-west-2.amazonaws.com/anchor-audio-bank/staging/2023-1-01/392204921-22100-1-6f1f1cdebd586.mp3",
+        "trackedUrl": "https://anchor.fm/s/undefined/podcast/play/undefined/undefined",
+        "episodeImage": null,
+        "shareLinkPath": "/john-doe/episodes/Self-serve-analytics-powered-by-GPT-4-w-David-Jayatillake-e215pm4",
+        "shareLinkEmbedPath": "/john-doe/embed/episodes/Self-serve-analytics-powered-by-GPT-4-w-David-Jayatillake-foo1234"
+      }
+    ],
+    "totalPodcastEpisodes": 14,
+    "vanitySlug": "john-doe",
+    "stationCreatedDate": "2022-02-04T16:00:44.000Z"
+  }
+}

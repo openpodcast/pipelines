@@ -1,0 +1,143 @@
+{
+    "provider": "anchor",
+    "version": 1,
+    "retrieved": "2023-05-05T16:20:57.008583",
+    "meta": {
+        "show": "123abcde",
+        "endpoint": "playsByGeo"
+    },
+    "range": {
+        "start": "2023-05-01",
+        "end": "2023-05-04"
+    },
+    "data": {
+        "stationId": 21684409,
+        "kind": "playsByGeo",
+        "parameters": {
+            "geos": {
+                "type": "array",
+                "minItems": 3,
+                "maxItems": 3,
+                "prefixItems": [
+                    {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    {
+                        "type": "string",
+                        "not": {
+                            "const": null
+                        }
+                    },
+                    {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                ]
+            },
+            "resultGeo": "geo_3",
+            "timeRange": [
+                1645747200,
+                1685923200
+            ],
+            "timeInterval": 3600
+        },
+        "data": {
+            "rows": [
+                [
+                    "Land Berlin",
+                    0.38
+                ],
+                [
+                    "Bavaria",
+                    0.16
+                ],
+                [
+                    "North Rhine-Westphalia",
+                    0.11
+                ],
+                [
+                    "Hesse",
+                    0.06
+                ],
+                [
+                    "Free and Hanseatic City of Hamburg",
+                    0.05
+                ],
+                [
+                    "Lower Saxony",
+                    0.05
+                ],
+                [
+                    "Saxony",
+                    0.04
+                ],
+                [
+                    "Schleswig-Holstein",
+                    0.03
+                ],
+                [
+                    "Rheinland-Pfalz",
+                    0.02
+                ],
+                [
+                    "Bremen",
+                    0.02
+                ],
+                [
+                    "Brandenburg",
+                    0.02
+                ],
+                [
+                    "Baden-W\u00fcrttemberg Region",
+                    0.02
+                ],
+                [
+                    "Baden-Wurttemberg",
+                    0.02
+                ],
+                [
+                    "Hamburg",
+                    0.01
+                ],
+                [
+                    "Saxony-Anhalt",
+                    0.006514657980456026
+                ],
+                [
+                    "Baden-W\u00fcrttemberg",
+                    0.006514657980456026
+                ],
+                [
+                    "Thuringia",
+                    0.002171552660152009
+                ],
+                [
+                    "Saarland",
+                    0.0010857763300760044
+                ],
+                [
+                    "Mecklenburg-Vorpommern",
+                    0.0010857763300760044
+                ]
+            ],
+            "columnHeaders": [
+                {
+                    "name": "Geo",
+                    "type": "string"
+                },
+                {
+                    "name": "Percent of Plays",
+                    "type": "number"
+                }
+            ],
+            "assets": {
+                "flagUrlByGeo": {}
+            }
+        }
+    }
+}

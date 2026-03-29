@@ -1,0 +1,73 @@
+{
+  "provider": "anchor",
+  "version": 1,
+  "retrieved": "2023-05-05T16:18:20.417176",
+  "meta": {
+    "show": "123abcde",
+    "endpoint": "playsByApp"
+  },
+  "range": {
+    "start": "2023-05-01",
+    "end": "2023-05-04"
+  },
+  "data": {
+    "stationId": 98765432,
+    "kind": "playsByApp",
+    "parameters": {
+      "minValue": 0.02,
+      "timeRange": [
+        1682899200,
+        1683158400
+      ],
+      "timeInterval": 86400
+    },
+    "data": {
+      "rows": [
+        [
+          "Spotify",
+          0.6511627906976745
+        ],
+        [
+          "Web Browser",
+          0.13953488372093023
+        ],
+        [
+          "Apple Podcasts",
+          0.11627906976744186
+        ],
+        [
+          "Pocket Casts",
+          0.06976744186046512
+        ],
+        [
+          "CastBox",
+          0.023255813953488372
+        ]
+      ],
+      "translationMapping": {
+        "Spotify": "Spotify",
+        "Web Browser": "Web Browser",
+        "Apple Podcasts": "Apple Podcasts",
+        "Pocket Casts": "Pocket Casts",
+        "CastBox": "CastBox"
+      },
+      "columnHeaders": [
+        {
+          "name": "App",
+          "type": "string"
+        },
+        {
+          "name": "Percent of Plays",
+          "type": "number"
+        }
+      ],
+      "colors": {
+        "Spotify": "#1ED760",
+        "Web Browser": "#5D55FF",
+        "Apple Podcasts": "#D56DFB",
+        "Pocket Casts": "#F43E37",
+        "CastBox": "#F55B23"
+      }
+    }
+  }
+}

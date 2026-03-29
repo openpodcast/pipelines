@@ -1,0 +1,73 @@
+{
+  "provider": "anchor",
+  "version": 1,
+  "retrieved": "2023-05-05T16:18:20.830407",
+  "meta": {
+    "show": "123abcde",
+    "endpoint": "playsByDevice"
+  },
+  "range": {
+    "start": "2023-05-01",
+    "end": "2023-05-04"
+  },
+  "data": {
+    "stationId": 98765432,
+    "kind": "playsByDevice",
+    "parameters": {
+      "minValue": 0.02,
+      "timeRange": [
+        1682899200,
+        1683158400
+      ],
+      "timeInterval": 86400
+    },
+    "data": {
+      "rows": [
+        [
+          "iPhone",
+          0.4186046511627907
+        ],
+        [
+          "Android",
+          0.3023255813953488
+        ],
+        [
+          "Mac",
+          0.046511627906976744
+        ],
+        [
+          "Windows",
+          0.046511627906976744
+        ],
+        [
+          "Other",
+          0.18604651162790697
+        ]
+      ],
+      "translationMapping": {
+        "iPhone": "iPhone",
+        "Android": "Android",
+        "Mac": "Mac",
+        "Windows": "Windows",
+        "Other": "Other"
+      },
+      "columnHeaders": [
+        {
+          "name": "Device",
+          "type": "string"
+        },
+        {
+          "name": "Percent of Plays",
+          "type": "number"
+        }
+      ],
+      "colors": {
+        "iPhone": "#5D55FF",
+        "Android": "#26008D",
+        "Mac": "#EF77A1",
+        "Windows": "#80AC0B",
+        "Other": "#FF4834"
+      }
+    }
+  }
+}
