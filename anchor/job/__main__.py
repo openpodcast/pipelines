@@ -170,7 +170,13 @@ discovery_stats = connector.get_show_audience_discovery(
 )
 top_episodes = connector.get_show_top_episodes(show_uri=show_uri)
 
-logger.info("Pre-fetch complete.")
+logger.info("Fetching all episodes …")
+raw_episodes = connector.get_all_episodes()
+
+# Build enrichment lookup so transforms can access episodeId, duration, etc.
+episode_enrichment = {ep.get("uri", ""): ep for ep in raw_episodes}
+
+logger.info(f"Pre-fetch complete ({len(raw_episodes)} episodes).")
 
 # ---------------------------------------------------------------------------
 # Show-level endpoints
@@ -239,7 +245,9 @@ endpoints: list[FetchParams] = [
     ),
     FetchParams(
         openpodcast_endpoint="totalPlaysByEpisode",
-        anchor_call=lambda: transform_total_plays_by_episode(top_episodes),
+        anchor_call=lambda: transform_total_plays_by_episode(
+            top_episodes, episode_enrichment=episode_enrichment
+        ),
         start_date=START_DATE,
         end_date=END_DATE,
     ),
@@ -249,8 +257,6 @@ endpoints: list[FetchParams] = [
 # Episodes
 # ---------------------------------------------------------------------------
 
-logger.info("Fetching all episodes …")
-raw_episodes = connector.get_all_episodes()
 all_episodes = transform_episodes_page(raw_episodes)
 
 logger.info(f"Sending episodesPage data to Open Podcast ({len(all_episodes)} episodes)")
@@ -261,6 +267,8 @@ open_podcast.post(
     START_DATE,
     END_DATE,
 )
+
+# episode_enrichment was already built during pre-fetch above.
 
 # ---------------------------------------------------------------------------
 # Per-episode endpoints
@@ -321,6 +329,7 @@ for episode in raw_episodes:
                 lambda uri=episode_uri: wrap_episode_metadata(
                     connector.get_episode_metadata_for_analytics(episode_uri=uri),
                     uri,
+                    episode_enrichment=episode_enrichment,
                 ),
             ),
             start_date=START_DATE,

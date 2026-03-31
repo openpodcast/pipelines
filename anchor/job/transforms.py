@@ -204,7 +204,11 @@ def transform_plays_by_geo(graphql_data: dict) -> dict:
 def transform_plays_by_geo_city(graphql_data: dict) -> dict:
     """
     getShowAudienceAllPlatformsGeoStats (GEO_CITY) → old ``playsByGeoCity`` shape.
+
+    NOTE: The Spotify GraphQL API may return ``null`` for city-level geo data
+    on some shows (DataFetchingException).  In that case we return empty rows.
     """
+    # Guard: if the API returned null for the geo node, inner will be {}
     inner = _extract_analytics_value(
         graphql_data, "showByShowUri", "showStreamsAndDownloadsByGeo"
     )
@@ -377,14 +381,21 @@ def transform_audience_size(graphql_data: dict) -> dict:
 
 def transform_total_plays(graphql_data: dict) -> dict:
     """
-    getShowOverviewStatsNRT → old ``totalPlays`` shape.
+    getShowOnSpotifyStats → old ``totalPlays`` shape.
+
+    The GraphQL response carries a time-series under
+    ``showByShowUri.playsDaily`` with daily play counts.
+    We sum them to produce the total for the requested window.
 
     Old shape: ``{"kind": "totalPlays", "data": {"rows": [1234]}}``
     """
-    inner = _extract_analytics_value(
-        graphql_data, "showByShowUri", "streamsAndDownloadsAllTime"
+    points = _extract_time_series_points(
+        graphql_data, "showByShowUri", "playsDaily"
     )
-    value = inner.get("value", 0)
+    value = sum(
+        (p.get("value", {}).get("value", 0) if isinstance(p.get("value"), dict) else 0)
+        for p in points
+    )
 
     return {
         "stationId": 0,
@@ -399,9 +410,18 @@ def transform_total_plays(graphql_data: dict) -> dict:
     }
 
 
-def transform_total_plays_by_episode(graphql_data: dict) -> dict:
+def transform_total_plays_by_episode(
+    graphql_data: dict,
+    episode_enrichment: dict | None = None,
+) -> dict:
     """
     getShowTopEpisodes → old ``totalPlaysByEpisode`` shape.
+
+    *episode_enrichment* is a ``{uri: episode_dict}`` lookup built from
+    ``get_all_episodes()``.  Each episode dict is expected to carry an
+    ``episodeId`` integer field (the legacy Anchor numeric ID).  When the
+    lookup is provided the real ID is used; otherwise ``rank`` is used as
+    a fallback.
 
     Old shape::
 
@@ -410,6 +430,7 @@ def transform_total_plays_by_episode(graphql_data: dict) -> dict:
             ...
         ]}}
     """
+    enrichment = episode_enrichment or {}
     inner = _extract_analytics_value(
         graphql_data, "showByShowUri", "analytics"
     )
@@ -421,9 +442,11 @@ def transform_total_plays_by_episode(graphql_data: dict) -> dict:
         episode_uri = ep.get("episodeUri", "")
         count = ep.get("count", 0)
         publish_seconds = ep.get("episode", {}).get("publishedOn", {}).get("seconds", 0)
-        # Old schema used numeric episodeId; use 0 as placeholder since we're
-        # moving away from numeric IDs
-        rows.append([title, 0, count, publish_seconds, rank, episode_uri])
+        # Use the real Anchor numeric episodeId when available (from
+        # get_all_episodes enrichment), otherwise fall back to rank.
+        ep_info = enrichment.get(episode_uri, {})
+        episode_id = ep_info.get("episodeId", rank)
+        rows.append([title, episode_id, count, publish_seconds, rank, episode_uri])
 
     return {
         "stationId": 0,
@@ -464,11 +487,10 @@ def transform_episodes_page(episodes_list: list[dict]) -> list[dict]:
         created_seconds = ep.get("createdOn", {}).get("seconds", 0)
         duration = ep.get("asset", {}).get("lengthMs", 0)
         total_plays = (
-            ep.get("analyticsStreamsAndDownloads", {})
-            .get("analyticsValue", {})
-            .get("analyticsValue", {})
-            .get("value", 0)
+            (ep.get("analyticsStreamsAndDownloads") or {})
+            .get("analyticsValue") or {}
         )
+        total_plays = (total_plays.get("analyticsValue") or {}).get("value", 0)
         is_trailer = ep.get("episodeType") == "EPISODE_TYPE_TRAILER"
         is_video = ep.get("contentType") == "EPISODE_CONTENT_TYPE_VIDEO"
 
@@ -615,9 +637,18 @@ def transform_aggregated_performance(graphql_data: dict, episode_uri: str) -> di
     }
 
 
-def wrap_episode_metadata(graphql_data: dict, episode_uri: str) -> dict:
+def wrap_episode_metadata(
+    graphql_data: dict,
+    episode_uri: str,
+    episode_enrichment: dict | None = None,
+) -> dict:
     """
     getEpisodeMetadataForAnalytics → old ``podcastEpisode`` envelope shape.
+
+    ``episode_enrichment`` is an optional dict from ``get_all_episodes()``
+    keyed by episode URI.  It supplies ``duration``, ``created``,
+    ``downloadUrl`` and ``description`` which the analytics metadata
+    endpoint does not return.
 
     Old shape::
 
@@ -625,17 +656,23 @@ def wrap_episode_metadata(graphql_data: dict, episode_uri: str) -> dict:
          "podcastEpisodes": [{...}], "totalPodcastEpisodes": 1, ...}
     """
     ep = graphql_data.get("episodeByUri", {})
+    enrich = (episode_enrichment or {}).get(episode_uri, {})
 
     publish_seconds = ep.get("publishedOn", {}).get("seconds", 0)
     thumbnail_images = ep.get("thumbnail", {}).get("images", [])
     episode_image = thumbnail_images[0].get("url") if thumbnail_images else None
 
+    # Enrichment from get_all_episodes()
+    duration_ms = enrich.get("asset", {}).get("lengthMs", 0)
+    created_seconds = enrich.get("createdOn", {}).get("seconds", 0)
+    download_url = enrich.get("asset", {}).get("downloadUrl", "")
+
     transformed_episode = {
         "adCount": 0,
         "created": "",
-        "createdUnixTimestamp": 0,
+        "createdUnixTimestamp": created_seconds,
         "description": "",
-        "duration": 0,
+        "duration": duration_ms,
         "hourOffset": 0,
         "isDeleted": False,
         "isPublished": True,
@@ -643,7 +680,7 @@ def wrap_episode_metadata(graphql_data: dict, episode_uri: str) -> dict:
         "publishOn": "",
         "publishOnUnixTimestamp": publish_seconds * 1000 if publish_seconds else 0,
         "title": ep.get("title", ""),
-        "url": "",
+        "url": download_url or "",
         "trackedUrl": "",
         "episodeImage": episode_image,
         "shareLinkPath": "",
