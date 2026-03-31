@@ -83,7 +83,12 @@ def transform_plays(graphql_data: dict) -> dict:
         rows.append([ts, val])
 
     return {
+        "stationId": 0,
         "kind": "plays",
+        "parameters": {
+            "timeRange": [rows[0][0], rows[-1][0]] if rows else [],
+            "timeInterval": 86400,
+        },
         "data": {
             "rows": rows,
             "columnHeaders": [
@@ -110,7 +115,13 @@ def transform_plays_by_app(graphql_data: dict) -> dict:
     rows = [[a["displayName"], a["value"]] for a in apps]
 
     return {
+        "stationId": 0,
         "kind": "playsByApp",
+        "parameters": {
+            "minValue": 0.02,
+            "timeRange": [],
+            "timeInterval": 86400,
+        },
         "data": {
             "rows": rows,
             "columnHeaders": [
@@ -131,14 +142,25 @@ def transform_plays_by_device(graphql_data: dict) -> dict:
     devices = inner.get("devices", [])
     rows = [[d["displayName"], d["value"]] for d in devices]
 
+    translation_mapping = {r[0]: r[0] for r in rows}
+    colors = {r[0]: "#26008D" for r in rows}
+
     return {
+        "stationId": 0,
         "kind": "playsByDevice",
+        "parameters": {
+            "minValue": 0.02,
+            "timeRange": [],
+            "timeInterval": 86400,
+        },
         "data": {
             "rows": rows,
             "columnHeaders": [
                 {"name": "Device", "type": "string"},
                 {"name": "Percent of Plays", "type": "number"},
             ],
+            "translationMapping": translation_mapping,
+            "colors": colors,
         },
     }
 
@@ -160,9 +182,13 @@ def transform_plays_by_geo(graphql_data: dict) -> dict:
     rows = [[g["displayName"], g["value"]] for g in geos]
 
     return {
+        "stationId": 0,
         "kind": "playsByGeo",
         "parameters": {
+            "geos": [None, None, None],
             "resultGeo": "geo_4",
+            "timeRange": [],
+            "timeInterval": 3600,
         },
         "data": {
             "rows": rows,
@@ -170,6 +196,7 @@ def transform_plays_by_geo(graphql_data: dict) -> dict:
                 {"name": "Geo", "type": "string"},
                 {"name": "Percent of Plays", "type": "number"},
             ],
+            "assets": {"flagUrlByGeo": {}},
         },
     }
 
@@ -185,9 +212,13 @@ def transform_plays_by_geo_city(graphql_data: dict) -> dict:
     rows = [[g["displayName"], g["value"]] for g in geos]
 
     return {
+        "stationId": 0,
         "kind": "playsByGeo",
         "parameters": {
+            "geos": [None, None, None],
             "resultGeo": "geo_3",
+            "timeRange": [],
+            "timeInterval": 3600,
         },
         "data": {
             "rows": rows,
@@ -195,6 +226,7 @@ def transform_plays_by_geo_city(graphql_data: dict) -> dict:
                 {"name": "Geo", "type": "string"},
                 {"name": "Percent of Plays", "type": "number"},
             ],
+            "assets": {"flagUrlByGeo": {}},
         },
     }
 
@@ -213,21 +245,38 @@ def transform_plays_by_age_range(graphql_data: dict) -> dict:
     age_breakdown = inner.get("ageBreakdown", [])
     total_value = inner.get("totalValue", 0)
 
+    # Mapping from new API bracket names to old Anchor names
+    _AGE_REMAP = {"60-150": "60+"}
+
     rows = []
     for bracket in age_breakdown:
         bracket_name = bracket.get("ageBracket", bracket.get("displayName", ""))
+        # Skip unknown brackets
+        if bracket_name == "unknown":
+            continue
+        bracket_name = _AGE_REMAP.get(bracket_name, bracket_name)
         bracket_total = bracket.get("genderBreakdown", {}).get("total", 0)
         fraction = bracket_total / total_value if total_value else 0.0
         rows.append([bracket_name, fraction])
 
+    # Build translationMapping and colors from actual data rows
+    translation_mapping = {r[0]: r[0] for r in rows}
+    colors = {r[0]: "#26008D" for r in rows}
+
     return {
+        "stationId": 0,
         "kind": "playsByAgeRange",
+        "parameters": {
+            "timeRange": [],
+        },
         "data": {
             "rows": rows,
             "columnHeaders": [
                 {"name": "Age Range", "type": "string"},
                 {"name": "Percent of Plays", "type": "number"},
             ],
+            "translationMapping": translation_mapping,
+            "colors": colors,
         },
     }
 
@@ -247,14 +296,28 @@ def transform_plays_by_gender(graphql_data: dict) -> dict:
 
     rows = [[g["displayName"], g["percent"]] for g in counts]
 
+    # Build translationMapping and colors from actual data rows
+    gender_colors = {
+        "Male": "#26008D", "Female": "#5925FF",
+        "Not specified": "#9691FF", "Non-binary": "#D7DBFF",
+    }
+    translation_mapping = {r[0]: r[0] for r in rows}
+    colors = {r[0]: gender_colors.get(r[0], "#26008D") for r in rows}
+
     return {
+        "stationId": 0,
         "kind": "playsByGender",
+        "parameters": {
+            "timeRange": [],
+        },
         "data": {
             "rows": rows,
             "columnHeaders": [
                 {"name": "Gender", "type": "string"},
                 {"name": "Percent of Plays", "type": "number"},
             ],
+            "translationMapping": translation_mapping,
+            "colors": colors,
         },
     }
 
@@ -273,7 +336,9 @@ def transform_unique_listeners(graphql_data: dict) -> dict:
     value = inner.get("value", 0)
 
     return {
+        "stationId": 0,
         "kind": "uniqueListeners",
+        "parameters": None,
         "data": {
             "rows": [value],
             "columnHeaders": [
@@ -298,7 +363,9 @@ def transform_audience_size(graphql_data: dict) -> dict:
     value = inner.get("value", 0)
 
     return {
+        "stationId": 0,
         "kind": "audienceSize",
+        "parameters": None,
         "data": {
             "rows": [value],
             "columnHeaders": [
@@ -320,7 +387,9 @@ def transform_total_plays(graphql_data: dict) -> dict:
     value = inner.get("value", 0)
 
     return {
+        "stationId": 0,
         "kind": "totalPlays",
+        "parameters": None,
         "data": {
             "rows": [value],
             "columnHeaders": [
@@ -357,7 +426,9 @@ def transform_total_plays_by_episode(graphql_data: dict) -> dict:
         rows.append([title, 0, count, publish_seconds, rank, episode_uri])
 
     return {
+        "stationId": 0,
         "kind": "totalPlaysByEpisode",
+        "parameters": None,
         "data": {
             "rows": rows,
             "columnHeaders": [
@@ -408,8 +479,8 @@ def transform_episodes_page(episodes_list: list[dict]) -> list[dict]:
                 "title": title,
                 "publishOnUnixTimestamp": publish_seconds,
                 "createdUnixTimestamp": created_seconds,
-                "shareLinkPath": None,
-                "shareLinkEmbedPath": None,
+                "shareLinkPath": "",
+                "shareLinkEmbedPath": "",
                 "downloadUrl": ep.get("asset", {}).get("downloadUrl"),
                 "totalPlays": total_plays,
                 "duration": duration,
@@ -453,8 +524,12 @@ def transform_episode_plays(graphql_data: dict, episode_uri: str) -> dict:
         rows.append([ts, val])
 
     return {
-        "episodeUri": episode_uri,
+        "episodeId": 0,
         "kind": "plays",
+        "parameters": {
+            "timeRange": [rows[0][0], rows[-1][0]] if rows else [],
+            "timeInterval": 86400,
+        },
         "data": {
             "rows": rows,
             "columnHeaders": [
@@ -478,8 +553,9 @@ def transform_episode_performance(graphql_data: dict, episode_uri: str) -> dict:
     rows = [[p["second"], str(p["sampleCount"])] for p in points]
 
     return {
-        "episodeUri": episode_uri,
+        "episodeId": 0,
         "kind": "performance",
+        "parameters": None,
         "data": {
             "rows": rows,
             "columnHeaders": [
@@ -526,8 +602,9 @@ def transform_aggregated_performance(graphql_data: dict, episode_uri: str) -> di
     ]
 
     return {
-        "episodeUri": episode_uri,
+        "episodeId": 0,
         "kind": "aggregatedPerformance",
+        "parameters": None,
         "data": {
             "rows": rows,
             "columnHeaders": [
@@ -555,31 +632,31 @@ def wrap_episode_metadata(graphql_data: dict, episode_uri: str) -> dict:
 
     transformed_episode = {
         "adCount": 0,
-        "created": None,
+        "created": "",
         "createdUnixTimestamp": 0,
-        "description": None,
+        "description": "",
         "duration": 0,
         "hourOffset": 0,
         "isDeleted": False,
         "isPublished": True,
         "podcastEpisodeId": episode_uri,
-        "publishOn": None,
+        "publishOn": "",
         "publishOnUnixTimestamp": publish_seconds * 1000 if publish_seconds else 0,
-        "title": ep.get("title"),
-        "url": None,
-        "trackedUrl": None,
+        "title": ep.get("title", ""),
+        "url": "",
+        "trackedUrl": "",
         "episodeImage": episode_image,
-        "shareLinkPath": None,
-        "shareLinkEmbedPath": None,
+        "shareLinkPath": "",
+        "shareLinkEmbedPath": "",
     }
 
     return {
         "allEpisodeWebIds": [episode_uri],
-        "podcastId": None,
+        "podcastId": "",
         "podcastEpisodes": [transformed_episode],
         "totalPodcastEpisodes": 1,
-        "vanitySlug": None,
-        "stationCreatedDate": None,
+        "vanitySlug": "",
+        "stationCreatedDate": "",
     }
 
 

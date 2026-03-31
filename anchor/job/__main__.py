@@ -69,14 +69,14 @@ DATE_RANGE_WINDOW = load_env("DATE_RANGE_WINDOW", "WINDOW_LAST_THIRTY_DAYS")
 NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
 
 # Synthetic date range for the Open Podcast API envelope (metadata only)
-START_DATE = (dt.datetime.now() - dt.timedelta(days=30)).strftime("%Y-%m-%d")
-END_DATE = (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
+START_DATE = (dt.datetime.now() - dt.timedelta(days=30)).date()
+END_DATE = (dt.datetime.now() - dt.timedelta(days=1)).date()
 
 # Check required env vars
 missing_vars = [
     name
     for name in ("OPENPODCAST_API_TOKEN", "SPOTIFY_SP_DC", "SPOTIFY_SP_KEY")
-    if not locals().get(name)
+    if not globals().get(name)
 ]
 if missing_vars:
     logger.error(
@@ -258,10 +258,8 @@ open_podcast.post(
 # ---------------------------------------------------------------------------
 
 for episode in raw_episodes:
-    # Extract the Spotify episode URI from the new API response.
-    # The episode items have an `entity` dict with a `uri` field.
-    entity = episode.get("entity", {})
-    episode_uri = entity.get("uri", "")
+    # Extract the Spotify episode URI directly from the episode dict.
+    episode_uri = episode.get("uri", "")
     if not episode_uri:
         logger.warning(f"Skipping episode without URI: {episode}")
         continue
