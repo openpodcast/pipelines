@@ -63,7 +63,7 @@ if not SPOTIFY_STATION_ID:
     SPOTIFY_STATION_ID = load_file_or_env("PODCAST_ID", "")
 
 # Date range window used for most analytics queries
-DATE_RANGE_WINDOW = load_env("DATE_RANGE_WINDOW", "WINDOW_LAST_THIRTY_DAYS")
+DATE_RANGE_WINDOW = load_env("DATE_RANGE_WINDOW", "WINDOW_LAST_SEVEN_DAYS")
 
 # Number of worker threads
 NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
