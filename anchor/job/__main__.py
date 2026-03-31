@@ -68,8 +68,17 @@ DATE_RANGE_WINDOW = load_env("DATE_RANGE_WINDOW", "WINDOW_LAST_THIRTY_DAYS")
 # Number of worker threads
 NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
 
-# Synthetic date range for the Open Podcast API envelope (metadata only)
-START_DATE = (dt.datetime.now() - dt.timedelta(days=30)).date()
+# Map window enum → number of lookback days so the API envelope dates
+# match the actual data returned by the GraphQL API.
+_WINDOW_DAYS = {
+    "WINDOW_LAST_SEVEN_DAYS": 7,
+    "WINDOW_LAST_THIRTY_DAYS": 30,
+    "WINDOW_LAST_NINETY_DAYS": 90,
+    "WINDOW_ALL_TIME": 365,  # approximation for envelope only
+}
+_lookback = _WINDOW_DAYS.get(DATE_RANGE_WINDOW, 30)
+
+START_DATE = (dt.datetime.now() - dt.timedelta(days=_lookback)).date()
 END_DATE = (dt.datetime.now() - dt.timedelta(days=1)).date()
 
 # Check required env vars
