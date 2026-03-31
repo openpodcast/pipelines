@@ -665,7 +665,10 @@ def wrap_episode_metadata(
     # Enrichment from get_all_episodes()
     duration_ms = enrich.get("asset", {}).get("lengthMs", 0)
     created_seconds = enrich.get("createdOn", {}).get("seconds", 0)
-    download_url = enrich.get("asset", {}).get("downloadUrl", "")
+    raw_download_url = enrich.get("asset", {}).get("downloadUrl", "") or ""
+    # Strip query-string from signed GCS URLs — the tokens are temporary
+    # and the full URL can exceed the backend's varchar(512) column limit.
+    download_url = raw_download_url.split("?")[0] if raw_download_url else ""
 
     transformed_episode = {
         "adCount": 0,
