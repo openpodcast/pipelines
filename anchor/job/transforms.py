@@ -201,7 +201,11 @@ def transform_plays_by_geo(graphql_data: dict) -> dict:
     }
 
 
-def transform_plays_by_geo_city(graphql_data: dict) -> dict:
+def transform_plays_by_geo_city(
+    graphql_data: dict,
+    country: str | None = None,
+    region: str | None = None,
+) -> dict:
     """
     getShowAudienceAllPlatformsGeoStats (GEO_CITY) → old ``playsByGeoCity`` shape.
 
@@ -219,8 +223,8 @@ def transform_plays_by_geo_city(graphql_data: dict) -> dict:
         "stationId": 0,
         "kind": "playsByGeo",
         "parameters": {
-            "geos": [None, None, None],
-            "resultGeo": "geo_3",
+            "geos": [None, country, region],
+            "resultGeo": "geo_2" if region else "geo_3",
             "timeRange": [],
             "timeInterval": 3600,
         },
@@ -445,7 +449,7 @@ def transform_total_plays_by_episode(
         # Use the real Anchor numeric episodeId when available (from
         # get_all_episodes enrichment), otherwise fall back to rank.
         ep_info = enrichment.get(episode_uri, {})
-        episode_id = ep_info.get("episodeId", rank)
+        episode_id = ep_info.get("id") or ep_info.get("episodeId") or ep_info.get("stationEpisodeId") or rank
         rows.append([title, episode_id, count, publish_seconds, rank, episode_uri])
 
     return {
@@ -471,7 +475,10 @@ def transform_total_plays_by_episode(
 # ---------------------------------------------------------------------------
 
 
-def transform_episodes_page(episodes_list: list[dict]) -> list[dict]:
+def transform_episodes_page(
+    episodes_list: list[dict],
+    legacy_web_ids_by_uri: dict[str, str] | None = None,
+) -> list[dict]:
     """
     get_all_episodes() list → old ``episodesPage`` shape.
 
@@ -479,9 +486,11 @@ def transform_episodes_page(episodes_list: list[dict]) -> list[dict]:
     Returns a flat list (the old API returned a generator/list of episode dicts).
     """
     result = []
+    legacy_map = legacy_web_ids_by_uri or {}
     for ep in episodes_list:
         uri = ep.get("uri", "")
         episode_id = ep.get("episodeId", 0)
+        web_episode_id = legacy_map.get(uri, uri)
         title = ep.get("title")
         publish_seconds = ep.get("publishedOn", {}).get("seconds", 0)
         created_seconds = ep.get("createdOn", {}).get("seconds", 0)
@@ -497,7 +506,7 @@ def transform_episodes_page(episodes_list: list[dict]) -> list[dict]:
         result.append(
             {
                 "episodeId": episode_id,
-                "webEpisodeId": uri,
+                "webEpisodeId": web_episode_id,
                 "title": title,
                 "publishOnUnixTimestamp": publish_seconds,
                 "createdUnixTimestamp": created_seconds,
@@ -641,6 +650,7 @@ def wrap_episode_metadata(
     graphql_data: dict,
     episode_uri: str,
     episode_enrichment: dict | None = None,
+    legacy_web_id: str | None = None,
 ) -> dict:
     """
     getEpisodeMetadataForAnalytics → old ``podcastEpisode`` envelope shape.
@@ -670,6 +680,8 @@ def wrap_episode_metadata(
     # and the full URL can exceed the backend's varchar(512) column limit.
     download_url = raw_download_url.split("?")[0] if raw_download_url else ""
 
+    podcast_episode_id = legacy_web_id or episode_uri
+
     transformed_episode = {
         "adCount": 0,
         "created": "",
@@ -679,7 +691,7 @@ def wrap_episode_metadata(
         "hourOffset": 0,
         "isDeleted": False,
         "isPublished": True,
-        "podcastEpisodeId": episode_uri,
+        "podcastEpisodeId": podcast_episode_id,
         "publishOn": "",
         "publishOnUnixTimestamp": publish_seconds * 1000 if publish_seconds else 0,
         "title": ep.get("title", ""),
@@ -691,7 +703,7 @@ def wrap_episode_metadata(
     }
 
     return {
-        "allEpisodeWebIds": [episode_uri],
+        "allEpisodeWebIds": [podcast_episode_id],
         "podcastId": "",
         "podcastEpisodes": [transformed_episode],
         "totalPodcastEpisodes": 1,

@@ -137,6 +137,25 @@ def get_request_lambda(f, *args, **kwargs):
     return lambda: f(*args, **kwargs)
 
 
+def get_top_geo_name(geo_payload: dict) -> str | None:
+    """Extract top geo displayName from a geo stats response."""
+    geos = (
+        geo_payload.get("showByShowUri", {})
+        .get("showStreamsAndDownloadsByGeo", {})
+        .get("analyticsValue", {})
+        .get("analyticsValue", {})
+        .get("geos", [])
+    )
+    if not geos:
+        return None
+    return geos[0].get("displayName")
+
+
+def get_numeric_episode_id(episode: dict) -> int | str | None:
+    """Return numeric Anchor episode ID from episode payload variants."""
+    return episode.get("id") or episode.get("episodeId") or episode.get("stationEpisodeId")
+
+
 # ---------------------------------------------------------------------------
 # Pre-fetch shared data (avoids duplicate API calls)
 # ---------------------------------------------------------------------------
@@ -165,12 +184,44 @@ geo_stats_country = connector.get_show_geo_stats(
     start_date=START_DATE,
     end_date=END_DATE,
 )
-geo_stats_city = connector.get_show_geo_stats(
-    show_uri=show_uri,
-    result_geo="GEO_CITY",
-    start_date=START_DATE,
-    end_date=END_DATE,
-)
+
+# Geo city drill-down requires country + region on newer connector versions.
+geo_city_country: str | None = None
+geo_city_region: str | None = None
+geo_stats_city: dict = {}
+top_country = get_top_geo_name(geo_stats_country)
+if top_country:
+    geo_city_country = top_country
+    try:
+        geo_stats_region = connector.get_show_geo_stats(
+            show_uri=show_uri,
+            result_geo="GEO_REGION",
+            country=top_country,
+            start_date=START_DATE,
+            end_date=END_DATE,
+        )
+        top_region = get_top_geo_name(geo_stats_region)
+        if top_region:
+            geo_city_region = top_region
+            geo_stats_city = connector.get_show_geo_stats(
+                show_uri=show_uri,
+                result_geo="GEO_CITY",
+                country=top_country,
+                region=top_region,
+                start_date=START_DATE,
+                end_date=END_DATE,
+            )
+            logger.info(
+                f"Fetched GEO_CITY drill-down for {top_country} / {top_region}."
+            )
+        else:
+            logger.warning(
+                f"No GEO_REGION data for country '{top_country}'. Falling back to empty GEO_CITY payload."
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"GEO_CITY fetch failed, keeping empty city payload: {exc}")
+else:
+    logger.warning("No GEO_COUNTRY data available; cannot fetch GEO_CITY drill-down.")
 discovery_stats = connector.get_show_audience_discovery(
     show_uri=show_uri,
     start_date=START_DATE,
@@ -183,6 +234,28 @@ raw_episodes = connector.get_all_episodes()
 
 # Build enrichment lookup so transforms can access episodeId, duration, etc.
 episode_enrichment = {ep.get("uri", ""): ep for ep in raw_episodes}
+
+# Build mapping from Spotify URI -> legacy Anchor web episode ID (e.g. e215pm4)
+# using the new legacy API helper in spotifygraphqlconnector.
+legacy_web_ids_by_uri: dict[str, str] = {}
+for episode in raw_episodes:
+    episode_uri = episode.get("uri", "")
+    numeric_episode_id = get_numeric_episode_id(episode)
+    if not episode_uri or numeric_episode_id is None:
+        continue
+    try:
+        legacy = connector.get_episode_legacy_web_id(numeric_episode_id)
+        legacy_web_id = legacy.get("webEpisodeId")
+        if legacy_web_id:
+            legacy_web_ids_by_uri[episode_uri] = legacy_web_id
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            f"Legacy web ID lookup failed for episode {numeric_episode_id} ({episode_uri}): {exc}"
+        )
+
+logger.info(
+    f"Resolved legacy web IDs for {len(legacy_web_ids_by_uri)}/{len(raw_episodes)} episodes."
+)
 
 logger.info(f"Pre-fetch complete ({len(raw_episodes)} episodes).")
 
@@ -217,7 +290,11 @@ endpoints: list[FetchParams] = [
     ),
     FetchParams(
         openpodcast_endpoint="playsByGeoCity",
-        anchor_call=lambda: transform_plays_by_geo_city(geo_stats_city),
+        anchor_call=lambda: transform_plays_by_geo_city(
+            geo_stats_city,
+            country=geo_city_country,
+            region=geo_city_region,
+        ),
         start_date=START_DATE,
         end_date=END_DATE,
     ),
@@ -265,7 +342,10 @@ endpoints: list[FetchParams] = [
 # Episodes
 # ---------------------------------------------------------------------------
 
-all_episodes = transform_episodes_page(raw_episodes)
+all_episodes = transform_episodes_page(
+    raw_episodes,
+    legacy_web_ids_by_uri=legacy_web_ids_by_uri,
+)
 
 logger.info(f"Sending episodesPage data to Open Podcast ({len(all_episodes)} episodes)")
 open_podcast.post(
@@ -289,7 +369,8 @@ for episode in raw_episodes:
         logger.warning(f"Skipping episode without URI: {episode}")
         continue
 
-    meta = {"episode": episode_uri}
+    legacy_web_id = legacy_web_ids_by_uri.get(episode_uri, episode_uri)
+    meta = {"episode": legacy_web_id}
 
     endpoints += [
         FetchParams(
@@ -339,6 +420,7 @@ for episode in raw_episodes:
                     connector.get_episode_metadata_for_analytics(episode_uri=uri),
                     uri,
                     episode_enrichment=episode_enrichment,
+                    legacy_web_id=legacy_web_ids_by_uri.get(uri, uri),
                 ),
             ),
             start_date=START_DATE,
