@@ -6,14 +6,15 @@ GraphQL API via ``spotifygraphqlconnector`` and posts the data to the Open
 Podcast API in the legacy Anchor-compatible data shapes expected by the backend.
 """
 
-import datetime as dt
 import os
 import threading
+import datetime as dt
 from queue import Queue
 
 from loguru import logger
 from spotifygraphqlconnector import SpotifyGraphQLConnector
 
+from job.dates import get_date_range
 from job.fetch_params import FetchParams
 from job.load_env import load_env, load_file_or_env
 from job.open_podcast import OpenPodcastConnector
@@ -62,24 +63,25 @@ SPOTIFY_STATION_ID = load_file_or_env("SPOTIFY_STATION_ID", "")
 if not SPOTIFY_STATION_ID:
     SPOTIFY_STATION_ID = load_file_or_env("PODCAST_ID", "")
 
-# Date range window used for most analytics queries
-DATE_RANGE_WINDOW = load_env("DATE_RANGE_WINDOW", "WINDOW_LAST_SEVEN_DAYS")
+# Date range used for analytics queries.
+# These mirror the naming used by the spotifygraphqlconnector CLI.
+SPOTIFY_START_DATE = load_env(
+    "SPOTIFY_START_DATE",
+    (dt.datetime.now() - dt.timedelta(days=3)).strftime("%Y-%m-%d"),
+)
+SPOTIFY_END_DATE = load_env(
+    "SPOTIFY_END_DATE",
+    (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d"),
+)
 
 # Number of worker threads
 NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
 
-# Map window enum → number of lookback days so the API envelope dates
-# match the actual data returned by the GraphQL API.
-_WINDOW_DAYS = {
-    "WINDOW_LAST_SEVEN_DAYS": 7,
-    "WINDOW_LAST_THIRTY_DAYS": 30,
-    "WINDOW_LAST_NINETY_DAYS": 90,
-    "WINDOW_ALL_TIME": 365,  # approximation for envelope only
-}
-_lookback = _WINDOW_DAYS.get(DATE_RANGE_WINDOW, 30)
+date_range = get_date_range(SPOTIFY_START_DATE, SPOTIFY_END_DATE)
+START_DATE = date_range.start.date()
+END_DATE = date_range.end.date()
 
-START_DATE = (dt.datetime.now() - dt.timedelta(days=_lookback)).date()
-END_DATE = (dt.datetime.now() - dt.timedelta(days=1)).date()
+logger.info(f"Using explicit date range {START_DATE} - {END_DATE}.")
 
 # Check required env vars
 missing_vars = [
@@ -143,30 +145,36 @@ logger.info("Pre-fetching shared analytics data …")
 
 spotify_stats = connector.get_show_spotify_stats(
     show_uri=show_uri,
-    date_range_window=DATE_RANGE_WINDOW,
     include_audience_size=True,
+    start_date=START_DATE,
+    end_date=END_DATE,
 )
 platform_stats = connector.get_show_platform_stats(
     show_uri=show_uri,
-    date_range_window=DATE_RANGE_WINDOW,
+    start_date=START_DATE,
+    end_date=END_DATE,
 )
 demographics_stats = connector.get_show_demographics_stats(
     show_uri=show_uri,
-    date_range_window=DATE_RANGE_WINDOW,
+    start_date=START_DATE,
+    end_date=END_DATE,
 )
 geo_stats_country = connector.get_show_geo_stats(
     show_uri=show_uri,
-    date_range_window=DATE_RANGE_WINDOW,
     result_geo="GEO_COUNTRY",
+    start_date=START_DATE,
+    end_date=END_DATE,
 )
 geo_stats_city = connector.get_show_geo_stats(
     show_uri=show_uri,
-    date_range_window=DATE_RANGE_WINDOW,
     result_geo="GEO_CITY",
+    start_date=START_DATE,
+    end_date=END_DATE,
 )
 discovery_stats = connector.get_show_audience_discovery(
     show_uri=show_uri,
-    date_range_window=DATE_RANGE_WINDOW,
+    start_date=START_DATE,
+    end_date=END_DATE,
 )
 top_episodes = connector.get_show_top_episodes(show_uri=show_uri)
 
@@ -290,7 +298,8 @@ for episode in raw_episodes:
                 lambda uri=episode_uri: transform_episode_plays(
                     connector.get_episode_streams_and_downloads(
                         episode_uri=uri,
-                        date_range_window=DATE_RANGE_WINDOW,
+                        start_date=START_DATE,
+                        end_date=END_DATE,
                     ),
                     uri,
                 ),
