@@ -1,10 +1,10 @@
+import importlib.metadata
 import multiprocessing
 import os
 import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
-import importlib.metadata
 
 import mysql.connector
 from loguru import logger
@@ -82,7 +82,11 @@ if "--interactive" in sys.argv:
 # Import worker functions and types from separate module for multiprocessing
 from manager.worker import PodcastJob, process_source_jobs
 
-if __name__ == "__main__":
+
+def print_debug_output():
+    """
+    Prints helpful debug information like commit ID and connector versions to the logs.
+    """
     commit_sha = os.environ.get("COMMIT_SHA")
     if commit_sha:
         logger.info(f"Commit ID: {commit_sha} (from env)")
@@ -102,7 +106,7 @@ if __name__ == "__main__":
     for connector in [
         "appleconnector",
         "spotifyconnector",
-        "anchorconnector",
+        "spotifygraphqlconnector",
         "podigeeconnector",
     ]:
         try:
@@ -110,7 +114,11 @@ if __name__ == "__main__":
             logger.info(f"{connector} version: {version}")
         except importlib.metadata.PackageNotFoundError:
             logger.info(f"{connector} version: Unknown (not installed)")
-  
+
+
+if __name__ == "__main__":
+    print_debug_output()
+
     print("Fetching all podcast tasks from database...")
     sql = """
         SELECT
