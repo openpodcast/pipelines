@@ -1,14 +1,15 @@
-from manager.load_env import load_env
-from manager.load_env import load_file_or_env
-import mysql.connector
-from manager.cryptography import decrypt_json
+import multiprocessing
 import os
 import subprocess
-from pathlib import Path
-from loguru import logger
 import sys
-import multiprocessing
 from collections import defaultdict
+from pathlib import Path
+
+import mysql.connector
+from loguru import logger
+
+from manager.cryptography import decrypt_json
+from manager.load_env import load_env, load_file_or_env
 
 # Import the Podigee connector functionality
 from manager.podigee_connector import handle_podigee_refresh
@@ -27,12 +28,14 @@ OPENPODCAST_ENCRYPTION_KEY = load_file_or_env("OPENPODCAST_ENCRYPTION_KEY")
 # Podigee-specific environment variables
 PODIGEE_CLIENT_ID = load_env("PODIGEE_CLIENT_ID")
 PODIGEE_CLIENT_SECRET = load_file_or_env("PODIGEE_CLIENT_SECRET")
-PODIGEE_REDIRECT_URI = load_env("PODIGEE_REDIRECT_URI", 
-                               "https://connect.openpodcast.app/auth/v1/podigee/callback")
+PODIGEE_REDIRECT_URI = load_env(
+    "PODIGEE_REDIRECT_URI", "https://connect.openpodcast.app/auth/v1/podigee/callback"
+)
 
 if not OPENPODCAST_ENCRYPTION_KEY:
     logger.error("No OPENPODCAST_ENCRYPTION_KEY found")
     exit(1)
+
 
 def ensure_db_connection():
     """
@@ -45,7 +48,7 @@ def ensure_db_connection():
             logger.info("Database connection lost, reconnecting...")
             if db is not None:
                 db.close()
-            
+
             db = mysql.connector.connect(
                 host=MYSQL_HOST,
                 port=MYSQL_PORT,
@@ -59,6 +62,7 @@ def ensure_db_connection():
     except mysql.connector.Error as e:
         logger.error(f"Error connecting to mysql: {e}")
         raise
+
 
 # try to connect to mysql or exit otherwise
 try:
@@ -75,10 +79,40 @@ if "--interactive" in sys.argv:
     interactiveMode = True
 
 # Import worker functions and types from separate module for multiprocessing
-from manager.worker import process_source_jobs, PodcastJob
+from manager.worker import PodcastJob, process_source_jobs
 
+if __name__ == "__main__":
+    import importlib.metadata
 
-if __name__ == '__main__':
+    print("--- Debug Info ---")
+    commit_sha = os.environ.get("COMMIT_SHA")
+    if commit_sha:
+        print(f"Commit ID: {commit_sha} (from env)")
+    else:
+        try:
+            commit_id = (
+                subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+                )
+                .decode("utf-8")
+                .strip()
+            )
+            print(f"Commit ID: {commit_id}")
+        except Exception:
+            print("Commit ID: Unknown (not a git repo or git not installed)")
+
+    for connector in [
+        "appleconnector",
+        "spotifyconnector",
+        "anchorconnector",
+        "podigeeconnector",
+    ]:
+        try:
+            version = importlib.metadata.version(connector)
+            print(f"{connector} version: {version}")
+        except importlib.metadata.PackageNotFoundError:
+            print(f"{connector} version: Unknown (not installed)")
+    print("------------------")
 
     print("Fetching all podcast tasks from database...")
     sql = """
@@ -105,7 +139,7 @@ if __name__ == '__main__':
             source_name=row[1],
             source_podcast_id=row[2],
             source_access_keys_encrypted=row[3],
-            pod_name=row[4]
+            pod_name=row[4],
         )
 
         if interactiveMode:
@@ -125,7 +159,11 @@ if __name__ == '__main__':
 
     # Process jobs: run different sources in parallel, but same-source jobs sequentially
     if jobs_to_process:
-        logger.info(f"Processing {len(jobs_to_process)} jobs across {len(jobs_by_source)} sources...")
+        logger.info(
+            f"Processing {len(jobs_to_process)} jobs across {len(jobs_by_source)} sources..."
+        )
+        print(f"Sources: {list(jobs_by_source.keys())}")
+        print(f"Jobs to process: {jobs_to_process}")
 
         all_results = []
 

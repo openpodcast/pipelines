@@ -4,6 +4,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      args:
+        COMMIT_SHA: ${COMMIT_SHA}
     environment:
       - MYSQL_HOST=db
       - MYSQL_PORT=3306
