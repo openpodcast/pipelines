@@ -151,17 +151,28 @@ def process_podcast_job(job):
         # Ensure that environment variables are proper strings
         source_access_keys = {k: str(v) for k, v in source_access_keys.items()}
 
+        # Build the base environment for the subprocess
+        job_env = {
+            **os.environ,
+            **source_access_keys,
+            "PODCAST_ID": job.source_podcast_id,
+            "PODCAST_NAME": job.pod_name,
+        }
+
+        # The anchor pipeline uses the Spotify GraphQL API and expects
+        # SPOTIFY_SHOW_URI (a Spotify URI like "spotify:show:abc123")
+        # instead of the legacy numeric PODCAST_ID.
+        # The encrypted access keys should contain SPOTIFY_SP_DC and
+        # SPOTIFY_SP_KEY for authentication.
+        if job.source_name == "anchor":
+            job_env["SPOTIFY_SHOW_URI"] = job.source_podcast_id
+
         # run an external process, switch to right fetcher depending on
         # source_name, and set env variables from source_access_keys
         result = subprocess.run(
             ["python", "-m", "job"],
             cwd=cwd,
-            env={
-                **os.environ,
-                **source_access_keys,
-                "PODCAST_ID": job.source_podcast_id,
-                "PODCAST_NAME": job.pod_name,
-            },
+            env=job_env,
             text=True,
             timeout=7200,  # 120 minute timeout to prevent hanging of subprocesses
         )

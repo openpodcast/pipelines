@@ -4,6 +4,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
+import importlib.metadata
 
 import mysql.connector
 from loguru import logger
@@ -35,6 +36,7 @@ PODIGEE_REDIRECT_URI = load_env(
 if not OPENPODCAST_ENCRYPTION_KEY:
     logger.error("No OPENPODCAST_ENCRYPTION_KEY found")
     exit(1)
+
 
 def ensure_db_connection():
     """
@@ -81,12 +83,9 @@ if "--interactive" in sys.argv:
 from manager.worker import PodcastJob, process_source_jobs
 
 if __name__ == "__main__":
-    import importlib.metadata
-
-    print("--- Debug Info ---")
     commit_sha = os.environ.get("COMMIT_SHA")
     if commit_sha:
-        print(f"Commit ID: {commit_sha} (from env)")
+        logger.info(f"Commit ID: {commit_sha} (from env)")
     else:
         try:
             commit_id = (
@@ -96,9 +95,9 @@ if __name__ == "__main__":
                 .decode("utf-8")
                 .strip()
             )
-            print(f"Commit ID: {commit_id}")
+            logger.info(f"Commit ID: {commit_id}")
         except Exception:
-            print("Commit ID: Unknown (not a git repo or git not installed)")
+            logger.info("Commit ID: Unknown (not a git repo or git not installed)")
 
     for connector in [
         "appleconnector",
@@ -108,11 +107,10 @@ if __name__ == "__main__":
     ]:
         try:
             version = importlib.metadata.version(connector)
-            print(f"{connector} version: {version}")
+            logger.info(f"{connector} version: {version}")
         except importlib.metadata.PackageNotFoundError:
-            print(f"{connector} version: Unknown (not installed)")
-    print("------------------")
-
+            logger.info(f"{connector} version: Unknown (not installed)")
+  
     print("Fetching all podcast tasks from database...")
     sql = """
         SELECT
@@ -124,6 +122,28 @@ if __name__ == "__main__":
         FROM
             podcastSources
             JOIN openpodcast.podcasts USING (account_id)
+        WHERE
+            -- Fetch if no updates exist for today (new podcast or first run of the day)
+            NOT EXISTS (
+                SELECT 1 FROM openpodcast.updates
+                WHERE openpodcast.updates.account_id = podcastSources.account_id
+                AND openpodcast.updates.provider = podcastSources.source_name
+                AND DATE(openpodcast.updates.created) = CURDATE()
+            )
+            OR
+            -- Re-fetch if today's endpoint count is less than yesterday's, which
+            -- indicates the previous fetch was aborted before all endpoints were fetched
+            (
+                SELECT COUNT(*) FROM openpodcast.updates
+                WHERE openpodcast.updates.account_id = podcastSources.account_id
+                AND openpodcast.updates.provider = podcastSources.source_name
+                AND DATE(openpodcast.updates.created) = CURDATE()
+            ) < (
+                SELECT COUNT(*) FROM openpodcast.updates
+                WHERE openpodcast.updates.account_id = podcastSources.account_id
+                AND openpodcast.updates.provider = podcastSources.source_name
+                AND DATE(openpodcast.updates.created) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+            )
     """
 
     with db.cursor() as cursor:
@@ -161,8 +181,8 @@ if __name__ == "__main__":
         logger.info(
             f"Processing {len(jobs_to_process)} jobs across {len(jobs_by_source)} sources..."
         )
-        print(f"Sources: {list(jobs_by_source.keys())}")
-        print(f"Jobs to process: {jobs_to_process}")
+        logger.info(f"Sources: {list(jobs_by_source.keys())}")
+        logger.info(f"Jobs to process: {jobs_to_process}")
 
         all_results = []
 
