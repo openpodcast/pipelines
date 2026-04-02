@@ -330,7 +330,10 @@ def transform_plays_by_gender(graphql_data: dict) -> dict:
     }
 
 
-def transform_unique_listeners(graphql_data: dict) -> dict:
+def transform_unique_listeners(
+    graphql_data: dict,
+    fallback_graphql_data: dict | None = None,
+) -> dict:
     """
     getShowAudienceDiscoveryStats → old ``uniqueListeners`` shape.
 
@@ -342,6 +345,13 @@ def transform_unique_listeners(graphql_data: dict) -> dict:
         graphql_data, "showByShowUri", "audienceSize"
     )
     value = inner.get("value", 0)
+
+    if not value and isinstance(fallback_graphql_data, dict):
+        fallback_points = _extract_time_series_points(
+            fallback_graphql_data, "showByShowUri", "audienceSizeDaily"
+        )
+        if fallback_points:
+            value = max(v for _, v in fallback_points)
 
     return {
         "stationId": 0,
@@ -356,7 +366,10 @@ def transform_unique_listeners(graphql_data: dict) -> dict:
     }
 
 
-def transform_audience_size(graphql_data: dict) -> dict:
+def transform_audience_size(
+    graphql_data: dict,
+    fallback_graphql_data: dict | None = None,
+) -> dict:
     """
     getShowAudienceDiscoveryStats → old ``audienceSize`` shape.
 
@@ -369,6 +382,13 @@ def transform_audience_size(graphql_data: dict) -> dict:
         graphql_data, "showByShowUri", "audienceSize"
     )
     value = inner.get("value", 0)
+
+    if not value and isinstance(fallback_graphql_data, dict):
+        fallback_points = _extract_time_series_points(
+            fallback_graphql_data, "showByShowUri", "audienceSizeDaily"
+        )
+        if fallback_points:
+            value = max(v for _, v in fallback_points)
 
     return {
         "stationId": 0,
@@ -478,6 +498,7 @@ def transform_total_plays_by_episode(
 def transform_episodes_page(
     episodes_list: list[dict],
     legacy_web_ids_by_uri: dict[str, str] | None = None,
+    legacy_metadata_by_uri: dict[str, dict] | None = None,
 ) -> list[dict]:
     """
     get_all_episodes() list → old ``episodesPage`` shape.
@@ -487,10 +508,12 @@ def transform_episodes_page(
     """
     result = []
     legacy_map = legacy_web_ids_by_uri or {}
+    legacy_meta_map = legacy_metadata_by_uri or {}
     for ep in episodes_list:
         uri = ep.get("uri", "")
         episode_id = ep.get("episodeId", 0)
         web_episode_id = legacy_map.get(uri, uri)
+        legacy_meta = legacy_meta_map.get(uri, {})
         title = ep.get("title")
         publish_seconds = ep.get("publishedOn", {}).get("seconds", 0)
         created_seconds = ep.get("createdOn", {}).get("seconds", 0)
@@ -510,8 +533,8 @@ def transform_episodes_page(
                 "title": title,
                 "publishOnUnixTimestamp": publish_seconds,
                 "createdUnixTimestamp": created_seconds,
-                "shareLinkPath": "",
-                "shareLinkEmbedPath": "",
+                "shareLinkPath": legacy_meta.get("shareLinkPath", ""),
+                "shareLinkEmbedPath": legacy_meta.get("shareLinkEmbedPath", ""),
                 "downloadUrl": ep.get("asset", {}).get("downloadUrl"),
                 "totalPlays": total_plays,
                 "duration": duration,
@@ -651,6 +674,8 @@ def wrap_episode_metadata(
     episode_uri: str,
     episode_enrichment: dict | None = None,
     legacy_web_id: str | None = None,
+    legacy_episode_data: dict | None = None,
+    legacy_web_station_id: str | None = None,
 ) -> dict:
     """
     getEpisodeMetadataForAnalytics → old ``podcastEpisode`` envelope shape.
@@ -680,13 +705,18 @@ def wrap_episode_metadata(
     # and the full URL can exceed the backend's varchar(512) column limit.
     download_url = raw_download_url.split("?")[0] if raw_download_url else ""
 
+    legacy = legacy_episode_data or {}
     podcast_episode_id = legacy_web_id or episode_uri
+    description = legacy.get("description", "") or ""
+    share_link_path = legacy.get("shareLinkPath", "") or ""
+    share_link_embed_path = legacy.get("shareLinkEmbedPath", "") or ""
+    podcast_id = legacy_web_station_id or legacy.get("webStationId", "") or ""
 
     transformed_episode = {
         "adCount": 0,
         "created": "",
         "createdUnixTimestamp": created_seconds,
-        "description": "",
+        "description": description,
         "duration": duration_ms,
         "hourOffset": 0,
         "isDeleted": False,
@@ -698,13 +728,13 @@ def wrap_episode_metadata(
         "url": download_url or "",
         "trackedUrl": "",
         "episodeImage": episode_image,
-        "shareLinkPath": "",
-        "shareLinkEmbedPath": "",
+        "shareLinkPath": share_link_path,
+        "shareLinkEmbedPath": share_link_embed_path,
     }
 
     return {
         "allEpisodeWebIds": [podcast_episode_id],
-        "podcastId": "",
+        "podcastId": podcast_id,
         "podcastEpisodes": [transformed_episode],
         "totalPodcastEpisodes": 1,
         "vanitySlug": "",

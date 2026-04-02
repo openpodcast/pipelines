@@ -238,6 +238,7 @@ episode_enrichment = {ep.get("uri", ""): ep for ep in raw_episodes}
 # Build mapping from Spotify URI -> legacy Anchor web episode ID (e.g. e215pm4)
 # using the new legacy API helper in spotifygraphqlconnector.
 legacy_web_ids_by_uri: dict[str, str] = {}
+legacy_metadata_by_uri: dict[str, dict] = {}
 for episode in raw_episodes:
     episode_uri = episode.get("uri", "")
     numeric_episode_id = get_numeric_episode_id(episode)
@@ -245,6 +246,7 @@ for episode in raw_episodes:
         continue
     try:
         legacy = connector.get_episode_legacy_web_id(numeric_episode_id)
+        legacy_metadata_by_uri[episode_uri] = legacy
         legacy_web_id = legacy.get("webEpisodeId")
         if legacy_web_id:
             legacy_web_ids_by_uri[episode_uri] = legacy_web_id
@@ -255,6 +257,15 @@ for episode in raw_episodes:
 
 logger.info(
     f"Resolved legacy web IDs for {len(legacy_web_ids_by_uri)}/{len(raw_episodes)} episodes."
+)
+
+legacy_web_station_id = next(
+    (
+        meta.get("webStationId")
+        for meta in legacy_metadata_by_uri.values()
+        if meta.get("webStationId")
+    ),
+    "",
 )
 
 logger.info(f"Pre-fetch complete ({len(raw_episodes)} episodes).")
@@ -312,13 +323,19 @@ endpoints: list[FetchParams] = [
     ),
     FetchParams(
         openpodcast_endpoint="uniqueListeners",
-        anchor_call=lambda: transform_unique_listeners(discovery_stats),
+        anchor_call=lambda: transform_unique_listeners(
+            discovery_stats,
+            fallback_graphql_data=spotify_stats,
+        ),
         start_date=START_DATE,
         end_date=END_DATE,
     ),
     FetchParams(
         openpodcast_endpoint="audienceSize",
-        anchor_call=lambda: transform_audience_size(discovery_stats),
+        anchor_call=lambda: transform_audience_size(
+            discovery_stats,
+            fallback_graphql_data=spotify_stats,
+        ),
         start_date=START_DATE,
         end_date=END_DATE,
     ),
@@ -345,6 +362,7 @@ endpoints: list[FetchParams] = [
 all_episodes = transform_episodes_page(
     raw_episodes,
     legacy_web_ids_by_uri=legacy_web_ids_by_uri,
+    legacy_metadata_by_uri=legacy_metadata_by_uri,
 )
 
 logger.info(f"Sending episodesPage data to Open Podcast ({len(all_episodes)} episodes)")
@@ -421,6 +439,8 @@ for episode in raw_episodes:
                     uri,
                     episode_enrichment=episode_enrichment,
                     legacy_web_id=legacy_web_ids_by_uri.get(uri, uri),
+                    legacy_episode_data=legacy_metadata_by_uri.get(uri, {}),
+                    legacy_web_station_id=legacy_web_station_id,
                 ),
             ),
             start_date=START_DATE,
