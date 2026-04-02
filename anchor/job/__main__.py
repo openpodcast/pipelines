@@ -64,20 +64,19 @@ if not SPOTIFY_STATION_ID:
     SPOTIFY_STATION_ID = load_file_or_env("PODCAST_ID", "")
 
 # Date range used for analytics queries.
-# These mirror the naming used by the spotifygraphqlconnector CLI.
-SPOTIFY_START_DATE = load_env(
-    "SPOTIFY_START_DATE",
+START_DATE_STR = load_env(
+    "START_DATE",
     (dt.datetime.now() - dt.timedelta(days=3)).strftime("%Y-%m-%d"),
 )
-SPOTIFY_END_DATE = load_env(
-    "SPOTIFY_END_DATE",
+END_DATE_STR = load_env(
+    "END_DATE",
     (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d"),
 )
 
 # Number of worker threads
 NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
 
-date_range = get_date_range(SPOTIFY_START_DATE, SPOTIFY_END_DATE)
+date_range = get_date_range(START_DATE_STR, END_DATE_STR)
 START_DATE = date_range.start.date()
 END_DATE = date_range.end.date()
 
