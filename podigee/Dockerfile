@@ -2,7 +2,7 @@ FROM python:3.11-slim-bullseye
 
 # Install cron
 RUN apt-get update \
-    && apt-get install -y cron \
+    && apt-get install -y --no-install-recommends cron \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

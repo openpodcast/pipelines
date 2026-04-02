@@ -1,9 +1,9 @@
-anchorconnector==0.6.3
-certifi==2022.12.7
+spotifygraphqlconnector==0.3.0
+certifi==2024.2.2
 charset-normalizer==3.1.0
 idna==3.4
-loguru==0.7.0
-PyYAML==6.0
-requests==2.29.0
-tenacity==8.2.2
+loguru==0.7.3
+PyYAML==6.0.3
+requests==2.32.5
+tenacity==9.1.4
 urllib3==1.26.15

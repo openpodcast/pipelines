@@ -1,18 +1,46 @@
-import datetime as dt
+"""
+Anchor / Spotify GraphQL pipeline – main entry point.
+
+Fetches show-level and episode-level analytics from the new Spotify Creators
+GraphQL API via ``spotifygraphqlconnector`` and posts the data to the Open
+Podcast API in the legacy Anchor-compatible data shapes expected by the backend.
+"""
+
 import os
 import threading
-from datetime import datetime, timedelta
+import datetime as dt
 from queue import Queue
 
-import requests
-from anchorconnector import AnchorConnector
 from loguru import logger
+from spotifygraphqlconnector import SpotifyGraphQLConnector
 
 from job.dates import get_date_range
 from job.fetch_params import FetchParams
 from job.load_env import load_env, load_file_or_env
 from job.open_podcast import OpenPodcastConnector
+from job.transforms import (
+    transform_aggregated_performance,
+    transform_audience_size,
+    transform_episode_performance,
+    transform_episode_plays,
+    transform_episodes_page,
+    transform_plays,
+    transform_plays_by_age_range,
+    transform_plays_by_app,
+    transform_plays_by_device,
+    transform_plays_by_gender,
+    transform_plays_by_geo,
+    transform_plays_by_geo_city,
+    transform_total_plays,
+    transform_total_plays_by_episode,
+    transform_unique_listeners,
+    wrap_episode_metadata,
+)
 from job.worker import worker
+
+# ---------------------------------------------------------------------------
+# Environment
+# ---------------------------------------------------------------------------
 
 print("Initializing environment")
 
@@ -21,67 +49,76 @@ OPENPODCAST_API_ENDPOINT = os.environ.get(
 )
 OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 
-# Note: Anchor API uses Spotify as base URL because it was acquired by Spotify.
-# This is not a typo.
-BASE_URL = load_file_or_env(
-    "ANCHOR_BASE_URL", "https://creators.spotify.com/pod/api/proxy/v3"
+# Spotify Creators GraphQL authentication cookies
+SPOTIFY_SP_DC = load_file_or_env("SPOTIFY_SP_DC")
+SPOTIFY_SP_KEY = load_file_or_env("SPOTIFY_SP_KEY")
+
+# Optional: Spotify show URI (e.g. "spotify:show:abc123")
+# If not set, the connector resolves it automatically from the account.
+SPOTIFY_SHOW_URI = load_file_or_env("SPOTIFY_SHOW_URI", "")
+
+# Optional: legacy station ID – only needed if get_all_episodes is called
+# without a show URI.  Can also be supplied as PODCAST_ID.
+SPOTIFY_STATION_ID = load_file_or_env("SPOTIFY_STATION_ID", "")
+if not SPOTIFY_STATION_ID:
+    SPOTIFY_STATION_ID = load_file_or_env("PODCAST_ID", "")
+
+# Date range used for analytics queries.
+START_DATE_STR = load_env(
+    "START_DATE",
+    (dt.datetime.now() - dt.timedelta(days=3)).strftime("%Y-%m-%d"),
+)
+END_DATE_STR = load_env(
+    "END_DATE",
+    (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d"),
 )
 
-# Anchor webstation ID which represents the podcast, which we fetch data for
-ANCHOR_WEBSTATION_ID = load_file_or_env("ANCHOR_WEBSTATION_ID")
+# Number of worker threads
+NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
 
-# if ANCHOR_WEBSTATION_ID is not set, try to use PODCAST_ID instead
-# this is used by the connector manager to be more generic
-if not ANCHOR_WEBSTATION_ID:
-    ANCHOR_WEBSTATION_ID = load_file_or_env("PODCAST_ID")
+date_range = get_date_range(START_DATE_STR, END_DATE_STR)
+START_DATE = date_range.start.date()
+END_DATE = date_range.end.date()
 
-# Anchor cookies needed to authenticate
-ANCHOR_PW_S = load_file_or_env("ANCHOR_PW_S")
+logger.info(f"Using explicit date range {START_DATE} - {END_DATE}.")
 
-# Number of worker threads to fetch data from the Anchor API by default
-NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
-
-# Start- and end-date for the data we want to fetch
-# Load from environment variable if set, otherwise set to defaults
-START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=30)).strftime("%Y-%m-%d")
-)
-END_DATE = load_env(
-    "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
-)
-
-date_range = get_date_range(START_DATE, END_DATE)
-
-# check if all required environment variables are set
-missing_vars = list(
-    filter(
-        lambda x: globals()[x] is None,
-        ["OPENPODCAST_API_TOKEN", "ANCHOR_WEBSTATION_ID", "ANCHOR_PW_S"],
-    )
-)
-
-if len(missing_vars):
+# Check required env vars
+missing_vars = [
+    name
+    for name in ("OPENPODCAST_API_TOKEN", "SPOTIFY_SP_DC", "SPOTIFY_SP_KEY")
+    if not globals().get(name)
+]
+if missing_vars:
     logger.error(
-        f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting..."
+        f"Missing required environment variables: {', '.join(missing_vars)}. Exiting..."
     )
     exit(1)
 
 print("Done initializing environment")
 
-anchor = AnchorConnector(
-    base_url=BASE_URL,
-    webstation_id=ANCHOR_WEBSTATION_ID,
-    anchorpw_s=ANCHOR_PW_S,
+# ---------------------------------------------------------------------------
+# Connectors
+# ---------------------------------------------------------------------------
+
+connector = SpotifyGraphQLConnector(
+    sp_dc=SPOTIFY_SP_DC,
+    sp_key=SPOTIFY_SP_KEY,
+    show_uri=SPOTIFY_SHOW_URI or None,
+    station_id=SPOTIFY_STATION_ID or None,
 )
+
+# Resolve the show URI once so every subsequent call can reuse it.
+show_uri = connector._ensure_show_uri()
+logger.info(f"Resolved show URI: {show_uri}")
 
 open_podcast = OpenPodcastConnector(
     OPENPODCAST_API_ENDPOINT,
     OPENPODCAST_API_TOKEN,
-    # The webstation ID is used to identify the podcast
-    ANCHOR_WEBSTATION_ID,
+    # Use the Spotify show URI as the podcast identifier
+    show_uri,
 )
 
-# Check that the Open Podcast API is healthy
+# Health check
 response = open_podcast.health()
 if response.status_code != 200:
     logger.error(
@@ -90,275 +127,357 @@ if response.status_code != 200:
     exit(1)
 
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 def get_request_lambda(f, *args, **kwargs):
-    """
-    Capture arguments in the closure so we can use them later in the call
-    to ensure call by value and not call by reference.
-    """
+    """Capture arguments in a closure (call-by-value)."""
     return lambda: f(*args, **kwargs)
 
 
-def episode_all_time_video_data(connector, web_episode_id):
-    """
-    Special endpoint for fetching video data for an episode because it can return a 404.
-    """
+def get_top_geo_name(geo_payload: dict) -> str | None:
+    """Extract top geo displayName from a geo stats response."""
+    geos = (
+        geo_payload.get("showByShowUri", {})
+        .get("showStreamsAndDownloadsByGeo", {})
+        .get("analyticsValue", {})
+        .get("analyticsValue", {})
+        .get("geos", [])
+    )
+    if not geos:
+        return None
+    return geos[0].get("displayName")
+
+
+def get_numeric_episode_id(episode: dict) -> int | str | None:
+    """Return numeric Anchor episode ID from episode payload variants."""
+    return episode.get("id") or episode.get("episodeId") or episode.get("stationEpisodeId")
+
+
+# ---------------------------------------------------------------------------
+# Pre-fetch shared data (avoids duplicate API calls)
+# ---------------------------------------------------------------------------
+
+logger.info("Pre-fetching shared analytics data …")
+
+spotify_stats = connector.get_show_spotify_stats(
+    show_uri=show_uri,
+    include_audience_size=True,
+    start_date=START_DATE,
+    end_date=END_DATE,
+)
+platform_stats = connector.get_show_platform_stats(
+    show_uri=show_uri,
+    start_date=START_DATE,
+    end_date=END_DATE,
+)
+demographics_stats = connector.get_show_demographics_stats(
+    show_uri=show_uri,
+    start_date=START_DATE,
+    end_date=END_DATE,
+)
+geo_stats_country = connector.get_show_geo_stats(
+    show_uri=show_uri,
+    result_geo="GEO_COUNTRY",
+    start_date=START_DATE,
+    end_date=END_DATE,
+)
+
+# Geo city drill-down requires country + region on newer connector versions.
+geo_city_country: str | None = None
+geo_city_region: str | None = None
+geo_stats_city: dict = {}
+top_country = get_top_geo_name(geo_stats_country)
+if top_country:
+    geo_city_country = top_country
     try:
-        return anchor.episode_all_time_video_data(web_episode_id)
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 404:
-            # Handle the case when the episode has no video data or the URL is incorrect
-            logger.info("Episode has no video data or URL is incorrect")
-            return None
+        geo_stats_region = connector.get_show_geo_stats(
+            show_uri=show_uri,
+            result_geo="GEO_REGION",
+            country=top_country,
+            start_date=START_DATE,
+            end_date=END_DATE,
+        )
+        top_region = get_top_geo_name(geo_stats_region)
+        if top_region:
+            geo_city_region = top_region
+            geo_stats_city = connector.get_show_geo_stats(
+                show_uri=show_uri,
+                result_geo="GEO_CITY",
+                country=top_country,
+                region=top_region,
+                start_date=START_DATE,
+                end_date=END_DATE,
+            )
+            logger.info(
+                f"Fetched GEO_CITY drill-down for {top_country} / {top_region}."
+            )
         else:
-            # Re-raise the exception if it's not a 404 error
-            raise
+            logger.warning(
+                f"No GEO_REGION data for country '{top_country}'. Falling back to empty GEO_CITY payload."
+            )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(f"GEO_CITY fetch failed, keeping empty city payload: {exc}")
+else:
+    logger.warning("No GEO_COUNTRY data available; cannot fetch GEO_CITY drill-down.")
+discovery_stats = connector.get_show_audience_discovery(
+    show_uri=show_uri,
+    start_date=START_DATE,
+    end_date=END_DATE,
+)
+all_time_show_stats = connector.get_streams_and_downloads_all_time(show_uri=show_uri)
 
+logger.info("Fetching all episodes …")
+raw_episodes = connector.get_all_episodes()
 
-endpoints = [
+logger.info("Fetching all-time plays per episode …")
+all_time_episode_plays = []
+for ep in raw_episodes:
+    ep_uri = ep.get("uri")
+    if not ep_uri:
+        continue
+    try:
+        plays_data = connector.get_episode_plays_total(episode_uri=ep_uri)
+        all_time_episode_plays.append({
+            "uri": ep_uri,
+            "episode": ep,
+            "plays_data": plays_data
+        })
+    except Exception as exc:
+        logger.warning(f"Failed to fetch episode plays total for {ep_uri}: {exc}")
+
+# Build enrichment lookup so transforms can access episodeId, duration, etc.
+episode_enrichment = {ep.get("uri", ""): ep for ep in raw_episodes}
+
+# Build mapping from Spotify URI -> legacy Anchor web episode ID (e.g. e215pm4)
+# using the new legacy API helper in spotifygraphqlconnector.
+legacy_web_ids_by_uri: dict[str, str] = {}
+legacy_metadata_by_uri: dict[str, dict] = {}
+for episode in raw_episodes:
+    episode_uri = episode.get("uri", "")
+    numeric_episode_id = get_numeric_episode_id(episode)
+    if not episode_uri or numeric_episode_id is None:
+        continue
+    try:
+        legacy = connector.get_episode_legacy_web_id(numeric_episode_id)
+        legacy_metadata_by_uri[episode_uri] = legacy
+        legacy_web_id = legacy.get("webEpisodeId")
+        if legacy_web_id:
+            legacy_web_ids_by_uri[episode_uri] = legacy_web_id
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            f"Legacy web ID lookup failed for episode {numeric_episode_id} ({episode_uri}): {exc}"
+        )
+
+logger.info(
+    f"Resolved legacy web IDs for {len(legacy_web_ids_by_uri)}/{len(raw_episodes)} episodes."
+)
+
+legacy_web_station_id = next(
+    (
+        meta.get("webStationId")
+        for meta in legacy_metadata_by_uri.values()
+        if meta.get("webStationId")
+    ),
+    "",
+)
+
+logger.info(f"Pre-fetch complete ({len(raw_episodes)} episodes).")
+
+# ---------------------------------------------------------------------------
+# Show-level endpoints
+# ---------------------------------------------------------------------------
+
+endpoints: list[FetchParams] = [
     FetchParams(
         openpodcast_endpoint="plays",
-        anchor_call=get_request_lambda(anchor.plays, date_range.start, date_range.end),
-        start_date=date_range.start,
-        end_date=date_range.end,
-    ),
-    FetchParams(
-        openpodcast_endpoint="playsByAgeRange",
-        anchor_call=get_request_lambda(
-            anchor.plays_by_age_range, date_range.start, date_range.end
-        ),
-        start_date=date_range.start,
-        end_date=date_range.end,
+        anchor_call=lambda: transform_plays(spotify_stats),
+        start_date=START_DATE,
+        end_date=END_DATE,
     ),
     FetchParams(
         openpodcast_endpoint="playsByApp",
-        anchor_call=get_request_lambda(
-            anchor.plays_by_app, date_range.start, date_range.end
-        ),
-        start_date=date_range.start,
-        end_date=date_range.end,
+        anchor_call=lambda: transform_plays_by_app(platform_stats),
+        start_date=START_DATE,
+        end_date=END_DATE,
     ),
     FetchParams(
         openpodcast_endpoint="playsByDevice",
-        anchor_call=get_request_lambda(
-            anchor.plays_by_device, date_range.start, date_range.end
-        ),
-        start_date=date_range.start,
-        end_date=date_range.end,
-    ),
-    FetchParams(
-        openpodcast_endpoint="playsByGender",
-        anchor_call=get_request_lambda(
-            anchor.plays_by_gender, date_range.start, date_range.end
-        ),
-        start_date=date_range.start,
-        end_date=date_range.end,
+        anchor_call=lambda: transform_plays_by_device(platform_stats),
+        start_date=START_DATE,
+        end_date=END_DATE,
     ),
     FetchParams(
         openpodcast_endpoint="playsByGeo",
-        anchor_call=get_request_lambda(anchor.plays_by_geo),
-        start_date=date_range.start,
-        end_date=date_range.end,
+        anchor_call=lambda: transform_plays_by_geo(geo_stats_country),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    ),
+    FetchParams(
+        openpodcast_endpoint="playsByGeoCity",
+        anchor_call=lambda: transform_plays_by_geo_city(
+            geo_stats_city,
+            country=geo_city_country,
+            region=geo_city_region,
+        ),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    ),
+    FetchParams(
+        openpodcast_endpoint="playsByAgeRange",
+        anchor_call=lambda: transform_plays_by_age_range(demographics_stats),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    ),
+    FetchParams(
+        openpodcast_endpoint="playsByGender",
+        anchor_call=lambda: transform_plays_by_gender(demographics_stats),
+        start_date=START_DATE,
+        end_date=END_DATE,
     ),
     FetchParams(
         openpodcast_endpoint="uniqueListeners",
-        anchor_call=anchor.unique_listeners,
-        start_date=date_range.start,
-        end_date=date_range.end,
+        anchor_call=lambda: transform_unique_listeners(
+            discovery_stats,
+            fallback_graphql_data=spotify_stats,
+        ),
+        start_date=START_DATE,
+        end_date=END_DATE,
     ),
     FetchParams(
         openpodcast_endpoint="audienceSize",
-        anchor_call=anchor.audience_size,
-        start_date=date_range.start,
-        end_date=date_range.end,
-    ),
-    FetchParams(
-        openpodcast_endpoint="totalPlaysByEpisode",
-        anchor_call=anchor.total_plays_by_episode,
-        start_date=date_range.start,
-        end_date=date_range.end,
+        anchor_call=lambda: transform_audience_size(
+            discovery_stats,
+            fallback_graphql_data=spotify_stats,
+        ),
+        start_date=START_DATE,
+        end_date=END_DATE,
     ),
     FetchParams(
         openpodcast_endpoint="totalPlays",
-        anchor_call=get_request_lambda(anchor.total_plays, True),
-        start_date=date_range.start,
-        end_date=date_range.end,
+        anchor_call=lambda: transform_total_plays(all_time_show_stats),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    ),
+    FetchParams(
+        openpodcast_endpoint="totalPlaysByEpisode",
+        anchor_call=lambda: transform_total_plays_by_episode(
+            all_time_episode_plays, episode_enrichment=episode_enrichment
+        ),
+        start_date=START_DATE,
+        end_date=END_DATE,
     ),
 ]
 
-# Fetch geo city data
-#
-# First get the list of all countries
-# then get the list of all cities in each country
-# (The geo data does not have a date range)
-countries = anchor.plays_by_geo()
+# ---------------------------------------------------------------------------
+# Episodes
+# ---------------------------------------------------------------------------
 
-# Iterate over the list of countries
-for row in countries["data"]["rows"]:
-    # The country name is in the first column of each row
-    country = row[0]
+all_episodes = transform_episodes_page(
+    raw_episodes,
+    legacy_web_ids_by_uri=legacy_web_ids_by_uri,
+    legacy_metadata_by_uri=legacy_metadata_by_uri,
+)
 
-    # Add the endpoint to the list of endpoints
-    endpoints += [
-        FetchParams(
-            openpodcast_endpoint="playsByGeoCity",
-            anchor_call=get_request_lambda(anchor.plays_by_geo_city, country),
-            start_date=date_range.start,
-            end_date=date_range.end,
-            meta={"country": country},
-        )
-    ]
-
-episodes = anchor.episodes()
-
-# We already store episode metadata from the `podcast_episode()` method above,
-# but we get additional data from the `episodes()` method (e.g. the mapping
-# between `episodeId` and `webEpisodeId`)
-all_episodes = list(episodes)
-logger.info(f"Sending episodesPage data to Open Podcast")
+logger.info(f"Sending episodesPage data to Open Podcast ({len(all_episodes)} episodes)")
 open_podcast.post(
     "episodesPage",
     None,
     all_episodes,
-    date_range.start,
-    date_range.end,
+    START_DATE,
+    END_DATE,
 )
 
+# episode_enrichment was already built during pre-fetch above.
 
-def wrap_episode_metadata(data):
-    """
-    Transform the episode data to match the expected format
+# ---------------------------------------------------------------------------
+# Per-episode endpoints
+# ---------------------------------------------------------------------------
 
-    This is a special case compared to the other endpoints because the
-    episode metadata is returned as a list of episodes, but we only want to
-    send one episode at a time to the Open Podcast API.
-    The reason is that we use a new Anchor/Spotify API endpoint to fetch the
-    individual episodes, which only returns one episode at a time.
-    """
+for episode in raw_episodes:
+    # Extract the Spotify episode URI directly from the episode dict.
+    episode_uri = episode.get("uri", "")
+    if not episode_uri:
+        logger.warning(f"Skipping episode without URI: {episode}")
+        continue
 
-    # This is the inner podcast data, which we have to wrap in a JSON object
-    transformed_episode = {
-        "adCount": 0,
-        "created": data.get("created"),
-        "createdUnixTimestamp": data.get("createdUnixTimestamp"),
-        "description": data.get("description"),
-        "duration": data.get("totalDuration"),
-        "hourOffset": data.get("hourOffset"),
-        "isDeleted": data.get("isDeleted", False),
-        "isPublished": data.get("isPublished", False),
-        "podcastEpisodeId": data.get("webEpisodeId"),
-        "publishOn": data.get("publishOn"),
-        "publishOnUnixTimestamp": data.get("publishOnUnixTimestamp", 0)
-        * 1000,  # Convert to milliseconds
-        "title": data.get("title"),
-        "url": (
-            data.get("episodeAudios", [{}])[0].get("url")
-            if data.get("episodeAudios")
-            else None
-        ),
-        "trackedUrl": data.get("spotifyUrl"),
-        "episodeImage": data.get("episodeImage"),
-        "shareLinkPath": data.get("shareLinkPath"),
-        "shareLinkEmbedPath": data.get("shareLinkEmbedPath"),
-    }
-
-    return {
-        "allEpisodeWebIds": [data.get("webEpisodeId")],
-        "podcastId": data.get("webStationId"),
-        "podcastEpisodes": [transformed_episode],
-        "totalPodcastEpisodes": 1,
-        "vanitySlug": "dummy",
-        "stationCreatedDate": "dummy",
-    }
-
-
-for episode in all_episodes:
-    # Note: Anchor has two IDs for each episode, the `episodeId` (numeric) and
-    # the `webEpisodeId` (string). The numeric `episodeId` is required by all
-    # analytics and metadata endpoints in the current API.
-    web_episode_id = episode["webEpisodeId"]
-    episode_id = episode["episodeId"]
-
-    # To ensure backwards compatibility,
-    # we include the raw ids in the meta data.
-    meta = {
-        "episode": web_episode_id,
-        "episodeIdNum": episode_id,
-        "webEpisodeId": web_episode_id,
-    }
+    legacy_web_id = legacy_web_ids_by_uri.get(episode_uri, episode_uri)
+    meta = {"episode": legacy_web_id}
 
     endpoints += [
         FetchParams(
             openpodcast_endpoint="episodePlays",
             anchor_call=get_request_lambda(
-                anchor.episode_plays,
-                episode_id,
-                date_range.start,
-                date_range.end,
-                "daily",
+                lambda uri=episode_uri: transform_episode_plays(
+                    connector.get_episode_streams_and_downloads(
+                        episode_uri=uri,
+                        start_date=START_DATE,
+                        end_date=END_DATE,
+                    ),
+                    uri,
+                ),
             ),
-            start_date=date_range.start,
-            end_date=date_range.end,
+            start_date=START_DATE,
+            end_date=END_DATE,
             meta=meta,
         ),
         FetchParams(
             openpodcast_endpoint="episodePerformance",
-            anchor_call=get_request_lambda(anchor.episode_performance, episode_id),
-            start_date=date_range.start,
-            end_date=date_range.end,
+            anchor_call=get_request_lambda(
+                lambda uri=episode_uri: transform_episode_performance(
+                    connector.get_episode_performance_all_time(episode_uri=uri),
+                    uri,
+                ),
+            ),
+            start_date=START_DATE,
+            end_date=END_DATE,
             meta=meta,
         ),
         FetchParams(
             openpodcast_endpoint="aggregatedPerformance",
             anchor_call=get_request_lambda(
-                anchor.episode_aggregated_performance, episode_id
+                lambda uri=episode_uri: transform_aggregated_performance(
+                    connector.get_episode_performance_all_time(episode_uri=uri),
+                    uri,
+                ),
             ),
-            start_date=date_range.start,
-            end_date=date_range.end,
+            start_date=START_DATE,
+            end_date=END_DATE,
             meta=meta,
         ),
         FetchParams(
             openpodcast_endpoint="podcastEpisode",
-            # Note: We pass the `episode_id` as a default argument to the
-            # lambda function. This creates a new binding for each iteration of
-            # the loop, effectively capturing the correct value of
-            # episode_id for each episode.
-            anchor_call=(
-                lambda ep_id=episode_id: wrap_episode_metadata(
-                    get_request_lambda(anchor.episode_metadata, ep_id)()
-                )
+            anchor_call=get_request_lambda(
+                lambda uri=episode_uri: wrap_episode_metadata(
+                    connector.get_episode_metadata_for_analytics(episode_uri=uri),
+                    uri,
+                    episode_enrichment=episode_enrichment,
+                    legacy_web_id=legacy_web_ids_by_uri.get(uri, uri),
+                    legacy_episode_data=legacy_metadata_by_uri.get(uri, {}),
+                    legacy_web_station_id=legacy_web_station_id,
+                ),
             ),
-            start_date=date_range.start,
-            end_date=date_range.end,
+            start_date=START_DATE,
+            end_date=END_DATE,
             meta=meta,
         ),
-        # TODO: This endpoint is not supported by the Open Podcast API yet
-        # FetchParams(
-        #     openpodcast_endpoint="episodeAllTimeVideoData",
-        #     anchor_call=get_request_lambda(
-        #         episode_all_time_video_data,
-        #         anchor,
-        #         web_episode_id,
-        #     ),
-        #     start_date=date_range.start,
-        #     end_date=date_range.end,
-        #     meta=meta,
-        # ),
     ]
 
-# Create a queue to hold the FetchParams objects
-queue = Queue()
+# ---------------------------------------------------------------------------
+# Execute via worker queue
+# ---------------------------------------------------------------------------
 
-# Start a pool of worker threads to process items from the queue
+queue: Queue = Queue()
+
 for i in range(NUM_WORKERS):
     t = threading.Thread(target=worker, args=(queue, open_podcast))
     t.daemon = True
     t.start()
 
-# Add all FetchParams objects to the queue
 for endpoint in endpoints:
     queue.put(endpoint)
 
-# Wait for all items in the queue to be processed
 queue.join()
 
 print("All items processed.")
