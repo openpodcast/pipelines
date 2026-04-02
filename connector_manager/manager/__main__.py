@@ -36,7 +36,6 @@ if not OPENPODCAST_ENCRYPTION_KEY:
     logger.error("No OPENPODCAST_ENCRYPTION_KEY found")
     exit(1)
 
-
 def ensure_db_connection():
     """
     Ensure database connection is valid, reconnect if necessary.
