@@ -351,7 +351,13 @@ def transform_unique_listeners(
             fallback_graphql_data, "showByShowUri", "audienceSizeDaily"
         )
         if fallback_points:
-            value = max(v for _, v in fallback_points)
+            numeric_values = [
+                p.get("value", {}).get("value", 0)
+                for p in fallback_points
+                if isinstance(p, dict)
+            ]
+            if numeric_values:
+                value = max(numeric_values)
 
     return {
         "stationId": 0,
@@ -388,7 +394,13 @@ def transform_audience_size(
             fallback_graphql_data, "showByShowUri", "audienceSizeDaily"
         )
         if fallback_points:
-            value = max(v for _, v in fallback_points)
+            numeric_values = [
+                p.get("value", {}).get("value", 0)
+                for p in fallback_points
+                if isinstance(p, dict)
+            ]
+            if numeric_values:
+                value = max(numeric_values)
 
     return {
         "stationId": 0,
