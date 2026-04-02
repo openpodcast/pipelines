@@ -2,6 +2,9 @@
 # Pin to linux/amd64 as we deploy to x86_64 servers
 FROM --platform=linux/amd64 python:3.11-slim-bullseye
 
+ARG COMMIT_SHA
+ENV COMMIT_SHA=${COMMIT_SHA}
+
 # Install cron and gpg for decrypting data fetched from db
 RUN apt-get update \
     && apt-get install -y cron gpg \

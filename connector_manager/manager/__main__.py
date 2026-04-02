@@ -4,6 +4,7 @@ import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
+import importlib.metadata
 
 import mysql.connector
 from loguru import logger
@@ -82,6 +83,34 @@ if "--interactive" in sys.argv:
 from manager.worker import PodcastJob, process_source_jobs
 
 if __name__ == "__main__":
+    commit_sha = os.environ.get("COMMIT_SHA")
+    if commit_sha:
+        logger.info(f"Commit ID: {commit_sha} (from env)")
+    else:
+        try:
+            commit_id = (
+                subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+                )
+                .decode("utf-8")
+                .strip()
+            )
+            logger.info(f"Commit ID: {commit_id}")
+        except Exception:
+            logger.info("Commit ID: Unknown (not a git repo or git not installed)")
+
+    for connector in [
+        "appleconnector",
+        "spotifyconnector",
+        "anchorconnector",
+        "podigeeconnector",
+    ]:
+        try:
+            version = importlib.metadata.version(connector)
+            logger.info(f"{connector} version: {version}")
+        except importlib.metadata.PackageNotFoundError:
+            logger.info(f"{connector} version: Unknown (not installed)")
+  
     print("Fetching all podcast tasks from database...")
     sql = """
         SELECT
@@ -152,6 +181,8 @@ if __name__ == "__main__":
         logger.info(
             f"Processing {len(jobs_to_process)} jobs across {len(jobs_by_source)} sources..."
         )
+        logger.info(f"Sources: {list(jobs_by_source.keys())}")
+        logger.info(f"Jobs to process: {jobs_to_process}")
 
         all_results = []
 
