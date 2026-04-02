@@ -1,4 +1,4 @@
-spotifygraphqlconnector==0.2.0
+spotifygraphqlconnector==0.3.0
 certifi==2024.2.2
 charset-normalizer==3.1.0
 idna==3.4
