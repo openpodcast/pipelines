@@ -66,6 +66,54 @@ def _extract_analytics_value(graphql_data: dict, *path_keys: str):
 # ---------------------------------------------------------------------------
 
 
+
+def _find_integer_value(obj):
+    if isinstance(obj, dict):
+        if "value" in obj and isinstance(obj["value"], int):
+            return obj["value"]
+        if "total" in obj and isinstance(obj["total"], int):
+            return obj["total"]
+        if "count" in obj and isinstance(obj["count"], int):
+            return obj["count"]
+        if "streamsAndDownloadsTotal" in obj and isinstance(obj["streamsAndDownloadsTotal"], int):
+            return obj["streamsAndDownloadsTotal"]
+        # deep search
+        for k, v in obj.items():
+            res = _find_integer_value(v)
+            if res is not None:
+                return res
+    elif isinstance(obj, list):
+        for item in obj:
+            res = _find_integer_value(item)
+            if res is not None:
+                return res
+    return None
+
+
+
+def _find_integer_value(obj):
+    if isinstance(obj, dict):
+        if "value" in obj and isinstance(obj["value"], int):
+            return obj["value"]
+        if "total" in obj and isinstance(obj["total"], int):
+            return obj["total"]
+        if "count" in obj and isinstance(obj["count"], int):
+            return obj["count"]
+        if "streamsAndDownloadsTotal" in obj and isinstance(obj["streamsAndDownloadsTotal"], int):
+            return obj["streamsAndDownloadsTotal"]
+        # deep search
+        for k, v in obj.items():
+            res = _find_integer_value(v)
+            if res is not None:
+                return res
+    elif isinstance(obj, list):
+        for item in obj:
+            res = _find_integer_value(item)
+            if res is not None:
+                return res
+    return None
+
+
 def transform_plays(graphql_data: dict) -> dict:
     """
     getShowOnSpotifyStats → old ``plays`` shape.
@@ -417,22 +465,9 @@ def transform_audience_size(
 
 def transform_total_plays(graphql_data: dict) -> dict:
     """
-    getShowOnSpotifyStats → old ``totalPlays`` shape.
-
-    The GraphQL response carries a time-series under
-    ``showByShowUri.playsDaily`` with daily play counts.
-    We sum them to produce the total for the requested window.
-
-    Old shape: ``{"kind": "totalPlays", "data": {"rows": [1234]}}``
+    get_streams_and_downloads_all_time → old ``totalPlays`` shape.
     """
-    points = _extract_time_series_points(
-        graphql_data, "showByShowUri", "playsDaily"
-    )
-    value = sum(
-        (p.get("value", {}).get("value", 0) if isinstance(p.get("value"), dict) else 0)
-        for p in points
-    )
-
+    value = _find_integer_value(graphql_data) or 0
     return {
         "stationId": 0,
         "kind": "totalPlays",
@@ -447,39 +482,33 @@ def transform_total_plays(graphql_data: dict) -> dict:
 
 
 def transform_total_plays_by_episode(
-    graphql_data: dict,
+    all_time_episode_plays: list[dict],
     episode_enrichment: dict | None = None,
 ) -> dict:
     """
-    getShowTopEpisodes → old ``totalPlaysByEpisode`` shape.
+    List of objects from get_episode_plays_total → old ``totalPlaysByEpisode`` shape.
 
     *episode_enrichment* is a ``{uri: episode_dict}`` lookup built from
-    ``get_all_episodes()``.  Each episode dict is expected to carry an
-    ``episodeId`` integer field (the legacy Anchor numeric ID).  When the
-    lookup is provided the real ID is used; otherwise ``rank`` is used as
-    a fallback.
-
-    Old shape::
-
-        {"kind": "totalPlaysByEpisode", "data": {"rows": [
-            ["title", episodeId, streamsCount, publishTimestamp, rank, "episodeUri"],
-            ...
-        ]}}
+    ``get_all_episodes()``. Each episode dict is expected to carry an
+    ``episodeId`` integer field (the legacy Anchor numeric ID).
     """
     enrichment = episode_enrichment or {}
-    inner = _extract_analytics_value(
-        graphql_data, "showByShowUri", "analytics"
-    )
-    top_episodes = inner.get("topEpisodes", [])
-
     rows = []
-    for rank, ep in enumerate(top_episodes, start=1):
-        title = ep.get("episode", {}).get("title", "")
-        episode_uri = ep.get("episodeUri", "")
-        count = ep.get("count", 0)
-        publish_seconds = ep.get("episode", {}).get("publishedOn", {}).get("seconds", 0)
-        # Use the real Anchor numeric episodeId when available (from
-        # get_all_episodes enrichment), otherwise fall back to rank.
+    
+    # Sort episodes by total plays descending, just like topEpisodes did
+    items = []
+    for item in all_time_episode_plays:
+        ep_uri = item.get("uri", "")
+        count = _find_integer_value(item.get("plays_data", {})) or 0
+        items.append((count, ep_uri, item))
+        
+    items.sort(key=lambda x: x[0], reverse=True)
+    
+    for rank, (count, episode_uri, item) in enumerate(items, start=1):
+        ep = item.get("episode", {})
+        title = ep.get("title", "")
+        publish_seconds = ep.get("publishedOn", {}).get("seconds", 0)
+        
         ep_info = enrichment.get(episode_uri, {})
         episode_id = ep_info.get("id") or ep_info.get("episodeId") or ep_info.get("stationEpisodeId") or rank
         rows.append([title, episode_id, count, publish_seconds, rank, episode_uri])

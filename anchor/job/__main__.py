@@ -226,10 +226,26 @@ discovery_stats = connector.get_show_audience_discovery(
     start_date=START_DATE,
     end_date=END_DATE,
 )
-top_episodes = connector.get_show_top_episodes(show_uri=show_uri)
+all_time_show_stats = connector.get_streams_and_downloads_all_time(show_uri=show_uri)
 
 logger.info("Fetching all episodes …")
 raw_episodes = connector.get_all_episodes()
+
+logger.info("Fetching all-time plays per episode …")
+all_time_episode_plays = []
+for ep in raw_episodes:
+    ep_uri = ep.get("uri")
+    if not ep_uri:
+        continue
+    try:
+        plays_data = connector.get_episode_plays_total(episode_uri=ep_uri)
+        all_time_episode_plays.append({
+            "uri": ep_uri,
+            "episode": ep,
+            "plays_data": plays_data
+        })
+    except Exception as exc:
+        logger.warning(f"Failed to fetch episode plays total for {ep_uri}: {exc}")
 
 # Build enrichment lookup so transforms can access episodeId, duration, etc.
 episode_enrichment = {ep.get("uri", ""): ep for ep in raw_episodes}
@@ -340,14 +356,14 @@ endpoints: list[FetchParams] = [
     ),
     FetchParams(
         openpodcast_endpoint="totalPlays",
-        anchor_call=lambda: transform_total_plays(spotify_stats),
+        anchor_call=lambda: transform_total_plays(all_time_show_stats),
         start_date=START_DATE,
         end_date=END_DATE,
     ),
     FetchParams(
         openpodcast_endpoint="totalPlaysByEpisode",
         anchor_call=lambda: transform_total_plays_by_episode(
-            top_episodes, episode_enrichment=episode_enrichment
+            all_time_episode_plays, episode_enrichment=episode_enrichment
         ),
         start_date=START_DATE,
         end_date=END_DATE,
