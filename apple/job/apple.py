@@ -21,13 +21,14 @@ class AppleCookies:
     itctx: str
 
 
-def fetch_all_cookies(bearer_token: str, apple_automation_endpoint: str):
+def fetch_all_cookies(bearer_token: str, apple_automation_endpoint: str, podcast_id: str):
     """
     Get Apple cookies from API
     """
     headers = {"Authorization": f"Bearer {bearer_token}"}
+    params = {"podcastId": podcast_id}
     response = requests.get(
-        apple_automation_endpoint, headers=headers, timeout=COOKIE_TIMEOUT
+        apple_automation_endpoint, headers=headers, params=params, timeout=COOKIE_TIMEOUT
     )
 
     logger.info(f"Got cookies response: {response.status_code}")
@@ -37,7 +38,7 @@ def fetch_all_cookies(bearer_token: str, apple_automation_endpoint: str):
         logger.info(f"Waiting for {waitForMinutes} minutes...")
         time.sleep(waitForMinutes * 60)
         response = requests.get(
-            apple_automation_endpoint, headers=headers, timeout=COOKIE_TIMEOUT
+            apple_automation_endpoint, headers=headers, params=params, timeout=COOKIE_TIMEOUT
         )
         if response.status_code != 200:
             raise Exception(
@@ -47,11 +48,12 @@ def fetch_all_cookies(bearer_token: str, apple_automation_endpoint: str):
     return cookies
 
 
-def get_cookies(bearer_token: str, apple_automation_endpoint: str) -> AppleCookies:
+def get_cookies(bearer_token: str, apple_automation_endpoint: str, podcast_id: str) -> AppleCookies:
     """
     Extract the relevant cookies from the response
     """
-    cookies = fetch_all_cookies(bearer_token, apple_automation_endpoint)
+    cookies = fetch_all_cookies(
+        bearer_token, apple_automation_endpoint, podcast_id)
     # Extract `myacinfo` cookie
     myacinfo_cookie = next(c for c in cookies if c["name"] == "myacinfo")
     myacinfo = myacinfo_cookie["value"]
