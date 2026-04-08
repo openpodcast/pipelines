@@ -16,7 +16,8 @@ services:
       # Reads from .env file if available
       - OPENPODCAST_ENCRYPTION_KEY=${OPENPODCAST_ENCRYPTION_KEY:-supersecret}
       - OPENPODCAST_API_ENDPOINT=${OPENPODCAST_API_ENDPOINT:-http://host.docker.internal:8080}
-
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - connector_manager/.env
     links:
