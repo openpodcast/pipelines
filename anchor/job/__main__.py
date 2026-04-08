@@ -56,12 +56,16 @@ SPOTIFY_SP_KEY = load_file_or_env("SPOTIFY_SP_KEY")
 # Optional: Spotify show URI (e.g. "spotify:show:abc123")
 # If not set, the connector resolves it automatically from the account.
 SPOTIFY_SHOW_URI = load_file_or_env("SPOTIFY_SHOW_URI", "")
+PODCAST_ID = load_file_or_env("PODCAST_ID", "")
+
+if not SPOTIFY_SHOW_URI and PODCAST_ID.startswith("spotify:show:"):
+    SPOTIFY_SHOW_URI = PODCAST_ID
 
 # Optional: legacy station ID – only needed if get_all_episodes is called
-# without a show URI.  Can also be supplied as PODCAST_ID.
+# without a show URI.  Can also be supplied as PODCAST_ID when numeric.
 SPOTIFY_STATION_ID = load_file_or_env("SPOTIFY_STATION_ID", "")
-if not SPOTIFY_STATION_ID:
-    SPOTIFY_STATION_ID = load_file_or_env("PODCAST_ID", "")
+if not SPOTIFY_STATION_ID and PODCAST_ID.isdigit():
+    SPOTIFY_STATION_ID = PODCAST_ID
 
 # Date range used for analytics queries.
 START_DATE_STR = load_env(
