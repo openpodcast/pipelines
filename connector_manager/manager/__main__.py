@@ -79,6 +79,12 @@ if "--interactive" in sys.argv:
     logger.info("Interactive mode enabled")
     interactiveMode = True
 
+# if module was started with flag --skip-repetition-check, fetch all podcasts regardless of prior fetches
+skipRepetitionCheck = False
+if "--skip-repetition-check" in sys.argv:
+    logger.info("Skip repetition check enabled: fetching all podcasts regardless of prior fetches")
+    skipRepetitionCheck = True
+
 # Import worker functions and types from separate module for multiprocessing
 from manager.worker import PodcastJob, process_source_jobs
 
@@ -120,39 +126,52 @@ if __name__ == "__main__":
     print_debug_output()
 
     print("Fetching all podcast tasks from database...")
-    sql = """
-        SELECT
-            account_id,
-            source_name,
-            source_podcast_id,
-            source_access_keys_encrypted,
-            pod_name
-        FROM
-            podcastSources
-            JOIN openpodcast.podcasts USING (account_id)
-        WHERE
-            -- Fetch if no updates exist for today (new podcast or first run of the day)
-            NOT EXISTS (
-                SELECT 1 FROM openpodcast.updates
-                WHERE openpodcast.updates.account_id = podcastSources.account_id
-                AND openpodcast.updates.provider = podcastSources.source_name
-                AND DATE(openpodcast.updates.created) = CURDATE()
-            )
-            OR
-            -- Re-fetch if today's endpoint count is less than yesterday's, which
-            -- indicates the previous fetch was aborted before all endpoints were fetched
-            (
-                SELECT COUNT(*) FROM openpodcast.updates
-                WHERE openpodcast.updates.account_id = podcastSources.account_id
-                AND openpodcast.updates.provider = podcastSources.source_name
-                AND DATE(openpodcast.updates.created) = CURDATE()
-            ) < (
-                SELECT COUNT(*) FROM openpodcast.updates
-                WHERE openpodcast.updates.account_id = podcastSources.account_id
-                AND openpodcast.updates.provider = podcastSources.source_name
-                AND DATE(openpodcast.updates.created) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
-            )
-    """
+    if skipRepetitionCheck:
+        sql = """
+            SELECT
+                account_id,
+                source_name,
+                source_podcast_id,
+                source_access_keys_encrypted,
+                pod_name
+            FROM
+                podcastSources
+                JOIN openpodcast.podcasts USING (account_id)
+        """
+    else:
+        sql = """
+            SELECT
+                account_id,
+                source_name,
+                source_podcast_id,
+                source_access_keys_encrypted,
+                pod_name
+            FROM
+                podcastSources
+                JOIN openpodcast.podcasts USING (account_id)
+            WHERE
+                -- Fetch if no updates exist for today (new podcast or first run of the day)
+                NOT EXISTS (
+                    SELECT 1 FROM openpodcast.updates
+                    WHERE openpodcast.updates.account_id = podcastSources.account_id
+                    AND openpodcast.updates.provider = podcastSources.source_name
+                    AND DATE(openpodcast.updates.created) = CURDATE()
+                )
+                OR
+                -- Re-fetch if today's endpoint count is less than yesterday's, which
+                -- indicates the previous fetch was aborted before all endpoints were fetched
+                (
+                    SELECT COUNT(*) FROM openpodcast.updates
+                    WHERE openpodcast.updates.account_id = podcastSources.account_id
+                    AND openpodcast.updates.provider = podcastSources.source_name
+                    AND DATE(openpodcast.updates.created) = CURDATE()
+                ) < (
+                    SELECT COUNT(*) FROM openpodcast.updates
+                    WHERE openpodcast.updates.account_id = podcastSources.account_id
+                    AND openpodcast.updates.provider = podcastSources.source_name
+                    AND DATE(openpodcast.updates.created) = DATE_SUB(CURDATE(), INTERVAL 1 DAY)
+                )
+        """
 
     with db.cursor() as cursor:
         cursor.execute(sql)
