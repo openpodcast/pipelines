@@ -315,9 +315,10 @@ def transform_plays_by_age_range(graphql_data: dict) -> dict:
         fraction = bracket_total / total_value if total_value else 0.0
         rows.append([bracket_name, fraction])
 
-    # Build translationMapping and colors from actual data rows
-    translation_mapping = {r[0]: r[0] for r in rows}
-    colors = {r[0]: "#26008D" for r in rows}
+    # OpenPodcast schema requires all legacy age buckets, even when rows are empty.
+    legacy_age_buckets = ["0-17", "18-22", "23-27", "28-34", "35-44", "45-59", "60+"]
+    translation_mapping = {bucket: bucket for bucket in legacy_age_buckets}
+    colors = {bucket: "#26008D" for bucket in legacy_age_buckets}
 
     return {
         "stationId": 0,
@@ -347,7 +348,7 @@ def transform_plays_by_gender(graphql_data: dict) -> dict:
     inner = _extract_analytics_value(
         graphql_data, "showByShowUri", "showStreamsFaceted"
     )
-    gender_breakdown = inner.get("genderBreakdown", {})
+    gender_breakdown = inner.get("genderBreakdown") or {}
     counts = gender_breakdown.get("counts", [])
 
     rows = [[g["displayName"], g["percent"]] for g in counts]

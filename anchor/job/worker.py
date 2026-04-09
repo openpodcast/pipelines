@@ -37,3 +37,8 @@ def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
     except requests.exceptions.HTTPError as e:
         logger.error(e)
         return
+    except Exception as e:
+        logger.error(
+            f"Skipping `{params.openpodcast_endpoint}` due to processing error: {e}"
+        )
+        return
