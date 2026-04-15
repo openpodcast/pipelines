@@ -209,6 +209,8 @@ if top_country:
         if top_region:
             geo_city_region = top_region
             
+        # The newer connector no longer requires passing a specific region to fetch GEO_CITY.
+        # Thus, GEO_CITY drill-down is no longer gated behind successfully retrieving a top_region.
         geo_stats_city = connector.get_show_geo_stats(
             show_uri=show_uri,
             result_geo="GEO_CITY",
@@ -316,6 +318,8 @@ endpoints: list[FetchParams] = [
         start_date=START_DATE,
         end_date=END_DATE,
     ),
+    # Re-using transform_plays_by_geo_city for playsByGeoRegion, as the
+    # data shape from the API is identical (list of displayName and value pairs).
     FetchParams(
         openpodcast_endpoint="playsByGeoRegion",
         anchor_call=lambda: transform_plays_by_geo_city(
