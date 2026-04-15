@@ -188,10 +188,12 @@ geo_stats_country = connector.get_show_geo_stats(
     end_date=END_DATE,
 )
 
-# Geo city drill-down requires country + region on newer connector versions.
+# Geo drill-down for top country.
 geo_city_country: str | None = None
 geo_city_region: str | None = None
 geo_stats_city: dict = {}
+geo_stats_region: dict = {}
+
 top_country = get_top_geo_name(geo_stats_country)
 if top_country:
     geo_city_country = top_country
@@ -206,23 +208,19 @@ if top_country:
         top_region = get_top_geo_name(geo_stats_region)
         if top_region:
             geo_city_region = top_region
-            geo_stats_city = connector.get_show_geo_stats(
-                show_uri=show_uri,
-                result_geo="GEO_CITY",
-                country=top_country,
-                region=top_region,
-                start_date=START_DATE,
-                end_date=END_DATE,
-            )
-            logger.info(
-                f"Fetched GEO_CITY drill-down for {top_country} / {top_region}."
-            )
-        else:
-            logger.warning(
-                f"No GEO_REGION data for country '{top_country}'. Falling back to empty GEO_CITY payload."
-            )
+            
+        geo_stats_city = connector.get_show_geo_stats(
+            show_uri=show_uri,
+            result_geo="GEO_CITY",
+            country=top_country,
+            start_date=START_DATE,
+            end_date=END_DATE,
+        )
+        logger.info(
+            f"Fetched GEO_REGION and GEO_CITY drill-down for {top_country}."
+        )
     except Exception as exc:  # noqa: BLE001
-        logger.warning(f"GEO_CITY fetch failed, keeping empty city payload: {exc}")
+        logger.warning(f"GEO drill-down fetch failed, keeping empty payloads: {exc}")
 else:
     logger.warning("No GEO_COUNTRY data available; cannot fetch GEO_CITY drill-down.")
 discovery_stats = connector.get_show_audience_discovery(
@@ -315,6 +313,15 @@ endpoints: list[FetchParams] = [
     FetchParams(
         openpodcast_endpoint="playsByGeo",
         anchor_call=lambda: transform_plays_by_geo(geo_stats_country),
+        start_date=START_DATE,
+        end_date=END_DATE,
+    ),
+    FetchParams(
+        openpodcast_endpoint="playsByGeoRegion",
+        anchor_call=lambda: transform_plays_by_geo_city(
+            geo_stats_region,
+            country=geo_city_country,
+        ),
         start_date=START_DATE,
         end_date=END_DATE,
     ),
