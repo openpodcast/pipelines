@@ -249,15 +249,14 @@ def transform_plays_by_geo(graphql_data: dict) -> dict:
     }
 
 
-def transform_plays_by_geo_city(
+def transform_plays_by_geo_region(
     graphql_data: dict,
     country: str | None = None,
-    region: str | None = None,
 ) -> dict:
     """
-    getShowAudienceAllPlatformsGeoStats (GEO_CITY) → old ``playsByGeoCity`` shape.
+    getShowAudienceAllPlatformsGeoStats (GEO_REGION) → old ``playsByGeoRegion`` shape.
 
-    NOTE: The Spotify GraphQL API may return ``null`` for city-level geo data
+    NOTE: The Spotify GraphQL API may return ``null`` for region-level geo data
     on some shows (DataFetchingException).  In that case we return empty rows.
     """
     # Guard: if the API returned null for the geo node, inner will be {}
@@ -271,8 +270,8 @@ def transform_plays_by_geo_city(
         "stationId": 0,
         "kind": "playsByGeo",
         "parameters": {
-            "geos": [None, country, region],
-            "resultGeo": "geo_2" if region else "geo_3",
+            "geos": [None, country, None],
+            "resultGeo": "geo_2",
             "timeRange": [],
             "timeInterval": 3600,
         },
