@@ -30,7 +30,7 @@ from job.transforms import (
     transform_plays_by_device,
     transform_plays_by_gender,
     transform_plays_by_geo,
-    transform_plays_by_geo_city,
+    transform_plays_by_geo_region,
     transform_total_plays,
     transform_total_plays_by_episode,
     transform_unique_listeners,
@@ -189,14 +189,12 @@ geo_stats_country = connector.get_show_geo_stats(
 )
 
 # Geo drill-down for top country.
-geo_city_country: str | None = None
-geo_city_region: str | None = None
-geo_stats_city: dict = {}
+geo_region_country: str | None = None
 geo_stats_region: dict = {}
 
 top_country = get_top_geo_name(geo_stats_country)
 if top_country:
-    geo_city_country = top_country
+    geo_region_country = top_country
     try:
         geo_stats_region = connector.get_show_geo_stats(
             show_uri=show_uri,
@@ -205,26 +203,13 @@ if top_country:
             start_date=START_DATE,
             end_date=END_DATE,
         )
-        top_region = get_top_geo_name(geo_stats_region)
-        if top_region:
-            geo_city_region = top_region
-            
-        # The newer connector no longer requires passing a specific region to fetch GEO_CITY.
-        # Thus, GEO_CITY drill-down is no longer gated behind successfully retrieving a top_region.
-        geo_stats_city = connector.get_show_geo_stats(
-            show_uri=show_uri,
-            result_geo="GEO_CITY",
-            country=top_country,
-            start_date=START_DATE,
-            end_date=END_DATE,
-        )
         logger.info(
-            f"Fetched GEO_REGION and GEO_CITY drill-down for {top_country}."
+            f"Fetched GEO_REGION drill-down for {top_country}."
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"GEO drill-down fetch failed, keeping empty payloads: {exc}")
 else:
-    logger.warning("No GEO_COUNTRY data available; cannot fetch GEO_CITY drill-down.")
+    logger.warning("No GEO_COUNTRY data available; cannot fetch GEO_REGION drill-down.")
 discovery_stats = connector.get_show_audience_discovery(
     show_uri=show_uri,
     start_date=START_DATE,
@@ -318,23 +303,12 @@ endpoints: list[FetchParams] = [
         start_date=START_DATE,
         end_date=END_DATE,
     ),
-    # Re-using transform_plays_by_geo_city for playsByGeoRegion, as the
-    # data shape from the API is identical (list of displayName and value pairs).
+    # Use transform_plays_by_geo_region for playsByGeoRegion
     FetchParams(
         openpodcast_endpoint="playsByGeoRegion",
-        anchor_call=lambda: transform_plays_by_geo_city(
+        anchor_call=lambda: transform_plays_by_geo_region(
             geo_stats_region,
-            country=geo_city_country,
-        ),
-        start_date=START_DATE,
-        end_date=END_DATE,
-    ),
-    FetchParams(
-        openpodcast_endpoint="playsByGeoCity",
-        anchor_call=lambda: transform_plays_by_geo_city(
-            geo_stats_city,
-            country=geo_city_country,
-            region=geo_city_region,
+            country=geo_region_country,
         ),
         start_date=START_DATE,
         end_date=END_DATE,
