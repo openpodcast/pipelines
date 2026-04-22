@@ -297,15 +297,16 @@ endpoints: list[FetchParams] = [
         start_date=START_DATE,
         end_date=END_DATE,
     ),
+    # Countries
     FetchParams(
         openpodcast_endpoint="playsByGeo",
         anchor_call=lambda: transform_plays_by_geo(geo_stats_country),
         start_date=START_DATE,
         end_date=END_DATE,
     ),
-    # Use transform_plays_by_geo_region for playsByGeoRegion
+    # endpoint is still called "byGeoCity" for legacy reasons, even though it now contains region-level data.
     FetchParams(
-        openpodcast_endpoint="playsByGeoRegion",
+        openpodcast_endpoint="byGeoCity",
         anchor_call=lambda: transform_plays_by_geo_region(
             geo_stats_region,
             country=geo_region_country,
