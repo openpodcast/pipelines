@@ -306,7 +306,7 @@ endpoints: list[FetchParams] = [
     ),
     # endpoint is still called "byGeoCity" for legacy reasons, even though it now contains region-level data.
     FetchParams(
-        openpodcast_endpoint="byGeoCity",
+        openpodcast_endpoint="playsByGeoCity",
         anchor_call=lambda: transform_plays_by_geo_region(
             geo_stats_region,
             country=geo_region_country,
