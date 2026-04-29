@@ -18,8 +18,7 @@ print("Initializing environment")
 
 # endpoint to receive apple cookie to access podcasters API
 APPLE_AUTOMATION_ENDPOINT = load_file_or_env("APPLE_AUTOMATION_ENDPOINT")
-APPLE_AUTOMATION_BEARER_TOKEN = load_file_or_env(
-    "APPLE_AUTOMATION_BEARER_TOKEN")
+APPLE_AUTOMATION_BEARER_TOKEN = load_file_or_env("APPLE_AUTOMATION_BEARER_TOKEN")
 
 # ID of the podcast we want to fetch data for
 APPLE_PODCAST_ID = load_file_or_env("APPLE_PODCAST_ID")
@@ -43,8 +42,7 @@ STORE_DATA = os.environ.get("STORE_DATA", "False") == "True"
 # Store data locally for debugging. If this is set to `False`,
 # data will only be sent to Open Podcast API.
 # Load from environment variable if set, otherwise default to 0
-STORE_DATA = os.environ.get(
-    "STORE_DATA", "False").lower() in ("true", "1", "t")
+STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 
 # Number of worker threads to fetch data from the Spotify API by default
 NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
@@ -55,18 +53,20 @@ TASK_DELAY = float(os.environ.get("TASK_DELAY", 0))
 # Start- and end-date for the data we want to fetch
 # Load from environment variable if set, otherwise set to defaults
 START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=7)
-                   ).strftime("%Y-%m-%d")
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=7)).strftime("%Y-%m-%d")
 )
 END_DATE = load_env("END_DATE", (dt.datetime.now()).strftime("%Y-%m-%d"))
 
 # Due to weird behaviour of the Apple API when fetching just a few days,
 # extend the date range to 30 days if shorter
-if (dt.datetime.strptime(END_DATE, "%Y-%m-%d") - dt.datetime.strptime(START_DATE, "%Y-%m-%d")).days < 30:
-    START_DATE = (dt.datetime.strptime(END_DATE, "%Y-%m-%d") -
-                  dt.timedelta(days=30)).strftime("%Y-%m-%d")
-    print(
-        f"Date range too short, extending to 30 days. New start date: {START_DATE}")
+if (
+    dt.datetime.strptime(END_DATE, "%Y-%m-%d")
+    - dt.datetime.strptime(START_DATE, "%Y-%m-%d")
+).days < 30:
+    START_DATE = (
+        dt.datetime.strptime(END_DATE, "%Y-%m-%d") - dt.timedelta(days=30)
+    ).strftime("%Y-%m-%d")
+    print(f"Date range too short, extending to 30 days. New start date: {START_DATE}")
 
 # The trends API supports historical data imports with daily resolution
 # up to 4 months in the past.
@@ -78,16 +78,26 @@ DAYS_PER_CHUNK = os.environ.get("DAYS_PER_CHUNK", 4 * 30)
 date_range = get_date_range(START_DATE, END_DATE)
 
 # check if all needed environment variables are set
-missing_vars = list(filter(lambda x: globals()[x] is None, [
-                    "APPLE_AUTOMATION_ENDPOINT", "APPLE_AUTOMATION_BEARER_TOKEN", "APPLE_PODCAST_ID", "OPENPODCAST_API_TOKEN"]))
+missing_vars = list(
+    filter(
+        lambda x: globals()[x] is None,
+        [
+            "APPLE_AUTOMATION_ENDPOINT",
+            "APPLE_AUTOMATION_BEARER_TOKEN",
+            "APPLE_PODCAST_ID",
+            "OPENPODCAST_API_TOKEN",
+        ],
+    )
+)
 
 if len(missing_vars):
     logger.error(
-        f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting...")
+        f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting..."
+    )
     exit(1)
 
 print("Done initializing environment")
-print(f"Import date range: ", date_range)
+print("Import date range: ", date_range)
 
 
 def get_request_lambda(f, *args, **kwargs):
@@ -115,8 +125,7 @@ if response.status_code != 200:
 logger.info(
     f"Receiving cookies from Apple from automation endpoint {APPLE_AUTOMATION_ENDPOINT}"
 )
-cookies = apple.get_cookies(
-    APPLE_AUTOMATION_BEARER_TOKEN, APPLE_AUTOMATION_ENDPOINT)
+cookies = apple.get_cookies(APPLE_AUTOMATION_BEARER_TOKEN, APPLE_AUTOMATION_ENDPOINT)
 
 apple_connector = AppleConnector(
     podcast_id=APPLE_PODCAST_ID,
@@ -174,7 +183,7 @@ for chunk_id, (start_date, end_date) in enumerate(date_range.chunks(DAYS_PER_CHU
                 "metric": Metric.TIME_LISTENED,
                 "dimension": Dimension.BY_FOLLOW_STATE,
             },
-        )
+        ),
     ]
 
 endpoints += [

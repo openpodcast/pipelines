@@ -2,12 +2,13 @@
 Tests for date utility functions.
 These tests can run independently without environment setup.
 """
+
 import unittest
 from datetime import datetime, date
 from job.date_utils import (
     extract_date_str_from_iso,
     get_date_string,
-    get_end_date_on_granularity
+    get_end_date_on_granularity,
 )
 
 

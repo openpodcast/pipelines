@@ -62,7 +62,6 @@ if not SPOTIFY_SHOW_URI and PODCAST_ID.startswith("spotify:show:"):
     SPOTIFY_SHOW_URI = PODCAST_ID
 
 
-
 # Date range used for analytics queries.
 START_DATE_STR = load_env(
     "START_DATE",
@@ -134,6 +133,7 @@ if response.status_code != 200:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def get_request_lambda(f, *args, **kwargs):
     """Capture arguments in a closure (call-by-value)."""
     return lambda: f(*args, **kwargs)
@@ -155,7 +155,9 @@ def get_top_geo_name(geo_payload: dict) -> str | None:
 
 def get_numeric_episode_id(episode: dict) -> int | str | None:
     """Return numeric Anchor episode ID from episode payload variants."""
-    return episode.get("id") or episode.get("episodeId") or episode.get("stationEpisodeId")
+    return (
+        episode.get("id") or episode.get("episodeId") or episode.get("stationEpisodeId")
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -202,9 +204,7 @@ if top_country:
             start_date=START_DATE,
             end_date=END_DATE,
         )
-        logger.info(
-            f"Fetched GEO_REGION drill-down for {top_country}."
-        )
+        logger.info(f"Fetched GEO_REGION drill-down for {top_country}.")
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"GEO drill-down fetch failed, keeping empty payloads: {exc}")
 else:
@@ -227,11 +227,9 @@ for ep in raw_episodes:
         continue
     try:
         plays_data = connector.get_episode_plays_total(episode_uri=ep_uri)
-        all_time_episode_plays.append({
-            "uri": ep_uri,
-            "episode": ep,
-            "plays_data": plays_data
-        })
+        all_time_episode_plays.append(
+            {"uri": ep_uri, "episode": ep, "plays_data": plays_data}
+        )
     except Exception as exc:
         logger.warning(f"Failed to fetch episode plays total for {ep_uri}: {exc}")
 

@@ -1,6 +1,5 @@
 import datetime as dt
 import unittest
-from typing import Tuple
 
 from job.dates import DateRange
 from job.dates import get_date_range
