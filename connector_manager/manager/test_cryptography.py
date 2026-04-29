@@ -8,7 +8,8 @@ passphrase = "supersecret"
 
 original = {"testkey": "testvalue"}
 encrypted = {
-    "testkey": "jA0EBwMCiwr1cCWJid//0j8B7rMbB+DT6lGsQpCerFKIeYNbe3YWcTKsvr+3fwAVwnJvxRbBAILR+9maT6rm56oC740ypydEHXQ7YVgyAIQ="}
+    "testkey": "jA0EBwMCiwr1cCWJid//0j8B7rMbB+DT6lGsQpCerFKIeYNbe3YWcTKsvr+3fwAVwnJvxRbBAILR+9maT6rm56oC740ypydEHXQ7YVgyAIQ="
+}
 
 json_original = json.dumps(original)
 json_encrypted = json.dumps(encrypted)
@@ -19,19 +20,19 @@ class TestDecrypt(unittest.TestCase):
         self.assertEqual(decrypt_json(json_encrypted, passphrase), original)
 
     def test_wrong_passphrase(self):
-        self.assertNotEqual(decrypt_json(
-            json_encrypted, "wrongpassphrase"), original)
+        self.assertNotEqual(decrypt_json(json_encrypted, "wrongpassphrase"), original)
 
     def test_unecrypted_value_is_untouched(self):
         json = '{"testkey": "testvalue"}'
-        self.assertEqual(decrypt_json(json, passphrase)
-                         ["testkey"], "testvalue")
+        self.assertEqual(decrypt_json(json, passphrase)["testkey"], "testvalue")
 
     def test_unencrypted_url(self):
         # apparently the url can be base64-encoded and the gpg fails without an error msg, just an empty string
         json = '{"APPLE_AUTOMATION_ENDPOINT": "https://apple-automation.somedomain.com/endpoint"}'
-        self.assertEqual(decrypt_json(json, passphrase)
-                         ["APPLE_AUTOMATION_ENDPOINT"], "https://apple-automation.somedomain.com/endpoint")
+        self.assertEqual(
+            decrypt_json(json, passphrase)["APPLE_AUTOMATION_ENDPOINT"],
+            "https://apple-automation.somedomain.com/endpoint",
+        )
 
 
 class TestEncrypt(unittest.TestCase):
@@ -56,7 +57,9 @@ class TestEncrypt(unittest.TestCase):
         decrypted_data = decrypt_json(encrypted_json, passphrase)
 
         # Convert expected values to strings since encrypt_json converts non-string values to strings
-        expected = {k: str(v) if v is not None else "None" for k, v in test_data.items()}
+        expected = {
+            k: str(v) if v is not None else "None" for k, v in test_data.items()
+        }
         self.assertEqual(decrypted_data, expected)
 
     def test_wrong_passphrase_decrypt(self):

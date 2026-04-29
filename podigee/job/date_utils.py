@@ -1,6 +1,7 @@
 """
 Date utility functions for Podigee data processing.
 """
+
 from datetime import datetime
 import calendar
 
@@ -9,7 +10,7 @@ def extract_date_str_from_iso(iso_string):
     """
     Extract date string (YYYY-MM-DD) from ISO datetime string.
     Since Podigee always sends UTC timestamps with 'Z', this preserves the UTC date.
-    
+
     Returns None if iso_string is None or empty, allowing callers to handle missing dates explicitly.
     """
     if not iso_string:
@@ -31,7 +32,7 @@ def get_date_string(date_obj):
         return date_obj
     elif isinstance(date_obj, datetime):
         return date_obj.strftime("%Y-%m-%d")
-    elif hasattr(date_obj, 'strftime'):  # handles date objects too
+    elif hasattr(date_obj, "strftime"):  # handles date objects too
         return date_obj.strftime("%Y-%m-%d")
     else:
         return str(date_obj)
@@ -50,7 +51,7 @@ def get_end_date_on_granularity(granularity, start_date):
             date_obj = datetime.strptime(start_date, "%Y-%m-%d")
         else:
             date_obj = start_date
-        
+
         # Get last day of the month
         last_day = calendar.monthrange(date_obj.year, date_obj.month)[1]
         end_date = date_obj.replace(day=last_day)

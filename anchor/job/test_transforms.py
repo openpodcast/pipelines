@@ -21,7 +21,9 @@ class TestDemographicTransforms(unittest.TestCase):
         transformed = transform_plays_by_age_range(graphql_data)
         required_buckets = {"0-17", "18-22", "23-27", "28-34", "35-44", "45-59", "60+"}
 
-        self.assertEqual(set(transformed["data"]["translationMapping"].keys()), required_buckets)
+        self.assertEqual(
+            set(transformed["data"]["translationMapping"].keys()), required_buckets
+        )
         self.assertEqual(set(transformed["data"]["colors"].keys()), required_buckets)
 
     def test_transform_plays_by_gender_handles_null_gender_breakdown(self):

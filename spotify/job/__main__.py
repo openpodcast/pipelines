@@ -55,9 +55,7 @@ try:
     # Store data locally for debugging. If this is set to `False`,
     # data will only be sent to Open Podcast API.
     # Load from environment variable if set, otherwise default to 0
-    STORE_DATA = os.environ.get(
-        "STORE_DATA", "False").lower() in ("true", "1", "t")
-
+    STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 
     # Number of worker threads to fetch data from the Spotify API by default
     NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
@@ -69,8 +67,7 @@ try:
     # Start- and end-date for the data we want to fetch
     # Load from environment variable if set, otherwise set to defaults
     START_DATE = load_env(
-        "START_DATE", (dt.datetime.now() - dt.timedelta(days=3)
-                    ).strftime("%Y-%m-%d")
+        "START_DATE", (dt.datetime.now() - dt.timedelta(days=3)).strftime("%Y-%m-%d")
     )
     END_DATE = load_env(
         "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
@@ -79,12 +76,17 @@ try:
     date_range = get_date_range(START_DATE, END_DATE)
 
     # check if all needed environment variables are set
-    missing_vars = list(filter(lambda x: globals()[x] is None,
-                        ["SP_DC", "SP_KEY", "SPOTIFY_PODCAST_ID", "OPENPODCAST_API_TOKEN"]))
+    missing_vars = list(
+        filter(
+            lambda x: globals()[x] is None,
+            ["SP_DC", "SP_KEY", "SPOTIFY_PODCAST_ID", "OPENPODCAST_API_TOKEN"],
+        )
+    )
 
     if len(missing_vars):
         logger.error(
-            f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting...")
+            f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting..."
+        )
         exit(1)
 
     print("Done initializing environment")
@@ -111,7 +113,6 @@ try:
         )
         exit(1)
 
-
     def get_request_lambda(f, *args, **kwargs):
         """
         Capture arguments in the closure so we can use them later in the call
@@ -119,10 +120,9 @@ try:
         """
         return lambda: f(*args, **kwargs)
 
-
     # Use a clean date for "today" at midnight. This avoids issues with the
     # impresions endpoint which requires exact date ranges.
-    # (For "total" and "faceted" impressions, start and end must be exactly IMPRESSIONS_DAYS_DIFF 
+    # (For "total" and "faceted" impressions, start and end must be exactly IMPRESSIONS_DAYS_DIFF
     # days apart.
     # See: https://github.com/openpodcast/spotify-connector/blob/2d3f9722662c06e8f9ddf7816c1ee81906d45655/spotifyconnector/connector.py#L460-L479)
     # It does not affect any other endpoints
@@ -165,7 +165,12 @@ try:
         FetchParams(
             openpodcast_endpoint="impressions_total",
             # Total impressions are only available for the last 30 days
-            spotify_call=get_request_lambda(spotify.impressions, "total", todayDate - dt.timedelta(days=IMPRESSIONS_DAYS_DIFF), todayDate),
+            spotify_call=get_request_lambda(
+                spotify.impressions,
+                "total",
+                todayDate - dt.timedelta(days=IMPRESSIONS_DAYS_DIFF),
+                todayDate,
+            ),
             start_date=date_range.start,
             end_date=date_range.end,
         ),
@@ -173,7 +178,10 @@ try:
             openpodcast_endpoint="impressions_faceted",
             spotify_call=get_request_lambda(
                 # Faceted impressions are only available for the last 30 days
-                spotify.impressions, "faceted", todayDate - dt.timedelta(days=IMPRESSIONS_DAYS_DIFF), todayDate 
+                spotify.impressions,
+                "faceted",
+                todayDate - dt.timedelta(days=IMPRESSIONS_DAYS_DIFF),
+                todayDate,
             ),
             start_date=date_range.start,
             end_date=date_range.end,
@@ -181,7 +189,10 @@ try:
         FetchParams(
             openpodcast_endpoint="impressions_daily",
             spotify_call=get_request_lambda(
-                spotify.impressions, "daily", todayDate - dt.timedelta(days=14), todayDate
+                spotify.impressions,
+                "daily",
+                todayDate - dt.timedelta(days=14),
+                todayDate,
             ),
             start_date=date_range.start,
             end_date=date_range.end,
@@ -189,7 +200,10 @@ try:
         FetchParams(
             openpodcast_endpoint="impressions_funnel",
             spotify_call=get_request_lambda(
-                spotify.impressions, "funnel", todayDate - dt.timedelta(days=14), todayDate
+                spotify.impressions,
+                "funnel",
+                todayDate - dt.timedelta(days=14),
+                todayDate,
             ),
             start_date=date_range.start,
             end_date=date_range.end,
@@ -200,7 +214,8 @@ try:
         FetchParams(
             openpodcast_endpoint="aggregate",
             spotify_call=get_request_lambda(
-                spotify.aggregate, current_date, current_date),
+                spotify.aggregate, current_date, current_date
+            ),
             start_date=current_date,
             end_date=current_date,
         )
@@ -218,9 +233,7 @@ try:
         endpoints += [
             FetchParams(
                 openpodcast_endpoint="episodeMetadata",
-                spotify_call=get_request_lambda(
-                    spotify.metadata, episode=episode_id
-                ),
+                spotify_call=get_request_lambda(spotify.metadata, episode=episode_id),
                 start_date=date_range.start,
                 end_date=date_range.end,
                 meta={"episode": episode_id},
@@ -228,7 +241,10 @@ try:
             FetchParams(
                 openpodcast_endpoint="detailedStreams",
                 spotify_call=get_request_lambda(
-                    spotify.streams, date_range.start, date_range.end, episode=episode_id
+                    spotify.streams,
+                    date_range.start,
+                    date_range.end,
+                    episode=episode_id,
                 ),
                 start_date=date_range.start,
                 end_date=date_range.end,
@@ -237,7 +253,10 @@ try:
             FetchParams(
                 openpodcast_endpoint="listeners",
                 spotify_call=get_request_lambda(
-                    spotify.listeners, date_range.start, date_range.end, episode=episode_id
+                    spotify.listeners,
+                    date_range.start,
+                    date_range.end,
+                    episode=episode_id,
                 ),
                 start_date=date_range.start,
                 end_date=date_range.end,
@@ -246,7 +265,8 @@ try:
             FetchParams(
                 openpodcast_endpoint="performance",
                 spotify_call=get_request_lambda(
-                    spotify.performance, episode=episode_id),
+                    spotify.performance, episode=episode_id
+                ),
                 start_date=date_range.start,
                 end_date=date_range.end,
                 meta={"episode": episode_id},
@@ -270,7 +290,7 @@ try:
 
         episode_date_range = get_date_range(
             episode_start_date.strftime("%Y-%m-%d"),
-            episode_end_date.strftime("%Y-%m-%d")
+            episode_end_date.strftime("%Y-%m-%d"),
         )
 
         endpoints += [
@@ -310,4 +330,4 @@ try:
 except CredentialsExpired as e:
     # Cleanly handle expired credential cookie
     logger.error(f"Authentication failed: {e}")
-    sys.exit(1)  
+    sys.exit(1)

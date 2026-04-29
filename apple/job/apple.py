@@ -40,8 +40,7 @@ def fetch_all_cookies(bearer_token: str, apple_automation_endpoint: str):
             apple_automation_endpoint, headers=headers, timeout=COOKIE_TIMEOUT
         )
         if response.status_code != 200:
-            raise Exception(
-                f"Failed to get cookies (second time): {response.text}")
+            raise Exception(f"Failed to get cookies (second time): {response.text}")
 
     cookies = response.json()
     return cookies

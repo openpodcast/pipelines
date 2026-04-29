@@ -79,7 +79,9 @@ if "--interactive" in sys.argv:
 # if module was started with flag --skip-repetition-check, fetch all podcasts regardless of prior fetches
 skipRepetitionCheck = False
 if "--skip-repetition-check" in sys.argv:
-    logger.info("Skip repetition check enabled: fetching all podcasts regardless of prior fetches")
+    logger.info(
+        "Skip repetition check enabled: fetching all podcasts regardless of prior fetches"
+    )
     skipRepetitionCheck = True
 
 # Import worker functions and types from separate module for multiprocessing

@@ -13,11 +13,9 @@ from job.load_env import load_env
 from job.dates import get_date_range
 from job.transforms import (
     transform_podigee_analytics_to_metrics,
-    transform_podigee_podcast_overview
+    transform_podigee_podcast_overview,
 )
-from job.date_utils import (
-    extract_date_str_from_iso
-)
+from job.date_utils import extract_date_str_from_iso
 
 from loguru import logger
 from podigeeconnector import PodigeeConnector
@@ -29,9 +27,7 @@ OPENPODCAST_API_ENDPOINT = os.environ.get(
 )
 OPENPODCAST_API_TOKEN = load_file_or_env("OPENPODCAST_API_TOKEN")
 
-BASE_URL = load_file_or_env(
-    "PODIGEE_BASE_URL", "https://app.podigee.com/api/v1"
-)
+BASE_URL = load_file_or_env("PODIGEE_BASE_URL", "https://app.podigee.com/api/v1")
 
 # Podigee podcast IDs are integers and different from Open Podcast IDs
 # One Podigee account can have multiple podcasts, so we need to specify the podcast ID
@@ -51,8 +47,7 @@ NUM_WORKERS = int(os.environ.get("NUM_WORKERS", 1))
 # Podigee default is last 30 days
 TODAY_DATE = dt.datetime.now()
 START_DATE = load_env(
-    "START_DATE", (dt.datetime.now() - dt.timedelta(days=31)
-                   ).strftime("%Y-%m-%d")
+    "START_DATE", (dt.datetime.now() - dt.timedelta(days=31)).strftime("%Y-%m-%d")
 )
 END_DATE = load_env(
     "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
@@ -95,7 +90,9 @@ if has_api_token:
         podigee_access_token=PODIGEE_ACCESS_TOKEN,
     )
 else:
-    logger.info("Fallback: Using Podigee username/password for authentication. Set API token to use it instead.")
+    logger.info(
+        "Fallback: Using Podigee username/password for authentication. Set API token to use it instead."
+    )
     podigee = PodigeeConnector.from_credentials(
         base_url=BASE_URL,
         username=PODIGEE_USERNAME,
@@ -116,7 +113,7 @@ if not PODCAST_ID or PODCAST_ID.strip() == "":
     exit(0)
 
 # The Podigee podcast ID is expected to be an integer
-# Try to convert it to an integer, if it fails, this throws exception 
+# Try to convert it to an integer, if it fails, this throws exception
 try:
     PODCAST_ID = int(PODCAST_ID)
 except ValueError:
@@ -139,16 +136,16 @@ if not podcast:
 # Extract and validate podcast title
 podcast_title = podcast.get("title")
 # published at format is "2022-01-25T22:19:42Z"
-podcast_published_at = datetime.fromisoformat(podcast.get("published_at").replace("Z", "+00:00"))
+podcast_published_at = datetime.fromisoformat(
+    podcast.get("published_at").replace("Z", "+00:00")
+)
 
 if not podcast_title:
     logger.error(f"Podcast with ID {PODCAST_ID} has no title")
     exit(1)
 
 open_podcast = OpenPodcastConnector(
-    OPENPODCAST_API_ENDPOINT,
-    OPENPODCAST_API_TOKEN,
-    PODCAST_ID
+    OPENPODCAST_API_ENDPOINT, OPENPODCAST_API_TOKEN, PODCAST_ID
 )
 
 # Check that the Open Podcast API is healthy
@@ -172,9 +169,8 @@ def get_podcast_metadata():
     """
     Get podcast metadata formatted for OpenPodcast API.
     """
-    return {
-        "name": podcast_title
-    }
+    return {"name": podcast_title}
+
 
 endpoints = [
     # Podcast metadata - get basic podcast information
@@ -188,22 +184,26 @@ endpoints = [
     FetchParams(
         openpodcast_endpoint="metrics",
         podigee_call=lambda: transform_podigee_analytics_to_metrics(
-            podigee.podcast_analytics(PODCAST_ID, start=date_range.start, end=date_range.end),
+            podigee.podcast_analytics(
+                PODCAST_ID, start=date_range.start, end=date_range.end
+            ),
             # we fetch this just every week on Monday and the first day of the month
             # daily downloads are stored every day
-            not (TODAY_DATE.weekday() == 0 or TODAY_DATE.day == 1)
-            ),
-            start_date=date_range.start,
-            end_date=date_range.end,
+            not (TODAY_DATE.weekday() == 0 or TODAY_DATE.day == 1),
         ),
+        start_date=date_range.start,
+        end_date=date_range.end,
+    ),
     # Fetch total downloads since beginning which is returned in months
     # the current month is not complete and is updated every day
     # important: end date is in the future for the current month, as it is always the last day of the month
     FetchParams(
         openpodcast_endpoint="metrics",
         podigee_call=lambda: transform_podigee_analytics_to_metrics(
-            podigee.podcast_analytics(PODCAST_ID, start=podcast_published_at, end=date_range.end),
-            store_downloads_only=True
+            podigee.podcast_analytics(
+                PODCAST_ID, start=podcast_published_at, end=date_range.end
+            ),
+            store_downloads_only=True,
         ),
         start_date=podcast_published_at,
         end_date=date_range.end,
@@ -212,7 +212,9 @@ endpoints = [
     FetchParams(
         openpodcast_endpoint="metrics",
         podigee_call=lambda: transform_podigee_podcast_overview(
-            podigee.podcast_overview(PODCAST_ID, start=date_range.start, end=date_range.end),
+            podigee.podcast_overview(
+                PODCAST_ID, start=date_range.start, end=date_range.end
+            ),
         ),
         start_date=date_range.start,
         end_date=date_range.end,
@@ -223,18 +225,27 @@ episodes = podigee.episodes(PODCAST_ID)
 
 for episode in episodes:
     print(episode)
-    episode_published_at_str = extract_date_str_from_iso(episode.get("published_at", ""))
+    episode_published_at_str = extract_date_str_from_iso(
+        episode.get("published_at", "")
+    )
     # Convert to datetime object for API calls
-    episode_published_at = datetime.strptime(episode_published_at_str, "%Y-%m-%d") if episode_published_at_str else date_range.start
+    episode_published_at = (
+        datetime.strptime(episode_published_at_str, "%Y-%m-%d")
+        if episode_published_at_str
+        else date_range.start
+    )
     endpoints += [
         # Episode metadata - basic episode information
         FetchParams(
             openpodcast_endpoint="metadata",
-            podigee_call=get_request_lambda(lambda ep: {
-                "ep_name": ep.get("title", ""),
-                "ep_url": ep.get("url", ""),
-                "ep_release_date": ep.get("published_at", "")
-            }, episode),
+            podigee_call=get_request_lambda(
+                lambda ep: {
+                    "ep_name": ep.get("title", ""),
+                    "ep_url": ep.get("url", ""),
+                    "ep_release_date": ep.get("published_at", ""),
+                },
+                episode,
+            ),
             start_date=date_range.start,
             end_date=date_range.end,
             meta={"episode": str(episode["id"])},
@@ -244,30 +255,40 @@ for episode in episodes:
             openpodcast_endpoint="metrics",
             podigee_call=get_request_lambda(
                 lambda ep_id: transform_podigee_analytics_to_metrics(
-                    podigee.episode_analytics(ep_id, granularity=None, start=date_range.start, end=date_range.end),
+                    podigee.episode_analytics(
+                        ep_id,
+                        granularity=None,
+                        start=date_range.start,
+                        end=date_range.end,
+                    ),
                     # for now we just store the downloads and do not store platforms etc. per episode
-                    store_downloads_only=True
+                    store_downloads_only=True,
                 ),
-                str(episode["id"])
+                str(episode["id"]),
             ),
             start_date=date_range.start,
             end_date=date_range.end,
             meta={"episode": str(episode["id"])},
         ),
-         # We store the downloads since publication. The Podigee API returns one data point per month.
+        # We store the downloads since publication. The Podigee API returns one data point per month.
         FetchParams(
             openpodcast_endpoint="metrics",
             podigee_call=get_request_lambda(
                 lambda ep_id: transform_podigee_analytics_to_metrics(
-                    podigee.episode_analytics(ep_id, granularity="monthly", start=episode_published_at, end=date_range.end),
-                    store_downloads_only=True
+                    podigee.episode_analytics(
+                        ep_id,
+                        granularity="monthly",
+                        start=episode_published_at,
+                        end=date_range.end,
+                    ),
+                    store_downloads_only=True,
                 ),
-                str(episode["id"])
+                str(episode["id"]),
             ),
             start_date=episode_published_at,
             end_date=date_range.end,
             meta={"episode": str(episode["id"])},
-        )
+        ),
     ]
 
 # Create a queue to hold the FetchParams objects
