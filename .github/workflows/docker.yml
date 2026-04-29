@@ -13,11 +13,12 @@ on:
       - "main"
 
 env:
+  IMAGE_NAME: openpodcast/connector-manager
   DOCKER_PLATFORMS: linux/amd64,linux/arm64/v8
 
 jobs:
   build:
-    name: Build ${{ matrix.image }}
+    name: Build ${{ env.IMAGE_NAME }}
     runs-on: ubuntu-latest
     # Don't run on forks
     if: >-
@@ -25,30 +26,6 @@ jobs:
       github.actor != 'dependabot[bot]' &&
       ( github.event_name != 'pull_request' ||
         github.event.pull_request.head.repo.owner.login == github.event.pull_request.base.repo.owner.login )
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - image: openpodcast/anchor-connector
-            context: anchor
-            dockerfile: anchor/Dockerfile
-            readme: anchor/README.md
-          - image: openpodcast/apple-connector
-            context: apple
-            dockerfile: apple/Dockerfile
-            readme: apple/README.md
-          - image: openpodcast/podigee-connector
-            context: podigee
-            dockerfile: podigee/Dockerfile
-            readme: podigee/README.md
-          - image: openpodcast/spotify-connector
-            context: spotify
-            dockerfile: spotify/Dockerfile
-            readme: spotify/README.md
-          - image: openpodcast/connector-manager
-            context: .
-            dockerfile: ./Dockerfile
-            readme: README.md
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,7 +35,7 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ${{ matrix.image }}
+            ${{ env.IMAGE_NAME }}
           tags: |
             type=schedule
             type=ref,event=branch
@@ -85,16 +62,16 @@ jobs:
       - name: Build and Push Image
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
+          context: .
+          file: ./Dockerfile
           platforms: ${{ env.DOCKER_PLATFORMS }}
           push: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             COMMIT_SHA=${{ github.sha }}
-          cache-from: type=gha,scope=${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Update DockerHub description
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -102,5 +79,5 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: ${{ matrix.image }}
-          readme-filepath: ${{ matrix.readme }}
+          repository: ${{ env.IMAGE_NAME }}
+          readme-filepath: README.md
