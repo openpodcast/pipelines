@@ -3,9 +3,7 @@ Handles Podigee OAuth operations, including token refresh and database updates.
 """
 from manager.cryptography import encrypt_json
 import mysql.connector
-import json
 from loguru import logger
-import os
 import requests
 
 def refresh_podigee_token(client_id, client_secret, refresh_token, redirect_uri=None):
@@ -96,9 +94,9 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
     
     if not token_data or "access_token" not in token_data or "refresh_token" not in token_data:
         logger.error(f"Failed to refresh Podigee token for {pod_name}")
-        logger.error(f"This likely means the refresh token was already used or is invalid.")
+        logger.error("This likely means the refresh token was already used or is invalid.")
         logger.error(f"Original refresh token was: {original_refresh_token[:10]}...")
-        logger.error(f"Manual intervention may be required to re-authenticate the Podigee connection.")
+        logger.error("Manual intervention may be required to re-authenticate the Podigee connection.")
         return None
 
     # Check if we got a new refresh token (it should be different from the original)
@@ -146,7 +144,7 @@ def handle_podigee_refresh(db_connection, account_id, source_name, source_access
     except (mysql.connector.Error, ValueError) as e:
         logger.error(f"Failed to update Podigee refresh token in database: {e}")
         logger.error(f"New refresh token that could not be saved: {token_data['refresh_token']} Account ID: {account_id}, Pod name: {pod_name}")
-        logger.error(f"Manual intervention required: update the refresh token in the database manually.")
+        logger.error("Manual intervention required: update the refresh token in the database manually.")
         return None
         
     return source_access_keys

@@ -3,10 +3,9 @@ Complete tests for Podigee OAuth connector functionality.
 Tests the refresh token logic, database update scenarios, and token reuse issues.
 """
 import pytest
-import json
 import requests
 import mysql.connector
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch
 from manager.podigee_connector import refresh_podigee_token, handle_podigee_refresh
 
 

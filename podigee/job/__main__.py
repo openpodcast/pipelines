@@ -1,12 +1,9 @@
 import threading
 import os
 import datetime as dt
-import requests
-import json
 
 from queue import Queue
-from datetime import datetime, timedelta
-import calendar
+from datetime import datetime
 
 from job.fetch_params import FetchParams
 from job.worker import worker
@@ -19,9 +16,7 @@ from job.transforms import (
     transform_podigee_podcast_overview
 )
 from job.date_utils import (
-    extract_date_str_from_iso,
-    get_date_string,
-    get_end_date_on_granularity
+    extract_date_str_from_iso
 )
 
 from loguru import logger

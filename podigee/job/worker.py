@@ -1,5 +1,4 @@
 import queue
-from time import sleep
 
 import requests
 from loguru import logger

@@ -87,7 +87,7 @@ if len(missing_vars):
     exit(1)
 
 print("Done initializing environment")
-print(f"Import date range: ", date_range)
+print("Import date range: ", date_range)
 
 
 def get_request_lambda(f, *args, **kwargs):

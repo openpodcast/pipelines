@@ -8,7 +8,6 @@ open_podcast.py).
 """
 
 from datetime import datetime, timezone
-from loguru import logger
 
 
 # ---------------------------------------------------------------------------
