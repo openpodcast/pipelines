@@ -61,11 +61,7 @@ PODCAST_ID = load_file_or_env("PODCAST_ID", "")
 if not SPOTIFY_SHOW_URI and PODCAST_ID.startswith("spotify:show:"):
     SPOTIFY_SHOW_URI = PODCAST_ID
 
-# Optional: legacy station ID – only needed if get_all_episodes is called
-# without a show URI.  Can also be supplied as PODCAST_ID when numeric.
-SPOTIFY_STATION_ID = load_file_or_env("SPOTIFY_STATION_ID", "")
-if not SPOTIFY_STATION_ID and PODCAST_ID.isdigit():
-    SPOTIFY_STATION_ID = PODCAST_ID
+
 
 # Date range used for analytics queries.
 START_DATE_STR = load_env(
@@ -104,11 +100,14 @@ print("Done initializing environment")
 # Connectors
 # ---------------------------------------------------------------------------
 
+# Note: as of spotifygraphqlconnector 0.5.0 the GraphQL API keys the episode
+# list by ``showUri`` (Spotify migrated ``WebGetIndexedEpisodeList`` away from
+# ``stationId`` in April 2026), so ``SPOTIFY_STATION_ID`` is no longer needed
+# and the connector ignores it.
 connector = SpotifyGraphQLConnector(
     sp_dc=SPOTIFY_SP_DC,
     sp_key=SPOTIFY_SP_KEY,
     show_uri=SPOTIFY_SHOW_URI or None,
-    station_id=SPOTIFY_STATION_ID or None,
 )
 
 # Resolve the show URI once so every subsequent call can reuse it.
