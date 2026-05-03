@@ -1,7 +1,7 @@
 mysql_connector_python==8.0.33
 python_gnupg==0.5.0
 appleconnector==0.4.1
-spotifygraphqlconnector==0.5.1
+spotifygraphqlconnector==0.5.2
 spotifyconnector==0.8.2
 podigeeconnector==0.3.0
 autopep8==1.7.0
