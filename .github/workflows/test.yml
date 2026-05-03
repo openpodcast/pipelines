@@ -17,7 +17,6 @@ jobs:
       matrix:
         pipeline:
           - anchor
-          - apple
           - connector_manager
           - podigee
           - spotify
@@ -48,3 +47,25 @@ jobs:
 
       - name: Run tests
         run: python -m pytest -v
+
+  test-apple:
+    name: Test apple
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./apple
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v8
+        with:
+          enable-cache: true
+          cache-dependency-glob: apple/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --dev --frozen
+
+      - name: Run tests
+        run: uv run pytest -v
