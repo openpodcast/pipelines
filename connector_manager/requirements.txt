@@ -3,7 +3,7 @@ python_gnupg==0.5.0
 appleconnector==0.4.1
 spotifygraphqlconnector==0.5.2
 spotifyconnector==0.8.2
-podigeeconnector==0.3.0
+podigeeconnector==0.4.1
 autopep8==1.7.0
 backoff==1.11.1
 certifi==2024.2.2

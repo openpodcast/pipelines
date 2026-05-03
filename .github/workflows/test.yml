@@ -18,7 +18,6 @@ jobs:
         pipeline:
           - anchor
           - connector_manager
-          - podigee
           - spotify
     defaults:
       run:
@@ -48,12 +47,18 @@ jobs:
       - name: Run tests
         run: python -m pytest -v
 
-  test-apple:
-    name: Test apple
+  test-uv:
+    name: Test ${{ matrix.pipeline }} (uv)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        pipeline:
+          - apple
+          - podigee
     defaults:
       run:
-        working-directory: ./apple
+        working-directory: ./${{ matrix.pipeline }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -62,7 +67,7 @@ jobs:
         uses: astral-sh/setup-uv@v8.1.0
         with:
           enable-cache: true
-          cache-dependency-glob: apple/uv.lock
+          cache-dependency-glob: ${{ matrix.pipeline }}/uv.lock
 
       - name: Install dependencies
         run: uv sync --dev --frozen
