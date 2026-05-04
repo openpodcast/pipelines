@@ -16,9 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         pipeline:
-          - anchor
           - connector_manager
-          - spotify
     defaults:
       run:
         working-directory: ./${{ matrix.pipeline }}
@@ -54,8 +52,10 @@ jobs:
       fail-fast: false
       matrix:
         pipeline:
+          - anchor
           - apple
           - podigee
+          - spotify
     defaults:
       run:
         working-directory: ./${{ matrix.pipeline }}
