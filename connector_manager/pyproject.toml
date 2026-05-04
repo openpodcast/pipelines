@@ -1,0 +1,45 @@
+[project]
+name = "connector-manager"
+version = "0.1.0"
+description = "Open Podcast connector manager: orchestrates per-source pipelines and handles credentials."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Open Podcast" },
+]
+
+# Runtime dependencies of the manager itself.
+#
+# The per-source pipelines (apple, anchor, podigee, spotify) are launched as
+# subprocesses by manager.worker against the *same* Python interpreter (see
+# the Dockerfile), so their connector libraries must be installed alongside
+# the manager. They're listed here rather than relying on each pipeline's
+# own pyproject.toml so the Docker image only needs a single `uv sync`.
+dependencies = [
+    "loguru>=0.7.3",
+    "mysql-connector-python>=8.0.33",
+    "python-gnupg>=0.5.0",
+    "requests>=2.32.5",
+    "PyYAML>=6.0.3",
+    "tenacity>=9.1.4",
+    # Per-source connectors (kept in sync with each pipeline's pyproject.toml).
+    "appleconnector>=0.4.1",
+    "podigeeconnector>=0.4.1",
+    "spotifyconnector>=0.8.3",
+    "spotifygraphqlconnector>=0.5.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+    "pytest-cov>=6.2.0",
+    "ruff>=0.6.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["manager"]
+python_files = ["test_*.py"]
