@@ -9,12 +9,12 @@ def transform_podigee_podcast_overview(overview_data):
     """
     Transform Podigee podcast overview data to OpenPodcast format.
     """
-    if not overview_data or "meta" not in overview_data:
+    if not overview_data or not overview_data.get("meta"):
         return {"metrics": []}
 
     # Extract common metadata
-    start_date = extract_date_str_from_iso(overview_data["meta"]["from"])
-    end_date = extract_date_str_from_iso(overview_data["meta"]["to"])
+    start_date = extract_date_str_from_iso(overview_data["meta"].get("from"))
+    end_date = extract_date_str_from_iso(overview_data["meta"].get("to"))
 
     metrics = []
 
@@ -57,15 +57,17 @@ def transform_podigee_analytics_to_metrics(analytics_data, store_downloads_only=
     Transform Podigee analytics data to OpenPodcast metrics format.
     Expected format: {"metrics": [{"start": "date", "end": "date", "dimension": "string", "subdimension": "string", "value": number}]}
     """
-    if not analytics_data or "objects" not in analytics_data:
+    if not analytics_data or not analytics_data.get("objects"):
         return {"metrics": []}
 
-    aggregation_granularity = analytics_data.get("meta", {}).get(
+    aggregation_granularity = (analytics_data.get("meta") or {}).get(
         "aggregation_granularity", "day"
     )
     metrics = []
 
     for day_data in analytics_data["objects"]:
+        if not day_data:
+            continue
         date = extract_date_str_from_iso(day_data.get("downloaded_on", ""))
         if not date:
             continue
