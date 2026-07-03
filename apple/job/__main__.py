@@ -116,7 +116,7 @@ logger.info(
     f"Receiving cookies from Apple from automation endpoint {APPLE_AUTOMATION_ENDPOINT}"
 )
 cookies = apple.get_cookies(
-    APPLE_AUTOMATION_BEARER_TOKEN, APPLE_AUTOMATION_ENDPOINT)
+    APPLE_AUTOMATION_BEARER_TOKEN, APPLE_AUTOMATION_ENDPOINT, APPLE_PODCAST_ID)
 
 apple_connector = AppleConnector(
     podcast_id=APPLE_PODCAST_ID,
