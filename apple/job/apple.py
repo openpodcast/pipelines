@@ -49,8 +49,7 @@ def fetch_all_cookies(
             timeout=COOKIE_TIMEOUT,
         )
         if response.status_code != 200:
-            raise Exception(
-                f"Failed to get cookies (second time): {response.text}")
+            raise Exception(f"Failed to get cookies (second time): {response.text}")
 
     cookies = response.json()
     return cookies

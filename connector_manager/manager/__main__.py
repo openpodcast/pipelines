@@ -4,16 +4,13 @@ import os
 import subprocess
 import sys
 from collections import defaultdict
-from pathlib import Path
 
 import mysql.connector
 from loguru import logger
 
-from manager.cryptography import decrypt_json
 from manager.load_env import load_env, load_file_or_env
 
 # Import the Podigee connector functionality
-from manager.podigee_connector import handle_podigee_refresh
 
 print("Initializing worker environment")
 
@@ -82,11 +79,13 @@ if "--interactive" in sys.argv:
 # if module was started with flag --skip-repetition-check, fetch all podcasts regardless of prior fetches
 skipRepetitionCheck = False
 if "--skip-repetition-check" in sys.argv:
-    logger.info("Skip repetition check enabled: fetching all podcasts regardless of prior fetches")
+    logger.info(
+        "Skip repetition check enabled: fetching all podcasts regardless of prior fetches"
+    )
     skipRepetitionCheck = True
 
 # Import worker functions and types from separate module for multiprocessing
-from manager.worker import PodcastJob, process_source_jobs
+from manager.worker import PodcastJob, process_source_jobs  # noqa: E402
 
 
 def print_debug_output():

@@ -1,0 +1,30 @@
+[project]
+name = "anchor-pipeline"
+version = "0.1.0"
+description = "Open Podcast pipeline that fetches Anchor-hosted podcast analytics via the Spotify Creators GraphQL API and posts them in the legacy Anchor-compatible shape."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Open Podcast" },
+]
+
+dependencies = [
+    "spotifygraphqlconnector>=0.5.2",
+    "loguru>=0.7.3",
+    "requests>=2.32.5",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.4.0",
+    "pytest-cov>=6.2.0",
+    "ruff>=0.6.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["job"]
+python_files = ["test_*.py"]

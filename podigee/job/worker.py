@@ -1,5 +1,4 @@
 import queue
-from time import sleep
 
 import requests
 from loguru import logger
@@ -24,18 +23,28 @@ def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
     """
     try:
         data = params.podigee_call()
-        if data:
-            logger.info(
-                f"Sending {params.openpodcast_endpoint} to Open Podcast")
-            response = openpodcast.post(
-                params.openpodcast_endpoint,
-                params.meta,
-                data,
-                params.start_date,
-                params.end_date,
+
+        # Treat None, empty containers, and {"metrics": []} as "no data".
+        metrics = data.get("metrics") if isinstance(data, dict) else None
+        is_empty = not data or metrics == []
+
+        if is_empty:
+            logger.warning(
+                f"Podigee returned no data for `{params.openpodcast_endpoint}` "
+                f"[{params.start_date} - {params.end_date}] "
+                f"meta={params.meta} data={data!r}; skipping post."
             )
-            logger.debug(
-                f"Response: {response.status_code} - {response.text}")
+            return
+
+        logger.info(f"Sending {params.openpodcast_endpoint} to Open Podcast")
+        response = openpodcast.post(
+            params.openpodcast_endpoint,
+            params.meta,
+            data,
+            params.start_date,
+            params.end_date,
+        )
+        logger.debug(f"Response: {response.status_code} - {response.text}")
     except requests.exceptions.HTTPError as e:
         logger.error(e)
         return

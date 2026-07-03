@@ -8,7 +8,6 @@ open_podcast.py).
 """
 
 from datetime import datetime, timezone
-from loguru import logger
 
 
 # ---------------------------------------------------------------------------
@@ -18,7 +17,9 @@ from loguru import logger
 
 def _date_to_unix(date_str: str) -> int:
     """Convert a 'YYYY-MM-DD' date string to a Unix timestamp (UTC midnight)."""
-    return int(datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp())
+    return int(
+        datetime.strptime(date_str, "%Y-%m-%d").replace(tzinfo=timezone.utc).timestamp()
+    )
 
 
 def _extract_time_series_points(graphql_data: dict, *path_keys: str) -> list[dict]:
@@ -66,7 +67,6 @@ def _extract_analytics_value(graphql_data: dict, *path_keys: str):
 # ---------------------------------------------------------------------------
 
 
-
 def _find_integer_value(obj):
     if isinstance(obj, dict):
         if "value" in obj and isinstance(obj["value"], int):
@@ -75,7 +75,9 @@ def _find_integer_value(obj):
             return obj["total"]
         if "count" in obj and isinstance(obj["count"], int):
             return obj["count"]
-        if "streamsAndDownloadsTotal" in obj and isinstance(obj["streamsAndDownloadsTotal"], int):
+        if "streamsAndDownloadsTotal" in obj and isinstance(
+            obj["streamsAndDownloadsTotal"], int
+        ):
             return obj["streamsAndDownloadsTotal"]
         # deep search
         for k, v in obj.items():
@@ -90,7 +92,6 @@ def _find_integer_value(obj):
     return None
 
 
-
 def _find_integer_value(obj):
     if isinstance(obj, dict):
         if "value" in obj and isinstance(obj["value"], int):
@@ -99,7 +100,9 @@ def _find_integer_value(obj):
             return obj["total"]
         if "count" in obj and isinstance(obj["count"], int):
             return obj["count"]
-        if "streamsAndDownloadsTotal" in obj and isinstance(obj["streamsAndDownloadsTotal"], int):
+        if "streamsAndDownloadsTotal" in obj and isinstance(
+            obj["streamsAndDownloadsTotal"], int
+        ):
             return obj["streamsAndDownloadsTotal"]
         # deep search
         for k, v in obj.items():
@@ -354,8 +357,10 @@ def transform_plays_by_gender(graphql_data: dict) -> dict:
 
     # Build translationMapping and colors from actual data rows
     gender_colors = {
-        "Male": "#26008D", "Female": "#5925FF",
-        "Not specified": "#9691FF", "Non-binary": "#D7DBFF",
+        "Male": "#26008D",
+        "Female": "#5925FF",
+        "Not specified": "#9691FF",
+        "Non-binary": "#D7DBFF",
     }
     translation_mapping = {r[0]: r[0] for r in rows}
     colors = {r[0]: gender_colors.get(r[0], "#26008D") for r in rows}
@@ -389,9 +394,7 @@ def transform_unique_listeners(
 
     Uses ``audienceSize`` from the discovery stats response.
     """
-    inner = _extract_analytics_value(
-        graphql_data, "showByShowUri", "audienceSize"
-    )
+    inner = _extract_analytics_value(graphql_data, "showByShowUri", "audienceSize")
     value = inner.get("value", 0)
 
     if not value and isinstance(fallback_graphql_data, dict):
@@ -432,9 +435,7 @@ def transform_audience_size(
     Same source as unique_listeners — the old API had two separate endpoints
     that returned the same concept.
     """
-    inner = _extract_analytics_value(
-        graphql_data, "showByShowUri", "audienceSize"
-    )
+    inner = _extract_analytics_value(graphql_data, "showByShowUri", "audienceSize")
     value = inner.get("value", 0)
 
     if not value and isinstance(fallback_graphql_data, dict):
@@ -494,23 +495,28 @@ def transform_total_plays_by_episode(
     """
     enrichment = episode_enrichment or {}
     rows = []
-    
+
     # Sort episodes by total plays descending, just like topEpisodes did
     items = []
     for item in all_time_episode_plays:
         ep_uri = item.get("uri", "")
         count = _find_integer_value(item.get("plays_data", {})) or 0
         items.append((count, ep_uri, item))
-        
+
     items.sort(key=lambda x: x[0], reverse=True)
-    
+
     for rank, (count, episode_uri, item) in enumerate(items, start=1):
         ep = item.get("episode", {})
         title = ep.get("title", "")
         publish_seconds = ep.get("publishedOn", {}).get("seconds", 0)
-        
+
         ep_info = enrichment.get(episode_uri, {})
-        episode_id = ep_info.get("id") or ep_info.get("episodeId") or ep_info.get("stationEpisodeId") or rank
+        episode_id = (
+            ep_info.get("id")
+            or ep_info.get("episodeId")
+            or ep_info.get("stationEpisodeId")
+            or rank
+        )
         rows.append([title, episode_id, count, publish_seconds, rank, episode_uri])
 
     return {
@@ -559,10 +565,9 @@ def transform_episodes_page(
         publish_seconds = ep.get("publishedOn", {}).get("seconds", 0)
         created_seconds = ep.get("createdOn", {}).get("seconds", 0)
         duration = ep.get("asset", {}).get("lengthMs", 0)
-        total_plays = (
-            (ep.get("analyticsStreamsAndDownloads") or {})
-            .get("analyticsValue") or {}
-        )
+        total_plays = (ep.get("analyticsStreamsAndDownloads") or {}).get(
+            "analyticsValue"
+        ) or {}
         total_plays = (total_plays.get("analyticsValue") or {}).get("value", 0)
         is_trailer = ep.get("episodeType") == "EPISODE_TYPE_TRAILER"
         is_video = ep.get("contentType") == "EPISODE_CONTENT_TYPE_VIDEO"
@@ -609,9 +614,7 @@ def transform_episode_plays(graphql_data: dict, episode_uri: str) -> dict:
         {"episodeId": N, "kind": "plays",
          "data": {"rows": [[timestamp, count], ...], "columnHeaders": [...]}}
     """
-    points = _extract_time_series_points(
-        graphql_data, "episodeByUri", "analytics"
-    )
+    points = _extract_time_series_points(graphql_data, "episodeByUri", "analytics")
     rows = []
     for p in points:
         ts = _date_to_unix(p["date"])
