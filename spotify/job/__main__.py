@@ -10,7 +10,7 @@ from job.open_podcast import OpenPodcastConnector
 from job.load_env import load_file_or_env
 from job.load_env import load_env
 from job.dates import get_date_range
-from job.spotify import get_episode_release_date
+from job.spotify import get_episode_release_date, normalize_performance
 
 from loguru import logger
 from spotifyconnector import SpotifyConnector
@@ -264,8 +264,8 @@ try:
             ),
             FetchParams(
                 openpodcast_endpoint="performance",
-                spotify_call=get_request_lambda(
-                    spotify.performance, episode=episode_id
+                spotify_call=lambda episode_id=episode_id: normalize_performance(
+                    spotify.performance(episode=episode_id)
                 ),
                 start_date=date_range.start,
                 end_date=date_range.end,
