@@ -73,6 +73,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Trigger deployment update
+        if: github.event_name != 'pull_request' && github.actor != 'dependabot[bot]'
+        env:
+          AUTOUPDATER_URL: ${{ secrets.AUTOUPDATER_URL }}
+        run: curl --fail --silent --show-error --retry 3 "$AUTOUPDATER_URL"
+
       - name: Update DockerHub description
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: peter-evans/dockerhub-description@v4
