@@ -1,20 +1,23 @@
-import threading
+import datetime as dt
 import os
 import sys
-import datetime as dt
+import threading
 from queue import Queue
-
-from job.fetch_params import FetchParams
-from job.worker import worker
-from job.open_podcast import OpenPodcastConnector
-from job.load_env import load_file_or_env
-from job.load_env import load_env
-from job.dates import get_date_range
-from job.spotify import get_episode_release_date, normalize_performance
 
 from loguru import logger
 from spotifyconnector import SpotifyConnector
 from spotifyconnector.connector import CredentialsExpired
+
+from job.dates import get_date_range
+from job.fetch_params import FetchParams
+from job.load_env import load_env, load_file_or_env
+from job.open_podcast import OpenPodcastConnector
+from job.spotify import (
+    aggregate_or_empty,
+    get_episode_release_date,
+    normalize_performance,
+)
+from job.worker import worker
 
 # The Spotify API imposes exactly 30 days of data for "total" and "faceted" impressions
 # (The diff is 29 because both start and end dates are inclusive)
@@ -58,19 +61,21 @@ try:
     STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 
     # Number of worker threads to fetch data from the Spotify API by default
-    NUM_WORKERS = os.environ.get("NUM_WORKERS", 1)
+    NUM_WORKERS = os.environ.get("NUM_WORKERS", "1")
 
     # API has a rate limit of around 20req/30sec.
     # using 1.5 seems to provide faster processing while staying within rate limits
-    TASK_DELAY = float(os.environ.get("TASK_DELAY", 1.0))
+    TASK_DELAY = float(os.environ.get("TASK_DELAY", "1.0"))
 
     # Start- and end-date for the data we want to fetch
     # Load from environment variable if set, otherwise set to defaults
     START_DATE = load_env(
-        "START_DATE", (dt.datetime.now() - dt.timedelta(days=3)).strftime("%Y-%m-%d")
+        "START_DATE",
+        (dt.datetime.now() - dt.timedelta(days=3)).strftime("%Y-%m-%d"),  # noqa: DTZ005
     )
     END_DATE = load_env(
-        "END_DATE", (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d")
+        "END_DATE",
+        (dt.datetime.now() - dt.timedelta(days=1)).strftime("%Y-%m-%d"),  # noqa: DTZ005
     )
 
     date_range = get_date_range(START_DATE, END_DATE)
@@ -87,7 +92,7 @@ try:
         logger.error(
             f"Missing required environment variables:  {', '.join(missing_vars)}. Exiting..."
         )
-        exit(1)
+        sys.exit(1)
 
     print("Done initializing environment")
 
@@ -111,7 +116,7 @@ try:
         logger.error(
             f"Open Podcast API healthcheck failed with status code {response.status_code}"
         )
-        exit(1)
+        sys.exit(1)
 
     def get_request_lambda(f, *args, **kwargs):
         """
@@ -126,9 +131,11 @@ try:
     # days apart.
     # See: https://github.com/openpodcast/spotify-connector/blob/2d3f9722662c06e8f9ddf7816c1ee81906d45655/spotifyconnector/connector.py#L460-L479)
     # It does not affect any other endpoints
-    todayDate = dt.datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    todayDate = dt.datetime.now().replace(  # noqa: DTZ005
+        hour=0, minute=0, second=0, microsecond=0
+    )
     yesterdayDate = todayDate - dt.timedelta(days=1)
-    oldestDate = dt.datetime(2015, 5, 1)
+    oldestDate = dt.datetime(2015, 5, 1)  # noqa: DTZ001
 
     # Define a list of FetchParams objects with the parameters for each API call
     endpoints = [
@@ -213,8 +220,10 @@ try:
         # Otherwise we get all data merged into one
         FetchParams(
             openpodcast_endpoint="aggregate",
-            spotify_call=get_request_lambda(
-                spotify.aggregate, current_date, current_date
+            spotify_call=lambda current_date=current_date: aggregate_or_empty(
+                lambda: spotify.aggregate(current_date, current_date),
+                current_date,
+                current_date,
             ),
             start_date=current_date,
             end_date=current_date,
@@ -296,11 +305,16 @@ try:
         endpoints += [
             FetchParams(
                 openpodcast_endpoint="aggregate",
-                spotify_call=get_request_lambda(
-                    spotify.aggregate,
-                    current_date,
-                    current_date,
-                    episode=episode_id,
+                spotify_call=lambda current_date=current_date, episode_id=episode_id: (
+                    aggregate_or_empty(
+                        lambda: spotify.aggregate(
+                            current_date,
+                            current_date,
+                            episode=episode_id,
+                        ),
+                        current_date,
+                        current_date,
+                    )
                 ),
                 start_date=current_date,
                 end_date=current_date,
