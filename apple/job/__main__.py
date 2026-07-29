@@ -73,7 +73,7 @@ if (
 # If we want to import a longer date-range, we split the date range into chunks
 # of 4 months to fetch the data in multiple requests.
 # This allows us to fetch the data quicker and avoid hitting the rate limit.
-DAYS_PER_CHUNK = os.environ.get("DAYS_PER_CHUNK", 4 * 30)
+DAYS_PER_CHUNK = int(os.environ.get("DAYS_PER_CHUNK", str(4 * 30)))
 
 date_range = get_date_range(START_DATE, END_DATE)
 
