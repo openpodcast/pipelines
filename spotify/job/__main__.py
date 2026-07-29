@@ -61,7 +61,7 @@ try:
     STORE_DATA = os.environ.get("STORE_DATA", "False").lower() in ("true", "1", "t")
 
     # Number of worker threads to fetch data from the Spotify API by default
-    NUM_WORKERS = os.environ.get("NUM_WORKERS", "1")
+    NUM_WORKERS = int(os.environ.get("NUM_WORKERS", "1"))
 
     # API has a rate limit of around 20req/30sec.
     # using 1.5 seems to provide faster processing while staying within rate limits
