@@ -29,7 +29,7 @@ class PodcastJob:
 # Load environment variables
 CONNECTORS_PATH = load_env("CONNECTORS_PATH", ".")
 MYSQL_HOST = load_env("MYSQL_HOST", "localhost")
-MYSQL_PORT = load_env("MYSQL_PORT", 3306)
+MYSQL_PORT = int(load_env("MYSQL_PORT", "3306"))
 MYSQL_USER = load_env("MYSQL_USER", "root")
 MYSQL_PASSWORD = load_file_or_env("MYSQL_PASSWORD")
 MYSQL_DATABASE = load_env("MYSQL_DATABASE", "openpodcast_auth")
