@@ -19,6 +19,7 @@ from job.fetch_params import FetchParams
 from job.load_env import load_env, load_file_or_env
 from job.open_podcast import OpenPodcastConnector
 from job.transforms import (
+    get_top_geo,
     transform_aggregated_performance,
     transform_audience_size,
     transform_episode_performance,
@@ -139,20 +140,6 @@ def get_request_lambda(f, *args, **kwargs):
     return lambda: f(*args, **kwargs)
 
 
-def get_top_geo_name(geo_payload: dict) -> str | None:
-    """Extract top geo displayName from a geo stats response."""
-    geos = (
-        geo_payload.get("showByShowUri", {})
-        .get("showStreamsAndDownloadsByGeo", {})
-        .get("analyticsValue", {})
-        .get("analyticsValue", {})
-        .get("geos", [])
-    )
-    if not geos:
-        return None
-    return geos[0].get("displayName")
-
-
 def get_numeric_episode_id(episode: dict) -> int | str | None:
     """Return numeric Anchor episode ID from episode payload variants."""
     return (
@@ -193,18 +180,22 @@ geo_stats_country = connector.get_show_geo_stats(
 geo_region_country: str | None = None
 geo_stats_region: dict = {}
 
-top_country = get_top_geo_name(geo_stats_country)
-if top_country:
-    geo_region_country = top_country
+top_country = get_top_geo(geo_stats_country)
+top_country_navigation_name = top_country.get("navigationName") if top_country else None
+if top_country_navigation_name:
+    geo_region_country = top_country.get("displayName") or top_country_navigation_name
     try:
         geo_stats_region = connector.get_show_geo_stats(
             show_uri=show_uri,
             result_geo="GEO_REGION",
-            country=top_country,
+            country=top_country_navigation_name,
             start_date=START_DATE,
             end_date=END_DATE,
         )
-        logger.info(f"Fetched GEO_REGION drill-down for {top_country}.")
+        logger.info(
+            f"Fetched GEO_REGION drill-down for {geo_region_country} "
+            f"({top_country_navigation_name})."
+        )
     except Exception as exc:  # noqa: BLE001
         logger.warning(f"GEO drill-down fetch failed, keeping empty payloads: {exc}")
 else:
@@ -217,7 +208,7 @@ discovery_stats = connector.get_show_audience_discovery(
 all_time_show_stats = connector.get_streams_and_downloads_all_time(show_uri=show_uri)
 
 logger.info("Fetching all episodes …")
-raw_episodes = connector.get_all_episodes()
+raw_episodes = connector.get_all_episodes(show_uri=show_uri)
 
 logger.info("Fetching all-time plays per episode …")
 all_time_episode_plays = []
