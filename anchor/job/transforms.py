@@ -64,9 +64,9 @@ def _extract_analytics_value(graphql_data: dict, *path_keys: str):
 
 def _episode_plays_and_downloads(episode: dict) -> int:
     """Return an episode's UI-equivalent plays and downloads total."""
-    value = _extract_analytics_value(
-        episode, "analyticsPlaysAndDownloads"
-    ).get("value", 0)
+    value = _extract_analytics_value(episode, "analyticsPlaysAndDownloads").get(
+        "value", 0
+    )
     return value if isinstance(value, int) else 0
 
 
