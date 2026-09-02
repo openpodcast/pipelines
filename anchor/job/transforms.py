@@ -62,6 +62,17 @@ def _extract_analytics_value(graphql_data: dict, *path_keys: str):
     return node if isinstance(node, dict) else {}
 
 
+def get_top_geo(graphql_data: dict) -> dict | None:
+    """Return the highest-ranked geographic entry from Spotify's native response."""
+    inner = _extract_analytics_value(
+        graphql_data, "showByShowUri", "showPlaysAndDownloadsByGeo"
+    )
+    geos = inner.get("geos") or []
+    if not isinstance(geos, list) or not geos or not isinstance(geos[0], dict):
+        return None
+    return geos[0]
+
+
 # ---------------------------------------------------------------------------
 # Show-level transforms
 # ---------------------------------------------------------------------------
@@ -152,7 +163,7 @@ def transform_plays(graphql_data: dict) -> dict:
 
 def transform_plays_by_app(graphql_data: dict) -> dict:
     """
-    getShowAudienceAllPlatformsStats → old ``playsByApp`` shape.
+    getShowPlaysAndDownloadsPlatformsStats → old ``playsByApp`` shape.
 
     Old shape::
 
@@ -160,10 +171,14 @@ def transform_plays_by_app(graphql_data: dict) -> dict:
          "columnHeaders": [{"name": "App", ...}, {"name": "Percent of Plays", ...}]}}
     """
     inner = _extract_analytics_value(
-        graphql_data, "showByShowUri", "showStreamsAndDownloadsByApp"
+        graphql_data, "showByShowUri", "showPlaysAndDownloadsByApp"
     )
-    apps = inner.get("apps", [])
-    rows = [[a["displayName"], a["value"]] for a in apps]
+    apps = inner.get("apps") or []
+    rows = [
+        [app["displayName"], app["value"]]
+        for app in apps
+        if isinstance(app, dict) and "displayName" in app and "value" in app
+    ]
 
     return {
         "stationId": 0,
@@ -185,16 +200,24 @@ def transform_plays_by_app(graphql_data: dict) -> dict:
 
 def transform_plays_by_device(graphql_data: dict) -> dict:
     """
-    getShowAudienceAllPlatformsStats → old ``playsByDevice`` shape.
+    getShowPlaysAndDownloadsPlatformsStats → old ``playsByDevice`` shape.
     """
     inner = _extract_analytics_value(
-        graphql_data, "showByShowUri", "showStreamsAndDownloadsByDevice"
+        graphql_data, "showByShowUri", "showPlaysAndDownloadsByDevice"
     )
-    devices = inner.get("devices", [])
-    rows = [[d["displayName"], d["value"]] for d in devices]
+    devices = inner.get("devices") or []
+    valid_devices = [
+        device
+        for device in devices
+        if isinstance(device, dict) and "displayName" in device and "value" in device
+    ]
+    rows = [[device["displayName"], device["value"]] for device in valid_devices]
 
     translation_mapping = {r[0]: r[0] for r in rows}
-    colors = {r[0]: "#26008D" for r in rows}
+    colors = {
+        device["displayName"]: device.get("color") or "#26008D"
+        for device in valid_devices
+    }
 
     return {
         "stationId": 0,
@@ -218,7 +241,7 @@ def transform_plays_by_device(graphql_data: dict) -> dict:
 
 def transform_plays_by_geo(graphql_data: dict) -> dict:
     """
-    getShowAudienceAllPlatformsGeoStats (GEO_COUNTRY) → old ``playsByGeo`` shape.
+    getShowPlaysAndDownloadsByGeo (GEO_COUNTRY) → old ``playsByGeo`` shape.
 
     Old shape::
 
@@ -227,10 +250,18 @@ def transform_plays_by_geo(graphql_data: dict) -> dict:
          "columnHeaders": [{"name": "Geo", ...}, {"name": "Percent of Plays", ...}]}}
     """
     inner = _extract_analytics_value(
-        graphql_data, "showByShowUri", "showStreamsAndDownloadsByGeo"
+        graphql_data, "showByShowUri", "showPlaysAndDownloadsByGeo"
     )
-    geos = inner.get("geos", [])
-    rows = [[g["displayName"], g["value"]] for g in geos]
+    geos = inner.get("geos") or []
+    valid_geos = [
+        geo
+        for geo in geos
+        if isinstance(geo, dict) and "displayName" in geo and "value" in geo
+    ]
+    rows = [[geo["displayName"], geo["value"]] for geo in valid_geos]
+    flag_urls = {
+        geo["displayName"]: geo["flagUrl"] for geo in valid_geos if geo.get("flagUrl")
+    }
 
     return {
         "stationId": 0,
@@ -247,7 +278,7 @@ def transform_plays_by_geo(graphql_data: dict) -> dict:
                 {"name": "Geo", "type": "string"},
                 {"name": "Percent of Plays", "type": "number"},
             ],
-            "assets": {"flagUrlByGeo": {}},
+            "assets": {"flagUrlByGeo": flag_urls},
         },
     }
 
@@ -257,17 +288,22 @@ def transform_plays_by_geo_region(
     country: str | None = None,
 ) -> dict:
     """
-    getShowAudienceAllPlatformsGeoStats (GEO_REGION) → old ``playsByGeoRegion`` shape.
+    getShowPlaysAndDownloadsByGeo (GEO_REGION) → old ``playsByGeoRegion`` shape.
 
     NOTE: The Spotify GraphQL API may return ``null`` for region-level geo data
     on some shows (DataFetchingException).  In that case we return empty rows.
     """
     # Guard: if the API returned null for the geo node, inner will be {}
     inner = _extract_analytics_value(
-        graphql_data, "showByShowUri", "showStreamsAndDownloadsByGeo"
+        graphql_data, "showByShowUri", "showPlaysAndDownloadsByGeo"
     )
-    geos = inner.get("geos", [])
-    rows = [[g["displayName"], g["value"]] for g in geos]
+    geos = inner.get("geos") or []
+    valid_geos = [
+        geo
+        for geo in geos
+        if isinstance(geo, dict) and "displayName" in geo and "value" in geo
+    ]
+    rows = [[geo["displayName"], geo["value"]] for geo in valid_geos]
 
     return {
         "stationId": 0,
@@ -291,29 +327,30 @@ def transform_plays_by_geo_region(
 
 def transform_plays_by_age_range(graphql_data: dict) -> dict:
     """
-    getShowAudienceDemographicsStats → old ``playsByAgeRange`` shape.
+    getShowPlaysByAge → old ``playsByAgeRange`` shape.
 
     The new API returns age brackets with per-gender breakdowns.
     We sum each bracket's total / overall total to get the fraction,
     matching the old shape: ``[["18-22", 0.08], ...]``.
     """
-    inner = _extract_analytics_value(
-        graphql_data, "showByShowUri", "showStreamsFaceted"
-    )
-    age_breakdown = inner.get("ageBreakdown", [])
-    total_value = inner.get("totalValue", 0)
+    inner = _extract_analytics_value(graphql_data, "showByShowUri", "showPlaysByAge")
+    age_breakdown = inner.get("ageBreakdown") or []
+    total_value = inner.get("totalValue") or 0
 
     # Mapping from new API bracket names to old Anchor names
     _AGE_REMAP = {"60-150": "60+"}
 
     rows = []
     for bracket in age_breakdown:
+        if not isinstance(bracket, dict):
+            continue
         bracket_name = bracket.get("ageBracket", bracket.get("displayName", ""))
         # Skip unknown brackets
         if bracket_name == "unknown":
             continue
         bracket_name = _AGE_REMAP.get(bracket_name, bracket_name)
-        bracket_total = bracket.get("genderBreakdown", {}).get("total", 0)
+        gender_breakdown = bracket.get("genderBreakdown") or {}
+        bracket_total = gender_breakdown.get("total", 0)
         fraction = bracket_total / total_value if total_value else 0.0
         rows.append([bracket_name, fraction])
 
@@ -342,18 +379,21 @@ def transform_plays_by_age_range(graphql_data: dict) -> dict:
 
 def transform_plays_by_gender(graphql_data: dict) -> dict:
     """
-    getShowAudienceDemographicsStats → old ``playsByGender`` shape.
+    getShowPlaysByGender → old ``playsByGender`` shape.
 
     Uses the top-level ``genderBreakdown`` summary from the response.
     Old shape: ``[["Female", 0.78], ["Male", 0.19], ...]``.
     """
-    inner = _extract_analytics_value(
-        graphql_data, "showByShowUri", "showStreamsFaceted"
-    )
+    inner = _extract_analytics_value(graphql_data, "showByShowUri", "showPlaysByGender")
     gender_breakdown = inner.get("genderBreakdown") or {}
-    counts = gender_breakdown.get("counts", [])
+    counts = gender_breakdown.get("counts") or []
 
-    rows = [[g["displayName"], g["percent"]] for g in counts]
+    valid_counts = [
+        gender
+        for gender in counts
+        if isinstance(gender, dict) and "displayName" in gender and "percent" in gender
+    ]
+    rows = [[gender["displayName"], gender["percent"]] for gender in valid_counts]
 
     # Build translationMapping and colors from actual data rows
     gender_colors = {
@@ -363,7 +403,11 @@ def transform_plays_by_gender(graphql_data: dict) -> dict:
         "Non-binary": "#D7DBFF",
     }
     translation_mapping = {r[0]: r[0] for r in rows}
-    colors = {r[0]: gender_colors.get(r[0], "#26008D") for r in rows}
+    colors = {
+        gender["displayName"]: gender.get("color")
+        or gender_colors.get(gender["displayName"], "#26008D")
+        for gender in valid_counts
+    }
 
     return {
         "stationId": 0,
