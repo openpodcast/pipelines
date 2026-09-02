@@ -171,7 +171,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "requests", specifier = ">=2.32.5" },
     { name = "spotifyconnector", specifier = ">=0.8.3" },
-    { name = "spotifygraphqlconnector", specifier = ">=0.5.2" },
+    { name = "spotifygraphqlconnector", specifier = ">=0.5.3" },
     { name = "tenacity", specifier = ">=9.1.4" },
 ]
 
@@ -548,7 +548,7 @@ wheels = [
 
 [[package]]
 name = "spotifygraphqlconnector"
-version = "0.5.2"
+version = "0.5.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "loguru" },
@@ -556,9 +556,9 @@ dependencies = [
     { name = "requests" },
     { name = "tenacity" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/d1/86/67eff513302e7db8086a9ba961c6cfe11eff4d7b6546e356c1ce17d1f1a6/spotifygraphqlconnector-0.5.2.tar.gz", hash = "sha256:c38cb5aef82d832f925ff96502f73bf20859bd27ceb8e53f287a1d704c26cdbc", size = 25204, upload-time = "2026-04-29T17:45:08.441Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/68/7c/cc09908af71e1763c19f890590fd154792910f041a79faf7bbef2c4933e2/spotifygraphqlconnector-0.5.3.tar.gz", hash = "sha256:a0145172b6f8246b2aac2aba4567cd6718999eeb45cae6ca7d4dd01d7fc69b42", size = 28090, upload-time = "2026-09-02T09:08:07.624Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/86/9a70da991dedf8900ae68809fce1b134d2ba47195188c5f753962081435a/spotifygraphqlconnector-0.5.2-py3-none-any.whl", hash = "sha256:fcc22c41205f0b88f7fa39a2fed22125aac20d53a3f98a4781f3ba6f7fe45edf", size = 28043, upload-time = "2026-04-29T17:45:09.186Z" },
+    { url = "https://files.pythonhosted.org/packages/c5/8d/0715339eb3749d5a08a3024c54d807331018b4ddee8eb57f62f3ad10dc61/spotifygraphqlconnector-0.5.3-py3-none-any.whl", hash = "sha256:7386a9af70e3772403a30fa91aae679623c3294414cfcfcc3a5894d7f29af3ee", size = 28913, upload-time = "2026-09-02T09:08:06.706Z" },
 ]
 
 [[package]]

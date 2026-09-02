@@ -10,7 +10,7 @@ authors = [
 ]
 
 dependencies = [
-    "spotifygraphqlconnector>=0.5.2",
+    "spotifygraphqlconnector>=0.5.3",
     "loguru>=0.7.3",
     "requests>=2.32.5",
 ]

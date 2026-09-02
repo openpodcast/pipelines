@@ -27,7 +27,7 @@ dependencies = [
     "appleconnector>=0.4.1",
     "podigeeconnector>=0.4.1",
     "spotifyconnector>=0.8.3",
-    "spotifygraphqlconnector>=0.5.2",
+    "spotifygraphqlconnector>=0.5.3",
 ]
 
 [dependency-groups]
