@@ -1,14 +1,38 @@
+import argparse
 import importlib.metadata
 import multiprocessing
 import os
 import subprocess
-import sys
 from collections import defaultdict
 
 import mysql.connector
 from loguru import logger
 
 from manager.load_env import load_env, load_file_or_env
+
+
+def parse_args(args=None):
+    """Parse connector-manager command-line flags."""
+    parser = argparse.ArgumentParser(
+        prog="python -m manager",
+        description="Fetch podcast data with the configured source pipelines.",
+    )
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="prompt for confirmation before fetching each podcast",
+    )
+    parser.add_argument(
+        "--skip-repetition-check",
+        action="store_true",
+        help="fetch all podcasts, including those already updated today",
+    )
+    return parser.parse_args(args)
+
+
+# Parse before loading configuration or connecting to MySQL so --help works in
+# an unconfigured environment.
+args = parse_args() if __name__ == "__main__" else parse_args([])
 
 # Import the Podigee connector functionality
 
@@ -70,19 +94,17 @@ except mysql.connector.Error as e:
     logger.error("Error connecting to mysql: ", e)
     exit(1)
 
-# if module was started with flag --interactive, every podcast has to be approved manually
-interactiveMode = False
-if "--interactive" in sys.argv:
+# If --interactive is set, every podcast has to be approved manually.
+interactive_mode = args.interactive
+if interactive_mode:
     logger.info("Interactive mode enabled")
-    interactiveMode = True
 
-# if module was started with flag --skip-repetition-check, fetch all podcasts regardless of prior fetches
-skipRepetitionCheck = False
-if "--skip-repetition-check" in sys.argv:
+# If --skip-repetition-check is set, fetch all podcasts regardless of prior fetches.
+skip_repetition_check = args.skip_repetition_check
+if skip_repetition_check:
     logger.info(
         "Skip repetition check enabled: fetching all podcasts regardless of prior fetches"
     )
-    skipRepetitionCheck = True
 
 # Import worker functions and types from separate module for multiprocessing
 from manager.worker import PodcastJob, process_source_jobs  # noqa: E402
@@ -125,7 +147,7 @@ if __name__ == "__main__":
     print_debug_output()
 
     print("Fetching all podcast tasks from database...")
-    if skipRepetitionCheck:
+    if skip_repetition_check:
         sql = """
             SELECT
                 account_id,
@@ -187,7 +209,7 @@ if __name__ == "__main__":
             pod_name=row[4],
         )
 
-        if interactiveMode:
+        if interactive_mode:
             print(
                 f"Fetch podcast {job.pod_name} {job.account_id} for {job.source_name} using podcast_id {job.source_podcast_id}? [y/n]"
             )
