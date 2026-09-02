@@ -9,6 +9,7 @@ from job.transforms import (
     transform_plays_by_gender,
     transform_plays_by_geo,
     transform_plays_by_geo_region,
+    transform_total_plays_by_episode,
 )
 
 
@@ -206,6 +207,9 @@ class TestEpisodeListTransform(unittest.TestCase):
                 "analyticsStreamsAndDownloads": {
                     "analyticsValue": {"analyticsValue": {"value": 284}}
                 },
+                "analyticsPlaysAndDownloads": {
+                    "analyticsValue": {"analyticsValue": {"value": 307}}
+                },
             }
         ]
 
@@ -217,10 +221,58 @@ class TestEpisodeListTransform(unittest.TestCase):
         self.assertEqual(len(transformed), 1)
         self.assertEqual(transformed[0]["episodeId"], 122814255)
         self.assertEqual(transformed[0]["webEpisodeId"], "e123")
-        self.assertEqual(transformed[0]["totalPlays"], 284)
+        self.assertEqual(transformed[0]["totalPlays"], 307)
         self.assertEqual(transformed[0]["duration"], 1003477)
         self.assertEqual(transformed[0]["audioCount"], 1)
 
+    def test_total_plays_by_episode_uses_plays_and_downloads_and_ranks(self):
+        episodes = [
+            {
+                "episodeId": 122814255,
+                "uri": "spotify:episode:first",
+                "title": "First episode",
+                "publishedOn": {"seconds": 1784070000},
+                "analyticsStreamsAndDownloads": {
+                    "analyticsValue": {"analyticsValue": {"value": 160}}
+                },
+                "analyticsPlaysAndDownloads": {
+                    "analyticsValue": {"analyticsValue": {"value": 307}}
+                },
+            },
+            {
+                "episodeId": 122814256,
+                "uri": "spotify:episode:second",
+                "title": "Second episode",
+                "publishedOn": {"seconds": 1784156400},
+                "analyticsPlaysAndDownloads": {
+                    "analyticsValue": {"analyticsValue": {"value": 410}}
+                },
+            },
+        ]
+
+        transformed = transform_total_plays_by_episode(episodes)
+
+        self.assertEqual(
+            transformed["data"]["rows"],
+            [
+                [
+                    "Second episode",
+                    122814256,
+                    410,
+                    1784156400,
+                    1,
+                    "spotify:episode:second",
+                ],
+                [
+                    "First episode",
+                    122814255,
+                    307,
+                    1784070000,
+                    2,
+                    "spotify:episode:first",
+                ],
+            ],
+        )
 
 if __name__ == "__main__":
     unittest.main()

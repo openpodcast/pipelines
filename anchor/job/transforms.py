@@ -62,6 +62,14 @@ def _extract_analytics_value(graphql_data: dict, *path_keys: str):
     return node if isinstance(node, dict) else {}
 
 
+def _episode_plays_and_downloads(episode: dict) -> int:
+    """Return an episode's UI-equivalent plays and downloads total."""
+    value = _extract_analytics_value(
+        episode, "analyticsPlaysAndDownloads"
+    ).get("value", 0)
+    return value if isinstance(value, int) else 0
+
+
 def get_top_geo(graphql_data: dict) -> dict | None:
     """Return the highest-ranked geographic entry from Spotify's native response."""
     inner = _extract_analytics_value(
@@ -527,38 +535,33 @@ def transform_total_plays(graphql_data: dict) -> dict:
 
 
 def transform_total_plays_by_episode(
-    all_time_episode_plays: list[dict],
-    episode_enrichment: dict | None = None,
+    episodes_list: list[dict],
 ) -> dict:
     """
-    List of objects from get_episode_plays_total → old ``totalPlaysByEpisode`` shape.
+    get_all_episodes() list → old ``totalPlaysByEpisode`` shape.
 
-    *episode_enrichment* is a ``{uri: episode_dict}`` lookup built from
-    ``get_all_episodes()``. Each episode dict is expected to carry an
-    ``episodeId`` integer field (the legacy Anchor numeric ID).
+    ``analyticsPlaysAndDownloads`` is the all-platform value displayed as
+    "Plays & downloads" in Spotify for Creators. It intentionally replaces
+    the Spotify-only value returned by ``get_episode_plays_total()``.
     """
-    enrichment = episode_enrichment or {}
     rows = []
 
     # Sort episodes by total plays descending, just like topEpisodes did
     items = []
-    for item in all_time_episode_plays:
-        ep_uri = item.get("uri", "")
-        count = _find_integer_value(item.get("plays_data", {})) or 0
-        items.append((count, ep_uri, item))
+    for episode in episodes_list:
+        episode_uri = episode.get("uri", "")
+        count = _episode_plays_and_downloads(episode)
+        items.append((count, episode_uri, episode))
 
     items.sort(key=lambda x: x[0], reverse=True)
 
-    for rank, (count, episode_uri, item) in enumerate(items, start=1):
-        ep = item.get("episode", {})
-        title = ep.get("title", "")
-        publish_seconds = ep.get("publishedOn", {}).get("seconds", 0)
-
-        ep_info = enrichment.get(episode_uri, {})
+    for rank, (count, episode_uri, episode) in enumerate(items, start=1):
+        title = episode.get("title", "")
+        publish_seconds = episode.get("publishedOn", {}).get("seconds", 0)
         episode_id = (
-            ep_info.get("id")
-            or ep_info.get("episodeId")
-            or ep_info.get("stationEpisodeId")
+            episode.get("id")
+            or episode.get("episodeId")
+            or episode.get("stationEpisodeId")
             or rank
         )
         rows.append([title, episode_id, count, publish_seconds, rank, episode_uri])
@@ -609,10 +612,7 @@ def transform_episodes_page(
         publish_seconds = ep.get("publishedOn", {}).get("seconds", 0)
         created_seconds = ep.get("createdOn", {}).get("seconds", 0)
         duration = ep.get("asset", {}).get("lengthMs", 0)
-        total_plays = (ep.get("analyticsStreamsAndDownloads") or {}).get(
-            "analyticsValue"
-        ) or {}
-        total_plays = (total_plays.get("analyticsValue") or {}).get("value", 0)
+        total_plays = _episode_plays_and_downloads(ep)
         is_trailer = ep.get("episodeType") == "EPISODE_TYPE_TRAILER"
         is_video = ep.get("contentType") == "EPISODE_CONTENT_TYPE_VIDEO"
 
