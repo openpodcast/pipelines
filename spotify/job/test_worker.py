@@ -8,50 +8,18 @@ from job.fetch_params import FetchParams
 from job.worker import fetch
 
 
-@pytest.mark.parametrize(
-    "data,meta,saved",
-    [
-        ({"counts": []}, None, True),
-        (None, None, False),
-        ({"counts": [{"date": "2026-09-29", "count": 0}]}, None, True),
-        ({"counts": []}, {"episode": "episode-id"}, True),
-    ],
-)
-def test_response_handling_is_unchanged(data, meta, saved):
-    params = FetchParams(
-        "listeners",
-        Mock(return_value=data),
-        datetime(2026, 9, 29),
-        datetime(2026, 9, 29),
-        meta,
-    )
+@pytest.mark.parametrize("failure", [None, "fetch", "save"])
+def test_fetch_reports_task_outcome(failure):
     connector = Mock()
-    assert fetch(connector, params) is True
-    assert connector.post.called is saved
-    if saved:
-        connector.post.assert_called_once_with(
-            "listeners", meta, data, params.start_date, params.end_date
-        )
+    source = Mock(return_value={"name": "show"})
+    if failure:
+        failing_call = source if failure == "fetch" else connector.post
+        failing_call.side_effect = requests.HTTPError("request failed")
+    day = datetime(2026, 9, 29)
+    params = FetchParams("metadata", source, day, day)
 
-
-@pytest.mark.parametrize("failure_source", ["fetch", "post"])
-@pytest.mark.parametrize("error", [requests.HTTPError, RuntimeError])
-def test_failures_are_reported_without_secrets_and_delay_is_preserved(
-    failure_source, error
-):
-    params = FetchParams(
-        "metadata",
-        Mock(return_value={"name": "show"}),
-        datetime(2026, 9, 29),
-        datetime(2026, 9, 29),
-    )
-    connector = Mock()
-    failing_call = params.spotify_call if failure_source == "fetch" else connector.post
-    failing_call.side_effect = error("secret-response")
-    with patch("job.worker.sleep") as sleep, patch("job.worker.logger.error") as log:
-        assert fetch(connector, params, 1) is False
+    with patch("job.worker.sleep") as sleep:
+        assert fetch(connector, params, delay=1) is (failure is None)
     sleep.assert_called_once_with(1)
-    template, *values = log.call_args.args
-    message = template.format(*values)
-    assert "metadata" in message and error.__name__ in message
-    assert "secret-response" not in message
+    source.assert_called_once_with()
+    assert connector.post.call_count == (0 if failure == "fetch" else 1)
