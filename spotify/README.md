@@ -46,21 +46,6 @@ To bump the upstream Spotify connector to a new release:
 uv lock --upgrade-package spotifyconnector
 ```
 
-## Ingestion failures
-
-Tasks continue after a fetch or ingestion error, but the process exits with status
-1 if any task failed. Check the endpoint, date range, and episode in the failure
-log before rerunning the affected range. Worker errors no longer leave the task
-queue waiting indefinitely.
-
-Ingestion errors now propagate to the worker instead of being logged and ignored.
-Connection errors, timeouts, and any non-200 response fail the task. Each POST is
-attempted once; this change does not add automatic retries. Ingestion failure logs
-contain task context and HTTP status, not response bodies or authorization headers.
-
-An empty or missing show-level listener `counts` series fails the task instead of
-being accepted as a successful no-op. Explicit daily counts of zero remain valid.
-No missing days are synthesized, and this does not verify that every requested day
-is present in a nonempty response. Episode-level empty series keep their existing
-behavior. The missing-row alert remains unchanged; delayed source data can still
-require a later rerun.
+The job finishes remaining tasks but exits with status 1 if any fetch or save fails.
+Empty show-listener responses count as missing data; explicit zero counts remain valid.
+Failures are logged without response bodies. No automatic save retries are added.

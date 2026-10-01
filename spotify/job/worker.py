@@ -1,7 +1,7 @@
 import math
-import queue
-import threading
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from time import sleep
 
 from loguru import logger
@@ -14,35 +14,26 @@ class EmptyListenerData(ValueError):
     """The source returned no daily show-listener rows to persist."""
 
 
-def worker(
-    q: queue.Queue[FetchParams | None],
-    openpodcast: OpenPodcastConnector,
-    delay: float,
-    failures: queue.Queue[FetchParams],
-) -> None:
-    """Drain tasks even after failures, recording them for the main thread."""
-    while True:
-        params = q.get()
-        try:
-            if params is None:
-                return
-            try:
-                fetch(openpodcast, params)
-            except Exception as exc:
-                failures.put(params)
-                # Exceptions/responses may contain credentials or request payloads.
-                logger.error(
-                    "Failed `{}` [{} - {}] episode={}: {} (HTTP {})",
-                    params.openpodcast_endpoint,
-                    params.start_date,
-                    params.end_date,
-                    (params.meta or {}).get("episode", "show"),
-                    type(exc).__name__,
-                    getattr(getattr(exc, "response", None), "status_code", None),
-                )
-            sleep(delay)
-        finally:
-            q.task_done()
+def _run_task(
+    params: FetchParams, openpodcast: OpenPodcastConnector, delay: float
+) -> int:
+    try:
+        fetch(openpodcast, params)
+        return 0
+    except Exception as exc:
+        # Exceptions/responses may contain credentials or request payloads.
+        logger.error(
+            "Failed `{}` [{} - {}] episode={}: {} (HTTP {})",
+            params.openpodcast_endpoint,
+            params.start_date,
+            params.end_date,
+            (params.meta or {}).get("episode", "show"),
+            type(exc).__name__,
+            getattr(getattr(exc, "response", None), "status_code", None),
+        )
+        return 1
+    finally:
+        sleep(delay)
 
 
 def run_tasks(
@@ -51,27 +42,15 @@ def run_tasks(
     delay: float,
     num_workers: int,
 ) -> int:
-    """Finish all queued tasks and return the number that failed."""
-    if num_workers < 1 or not math.isfinite(delay) or delay < 0:
-        raise ValueError(
-            "NUM_WORKERS must be positive and TASK_DELAY finite and non-negative"
+    """Finish all tasks and return the number that failed."""
+    if not math.isfinite(delay) or delay < 0:
+        raise ValueError("TASK_DELAY must be finite and non-negative")
+    with ThreadPoolExecutor(max_workers=num_workers) as pool:
+        return sum(
+            pool.map(
+                partial(_run_task, openpodcast=openpodcast, delay=delay), endpoints
+            )
         )
-    tasks: queue.Queue[FetchParams | None] = queue.Queue()
-    failures: queue.Queue[FetchParams] = queue.Queue()
-    threads = [
-        threading.Thread(target=worker, args=(tasks, openpodcast, delay, failures))
-        for _ in range(num_workers)
-    ]
-    for endpoint in endpoints:
-        tasks.put(endpoint)
-    for _ in threads:
-        tasks.put(None)
-    for thread in threads:
-        thread.start()
-    tasks.join()
-    for thread in threads:
-        thread.join()
-    return failures.qsize()
 
 
 def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
