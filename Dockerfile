@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Pin to linux/amd64 as we deploy to x86_64 servers
-FROM --platform=linux/amd64 python:3.11-slim-bullseye
+FROM --platform=linux/amd64 python:3.11-slim-bookworm
 
 ARG COMMIT_SHA
 ENV COMMIT_SHA=${COMMIT_SHA}
