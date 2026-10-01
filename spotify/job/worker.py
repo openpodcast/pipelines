@@ -1,28 +1,13 @@
-import queue
 from time import sleep
 
-import requests
 from loguru import logger
 
 from job.fetch_params import FetchParams
 from job.open_podcast import OpenPodcastConnector
 
 
-def worker(q: queue.Queue, openpodcast: OpenPodcastConnector, delay) -> None:
-    """
-    A worker thread that fetches data from the Spotify API
-    """
-    while True:
-        params = q.get()
-        fetch(openpodcast, params)
-        q.task_done()
-        sleep(delay)
-
-
-def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
-    """
-    Fetches data from the Spotify API and sends it to the Open Podcast API
-    """
+def fetch(openpodcast: OpenPodcastConnector, params: FetchParams, delay=0) -> bool:
+    """Fetch and store one task, reporting whether it succeeded."""
     try:
         data = params.spotify_call()
         if data:
@@ -33,6 +18,17 @@ def fetch(openpodcast: OpenPodcastConnector, params: FetchParams) -> None:
                 params.start_date,
                 params.end_date,
             )
-    except requests.exceptions.HTTPError as e:
-        logger.error(e)
-        return
+        return True
+    except Exception as exc:
+        # Avoid logging exception text, which may contain response data or secrets.
+        logger.error(
+            "Failed `{}` [{} - {}] episode={}: {}",
+            params.openpodcast_endpoint,
+            params.start_date,
+            params.end_date,
+            (params.meta or {}).get("episode", "show"),
+            type(exc).__name__,
+        )
+        return False
+    finally:
+        sleep(delay)
