@@ -10,7 +10,8 @@ from job import load_env, open_podcast, worker
 
 
 @pytest.mark.parametrize("failures", [0, 1])
-def test_job_exit_reflects_task_failures(monkeypatch, failures, capsys):
+@pytest.mark.parametrize("workers", [1, 3])
+def test_job_exit_reflects_task_failures(monkeypatch, failures, workers, capsys):
     # No real environment files, credentials, or network calls.
     values = {
         "SPOTIFY_SP_DC": "fake-cookie",
@@ -36,23 +37,34 @@ def test_job_exit_reflects_task_failures(monkeypatch, failures, capsys):
     monkeypatch.setattr(
         open_podcast, "OpenPodcastConnector", Mock(return_value=connector)
     )
-    run_tasks = Mock(return_value=failures)
-    monkeypatch.setattr(worker, "run_tasks", run_tasks)
+    fetch = Mock()
+    fetch.side_effect = lambda api, params, delay: (
+        not (failures and params.openpodcast_endpoint == "metadata")
+    )
+    monkeypatch.setattr(worker, "fetch", fetch)
     monkeypatch.setattr(
         requests.sessions.Session,
         "request",
         Mock(side_effect=AssertionError("network forbidden")),
     )
 
-    with patch.dict(os.environ, {"NUM_WORKERS": "2", "TASK_DELAY": "0"}, clear=True):
+    with patch.dict(
+        os.environ, {"NUM_WORKERS": str(workers), "TASK_DELAY": "0"}, clear=True
+    ):
         if failures:
             with pytest.raises(SystemExit) as exc:
                 runpy.run_module("job.__main__", run_name="__main__")
             assert exc.value.code == 1
         else:
             runpy.run_module("job.__main__", run_name="__main__")
-    run_tasks.assert_called_once()
-    tasks, actual_connector, delay, workers = run_tasks.call_args.args
-    assert any(t.openpodcast_endpoint == "listeners" for t in tasks)
-    assert (actual_connector, delay, workers) == (connector, 0.0, 2)
+    # Even when the first task fails, the pool must finish the remaining tasks.
+    assert fetch.call_count > 1
+    assert any(
+        call.args[1].openpodcast_endpoint == "listeners"
+        for call in fetch.call_args_list
+    )
+    assert all(
+        call.args[0] is connector and call.args[2] == 0.0
+        for call in fetch.call_args_list
+    )
     assert ("All items processed." in capsys.readouterr().out) == (failures == 0)

@@ -45,7 +45,3 @@ To bump the upstream Spotify connector to a new release:
 ```bash
 uv lock --upgrade-package spotifyconnector
 ```
-
-The job finishes remaining tasks but exits with status 1 if any fetch or save fails.
-Empty show-listener responses count as missing data; explicit zero counts remain valid.
-Failures are logged without response bodies. No automatic save retries are added.

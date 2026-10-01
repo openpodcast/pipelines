@@ -63,11 +63,7 @@ class OpenPodcastConnector:
         }
 
         response = requests.post(
-            f"{self.url}/connector",
-            headers=self.headers,
-            json=payload,
-            timeout=60,
-            allow_redirects=False,
+            f"{self.url}/connector", headers=self.headers, json=payload, timeout=60
         )
         if response.status_code != 200:
             response.close()

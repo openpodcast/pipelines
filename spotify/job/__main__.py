@@ -1,6 +1,7 @@
 import datetime as dt
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor
 
 from loguru import logger
 from spotifyconnector import SpotifyConnector
@@ -15,7 +16,7 @@ from job.spotify import (
     get_episode_release_date,
     normalize_performance,
 )
-from job.worker import run_tasks
+from job.worker import fetch
 
 # The Spotify API imposes exactly 30 days of data for "total" and "faceted" impressions
 # (The diff is 29 because both start and end dates are inclusive)
@@ -321,9 +322,11 @@ try:
             for current_date in episode_date_range
         ]
 
-    failures = run_tasks(endpoints, open_podcast, TASK_DELAY, NUM_WORKERS)
-    if failures:
-        logger.error("{} Spotify task(s) failed; ingestion is incomplete.", failures)
+    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as pool:
+        results = list(
+            pool.map(lambda params: fetch(open_podcast, params, TASK_DELAY), endpoints)
+        )
+    if not all(results):
         sys.exit(1)
 
     print("All items processed.")
