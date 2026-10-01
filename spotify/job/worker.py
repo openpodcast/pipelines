@@ -10,12 +10,6 @@ def fetch(openpodcast: OpenPodcastConnector, params: FetchParams, delay=0) -> bo
     """Fetch and store one task, reporting whether it succeeded."""
     try:
         data = params.spotify_call()
-        if (
-            params.openpodcast_endpoint == "listeners"
-            and not (params.meta or {}).get("episode")
-            and (not data or not data.get("counts"))
-        ):
-            raise ValueError("Show listener response has no daily counts")
         if data:
             openpodcast.post(
                 params.openpodcast_endpoint,

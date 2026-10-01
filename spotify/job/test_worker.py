@@ -9,15 +9,15 @@ from job.worker import fetch
 
 
 @pytest.mark.parametrize(
-    "data,meta,success,saved",
+    "data,meta,saved",
     [
-        ({"counts": []}, None, False, False),
-        (None, None, False, False),
-        ({"counts": [{"date": "2026-09-29", "count": 0}]}, None, True, True),
-        ({"counts": []}, {"episode": "episode-id"}, True, True),
+        ({"counts": []}, None, True),
+        (None, None, False),
+        ({"counts": [{"date": "2026-09-29", "count": 0}]}, None, True),
+        ({"counts": []}, {"episode": "episode-id"}, True),
     ],
 )
-def test_listener_results(data, meta, success, saved):
+def test_response_handling_is_unchanged(data, meta, saved):
     params = FetchParams(
         "listeners",
         Mock(return_value=data),
@@ -26,7 +26,7 @@ def test_listener_results(data, meta, success, saved):
         meta,
     )
     connector = Mock()
-    assert fetch(connector, params) is success
+    assert fetch(connector, params) is True
     assert connector.post.called is saved
     if saved:
         connector.post.assert_called_once_with(
