@@ -1,6 +1,7 @@
 import math
 import queue
 import threading
+from collections.abc import Iterable
 from time import sleep
 
 from loguru import logger
@@ -13,7 +14,12 @@ class EmptyListenerData(ValueError):
     """The source returned no daily show-listener rows to persist."""
 
 
-def worker(q: queue.Queue, openpodcast: OpenPodcastConnector, delay, failures) -> None:
+def worker(
+    q: queue.Queue[FetchParams | None],
+    openpodcast: OpenPodcastConnector,
+    delay: float,
+    failures: queue.Queue[FetchParams],
+) -> None:
     """Drain tasks even after failures, recording them for the main thread."""
     while True:
         params = q.get()
@@ -39,14 +45,19 @@ def worker(q: queue.Queue, openpodcast: OpenPodcastConnector, delay, failures) -
             q.task_done()
 
 
-def run_tasks(endpoints, openpodcast, delay, num_workers) -> int:
+def run_tasks(
+    endpoints: Iterable[FetchParams],
+    openpodcast: OpenPodcastConnector,
+    delay: float,
+    num_workers: int,
+) -> int:
     """Finish all queued tasks and return the number that failed."""
     if num_workers < 1 or not math.isfinite(delay) or delay < 0:
         raise ValueError(
             "NUM_WORKERS must be positive and TASK_DELAY finite and non-negative"
         )
-    tasks = queue.Queue()
-    failures = queue.Queue()
+    tasks: queue.Queue[FetchParams | None] = queue.Queue()
+    failures: queue.Queue[FetchParams] = queue.Queue()
     threads = [
         threading.Thread(target=worker, args=(tasks, openpodcast, delay, failures))
         for _ in range(num_workers)

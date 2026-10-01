@@ -55,8 +55,8 @@ queue waiting indefinitely.
 
 Ingestion errors now propagate to the worker instead of being logged and ignored.
 Connection errors, timeouts, and any non-200 response fail the task. Each POST is
-attempted once; this change does not add automatic retries. Response bodies and
-authorization headers are not logged.
+attempted once; this change does not add automatic retries. Ingestion failure logs
+contain task context and HTTP status, not response bodies or authorization headers.
 
 An empty or missing show-level listener `counts` series fails the task instead of
 being accepted as a successful no-op. Explicit daily counts of zero remain valid.

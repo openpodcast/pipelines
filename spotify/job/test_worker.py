@@ -1,15 +1,15 @@
-from pathlib import Path
 import subprocess
 import sys
 import textwrap
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
 import requests
 
-from job.fetch_params import FetchParams
 from job import worker
+from job.fetch_params import FetchParams
 
 
 def make_params(data=None, endpoint="metadata", meta=None):
@@ -58,7 +58,7 @@ def test_fetch_rejects_missing_or_malformed_show_listener_counts(data, meta):
     params = make_params(data, "listeners", meta)
     connector = Mock()
 
-    with pytest.raises(ValueError, match="daily counts"):
+    with pytest.raises(worker.EmptyListenerData, match="daily counts"):
         worker.fetch(connector, params)
 
     params.spotify_call.assert_called_once_with()
@@ -132,8 +132,8 @@ from unittest.mock import Mock, patch
 import threading
 import requests
 from spotifyconnector.connector import CredentialsExpired
-from job.fetch_params import FetchParams
 from job import worker
+from job.fetch_params import FetchParams
 
 requests.sessions.Session.request = Mock(side_effect=AssertionError("network forbidden"))
 
@@ -259,7 +259,5 @@ def test_run_tasks_rejects_invalid_configuration_before_work(
 
 @pytest.mark.parametrize("delay", [float("nan"), float("inf"), float("-inf")])
 def test_nonfinite_delay_is_rejected(delay):
-    from job.worker import run_tasks
-
     with pytest.raises(ValueError, match="finite"):
-        run_tasks([], Mock(), delay, 1)
+        worker.run_tasks([], Mock(), delay, 1)
