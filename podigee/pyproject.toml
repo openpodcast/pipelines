@@ -3,7 +3,7 @@ name = "podigee-pipeline"
 version = "0.1.0"
 description = "Open Podcast pipeline that fetches podcast analytics from the Podigee API."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11.5"
 license = { text = "MIT" }
 authors = [
     { name = "Open Podcast" },
@@ -24,6 +24,8 @@ dev = [
 
 [tool.uv]
 package = false
+# Security floor for the transitive dependency from beautifulsoup4.
+constraint-dependencies = ["soupsieve>=4.1"]
 
 [tool.pytest.ini_options]
 testpaths = ["job"]
