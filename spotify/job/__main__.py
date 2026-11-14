@@ -1,8 +1,7 @@
 import datetime as dt
 import os
 import sys
-import threading
-from queue import Queue
+from concurrent.futures import ThreadPoolExecutor
 
 from loguru import logger
 from spotifyconnector import SpotifyConnector
@@ -17,7 +16,7 @@ from job.spotify import (
     get_episode_release_date,
     normalize_performance,
 )
-from job.worker import worker
+from job.worker import fetch
 
 # The Spotify API imposes exactly 30 days of data for "total" and "faceted" impressions
 # (The diff is 29 because both start and end dates are inclusive)
@@ -323,21 +322,12 @@ try:
             for current_date in episode_date_range
         ]
 
-    # Create a queue to hold the FetchParams objects
-    queue = Queue()
-
-    # Start a pool of worker threads to process items from the queue
-    for i in range(NUM_WORKERS):
-        t = threading.Thread(target=worker, args=(queue, open_podcast, TASK_DELAY))
-        t.daemon = True
-        t.start()
-
-    # Add all FetchParams objects to the queue
-    for endpoint in endpoints:
-        queue.put(endpoint)
-
-    # Wait for all items in the queue to be processed
-    queue.join()
+    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as pool:
+        results = list(
+            pool.map(lambda params: fetch(open_podcast, params, TASK_DELAY), endpoints)
+        )
+    if not all(results):
+        sys.exit(1)
 
     print("All items processed.")
 
